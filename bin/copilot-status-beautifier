@@ -1,0 +1,198 @@
+#!/home/spopuri/.volta/tools/image/node/16.19.0/bin/node
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+const lib = require("../lib/render");
+
+const HOME = process.env.HOME || "";
+const COPILOT_HOME = process.env.COPILOT_HOME || path.join(HOME, ".copilot");
+const DEFAULT_STATE_PATH = path.join(COPILOT_HOME, "statusline-state.json");
+const DEFAULT_SETTINGS_PATH = path.join(COPILOT_HOME, "statusline-settings.json");
+const VERSION = "0.1.0";
+
+const DISPLAY_KEYS = [
+  "showModel", "showPromptLabel", "showProject", "showGit",
+  "showUsage", "showTiming", "showTools", "showAgents",
+];
+
+function parseArgs(argv) {
+  const opts = {
+    settingsPath: DEFAULT_SETTINGS_PATH,
+    statePath: DEFAULT_STATE_PATH,
+    inputPath: null,
+    inlineDisplay: {},
+    inline: {},
+    command: "render",
+  };
+  const positional = [];
+  for (let i = 0; i < argv.length; i += 1) {
+    const arg = argv[i];
+    const next = () => argv[++i];
+    switch (arg) {
+      case "-h": case "--help": opts.command = "help"; break;
+      case "-V": case "--version": opts.command = "version"; break;
+      case "--print-defaults": opts.command = "print-defaults"; break;
+      case "--print-config": opts.command = "print-config"; break;
+      case "--demo": opts.command = "demo"; break;
+      case "--install": opts.command = "install"; break;
+      case "--uninstall": opts.command = "uninstall"; break;
+      case "--settings": opts.settingsPath = next(); break;
+      case "--state": opts.statePath = next(); break;
+      case "--input": opts.inputPath = next(); break;
+      case "--no-color": opts.inline.color = false; break;
+      case "--color": opts.inline.color = true; break;
+      case "--ascii": opts.inline.useUnicode = false; break;
+      case "--unicode": opts.inline.useUnicode = true; break;
+      case "--max-width": opts.inline.maxWidth = Number(next()); break;
+      case "--max-tools": opts.inlineDisplay.maxTools = Number(next()); break;
+      case "--max-agents": opts.inlineDisplay.maxAgents = Number(next()); break;
+      case "--show": setDisplayFlag(opts.inlineDisplay, next(), true); break;
+      case "--hide": setDisplayFlag(opts.inlineDisplay, next(), false); break;
+      default:
+        if (arg.startsWith("--show=")) setDisplayFlag(opts.inlineDisplay, arg.slice(7), true);
+        else if (arg.startsWith("--hide=")) setDisplayFlag(opts.inlineDisplay, arg.slice(7), false);
+        else positional.push(arg);
+    }
+  }
+  opts.positional = positional;
+  return opts;
+}
+
+function setDisplayFlag(target, name, value) {
+  if (!name) return;
+  const map = {
+    model: "showModel", promptlabel: "showPromptLabel", prompt: "showPromptLabel",
+    project: "showProject", git: "showGit", usage: "showUsage",
+    timing: "showTiming", tools: "showTools", agents: "showAgents",
+  };
+  const key = map[String(name).toLowerCase()] || name;
+  if (DISPLAY_KEYS.includes(key)) target[key] = value;
+}
+
+function loadSettings(opts) {
+  const fileSettings = lib.readJson(opts.settingsPath, {});
+  const inline = { ...opts.inline };
+  if (Object.keys(opts.inlineDisplay).length) inline.display = opts.inlineDisplay;
+  return lib.mergeSettings(fileSettings, inline);
+}
+
+function readStatusFromStdin() {
+  return new Promise((resolve) => {
+    if (process.stdin.isTTY) return resolve("");
+    const chunks = [];
+    process.stdin.on("data", (c) => chunks.push(c));
+    process.stdin.on("end", () => resolve(Buffer.concat(chunks).toString("utf8").trim()));
+  });
+}
+
+async function commandRender(opts) {
+  let raw = "";
+  if (opts.inputPath) raw = fs.readFileSync(opts.inputPath, "utf8").trim();
+  else raw = await readStatusFromStdin();
+  const status = lib.safeJsonParse(raw, {});
+  const settings = loadSettings(opts);
+  const state = lib.readJson(opts.statePath, lib.defaultState());
+  const result = lib.render(status, settings, state);
+  if (result.stateChanged) {
+    try { lib.writeJsonAtomically(opts.statePath, result.state); } catch {}
+  }
+  process.stdout.write(result.line);
+}
+
+function commandDemo(opts) {
+  const sample = {
+    cwd: process.cwd(),
+    model: { display_name: "Claude Opus 4.7" },
+    cost: { total_premium_requests: 7, total_duration_ms: 184000, total_api_duration_ms: 92000 },
+    context_window: {
+      context_window_size: 200000,
+      used_percentage: 42,
+      current_usage: { input_tokens: 12500, output_tokens: 3400, cache_read_input_tokens: 18000 },
+    },
+  };
+  const settings = loadSettings(opts);
+  const state = lib.defaultState();
+  state.session.cwd = process.cwd();
+  process.stdout.write(`${lib.render(sample, settings, state).line}\n`);
+}
+
+function commandPrintDefaults() {
+  process.stdout.write(`${JSON.stringify(lib.defaultSettings(), null, 2)}\n`);
+}
+
+function commandPrintConfig(opts) {
+  process.stdout.write(`${JSON.stringify(loadSettings(opts), null, 2)}\n`);
+}
+
+function commandInstall() {
+  const configPath = path.join(COPILOT_HOME, "config.json");
+  const config = lib.readJson(configPath, {});
+  const binPath = path.resolve(__dirname, "copilot-status-beautifier");
+  config.statusLine = { type: "command", command: binPath, padding: 1 };
+  fs.mkdirSync(COPILOT_HOME, { recursive: true });
+  lib.writeJsonAtomically(configPath, config);
+  process.stdout.write(`Installed statusLine -> ${binPath}\n`);
+}
+
+function commandUninstall() {
+  const configPath = path.join(COPILOT_HOME, "config.json");
+  const config = lib.readJson(configPath, null);
+  if (!config) { process.stdout.write("No config.json found.\n"); return; }
+  delete config.statusLine;
+  lib.writeJsonAtomically(configPath, config);
+  process.stdout.write("Removed statusLine entry from config.json\n");
+}
+
+function commandHelp() {
+  process.stdout.write(`copilot-status-beautifier ${VERSION}
+
+Renders a power-user HUD status line for the GitHub Copilot CLI.
+By default, no customizations are applied — output matches the bundled HUD.
+
+Usage:
+  copilot-status-beautifier [options]              Read status JSON from stdin, print one line
+  copilot-status-beautifier --demo                 Render with a sample payload
+  copilot-status-beautifier --print-defaults       Print built-in default settings as JSON
+  copilot-status-beautifier --print-config         Print effective merged settings as JSON
+  copilot-status-beautifier --install              Wire as Copilot CLI statusLine in config.json
+  copilot-status-beautifier --uninstall            Remove the statusLine entry from config.json
+
+Options:
+  --settings <path>    Path to settings JSON   (default: ${DEFAULT_SETTINGS_PATH})
+  --state <path>       Path to state JSON      (default: ${DEFAULT_STATE_PATH})
+  --input <path>       Read status JSON from a file instead of stdin
+  --no-color           Disable ANSI colors
+  --ascii              Use ASCII glyphs instead of Unicode
+  --max-width N        Override max width (otherwise auto-detected)
+  --max-tools N        Limit recent tool entries shown
+  --max-agents N       Limit recent agent entries shown
+  --show <segment>     Force-enable a segment (model, promptLabel, project, git,
+                       usage, timing, tools, agents). Repeatable.
+  --hide <segment>     Force-disable a segment. Repeatable.
+  -h, --help           Show this help
+  -V, --version        Show version
+
+Customizations are OFF by default; pass flags or edit the settings file to enable.
+`);
+}
+
+(async function main() {
+  const opts = parseArgs(process.argv.slice(2));
+  try {
+    switch (opts.command) {
+      case "help": commandHelp(); break;
+      case "version": process.stdout.write(`${VERSION}\n`); break;
+      case "print-defaults": commandPrintDefaults(); break;
+      case "print-config": commandPrintConfig(opts); break;
+      case "demo": commandDemo(opts); break;
+      case "install": commandInstall(); break;
+      case "uninstall": commandUninstall(); break;
+      case "render":
+      default: await commandRender(opts);
+    }
+  } catch (err) {
+    process.stderr.write(`copilot-status-beautifier: ${err && err.message || err}\n`);
+    process.exit(1);
+  }
+})();
