@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# copilot-fork — fork a GitHub Copilot CLI session so you can resume the copy
+# in a different tmux pane while the original keeps running.
+#
+# Usage:
+#   copilot-fork                # fork the most-recently-updated session
+#   copilot-fork <session-id>   # fork the named session
+#   copilot-fork --list         # list recent sessions
+#   copilot-fork -h | --help
+#
+# Unofficial: reaches into ~/.copilot private storage. A Copilot CLI update
+# could change the schema and break this. The fork diverges at the snapshot
+# point; the source session is left untouched.
+
+set -euo pipefail
+
+COPILOT_DIR="${COPILOT_DIR:-$HOME/.copilot}"
+STATE_DIR="$COPILOT_DIR/session-state"
+DB="$COPILOT_DIR/session-store.db"
+
+die() { echo "copilot-fork: $*" >&2; exit 1; }
+
+case "${1:-}" in
+  -h|--help)
+    sed -n '2,/^$/p' "$0" | sed 's/^# \?//'
+    exit 0
+    ;;
+esac
+
+[[ -d "$STATE_DIR" ]] || die "no session-state dir at $STATE_DIR"
+[[ -f "$DB"        ]] || die "no session-store.db at $DB"
+
+if [[ "${1:-}" == "--list" ]]; then
+  exec python3 - "$DB" <<'PY'
+import sqlite3, sys
+con = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+con.row_factory = sqlite3.Row
+q = """SELECT id, updated_at, coalesce(cwd,'') AS cwd,
+              substr(coalesce(summary,''),1,60) AS s
+         FROM sessions ORDER BY updated_at DESC LIMIT 25"""
+for r in con.execute(q):
+    print(f"{r['id']}  {r['updated_at']}  {r['cwd']}  {r['s']}")
+PY
+fi
+
+# --- pick source ------------------------------------------------------------
+if [[ -n "${1:-}" ]]; then
+  SRC="$1"
+else
+  SRC=$(python3 - "$DB" <<'PY'
+import sqlite3, sys
+con = sqlite3.connect(f"file:{sys.argv[1]}?mode=ro", uri=True)
+row = con.execute(
+    "SELECT id FROM sessions ORDER BY updated_at DESC LIMIT 1"
+).fetchone()
+if not row:
+    sys.exit("no sessions found")
+print(row[0])
+PY
+  )
+fi
+
+[[ -d "$STATE_DIR/$SRC" ]] || die "no session-state dir for $SRC"
+
+NEW=$(python3 -c 'import uuid; print(uuid.uuid4())')
+
+# --- 1. snapshot the session directory -------------------------------------
+cp -a "$STATE_DIR/$SRC" "$STATE_DIR/$NEW"
+rm -f "$STATE_DIR/$NEW"/inuse.*.lock
+
+# --- 2. rewrite session id inside every file that embeds it ---------------
+# events.jsonl has the source id in session.start.data.sessionId and
+# hook.*.data.input.sessionId for every turn. workspace.yaml has it in `id:`.
+# Copilot rebuilds session identity from events.jsonl, so a dir rename alone
+# is not enough — we must rewrite the id there too. events.jsonl gets its
+# partial trailing line (if any) stripped first, in case the source was
+# mid-write when we snapshotted.
+python3 - "$STATE_DIR/$NEW" "$SRC" "$NEW" <<'PY'
+import json, pathlib, sys
+root, src, new = pathlib.Path(sys.argv[1]), sys.argv[2], sys.argv[3]
+
+ev = root / "events.jsonl"
+if ev.exists():
+    raw = ev.read_bytes()
+    keep = []
+    for line in raw.split(b"\n"):
+        if not line:
+            continue
+        try:
+            json.loads(line)
+        except Exception:
+            break
+        keep.append(line)
+    out = b"\n".join(keep) + (b"\n" if keep else b"")
+    out = out.replace(src.encode(), new.encode())
+    ev.write_bytes(out)
+
+ws = root / "workspace.yaml"
+if ws.exists():
+    ws.write_text(ws.read_text().replace(src, new))
+PY
+
+# --- 4. clone sqlite rows under the new session id -------------------------
+python3 - "$DB" "$SRC" "$NEW" <<'PY'
+import sqlite3, sys
+db, src, new = sys.argv[1], sys.argv[2], sys.argv[3]
+con = sqlite3.connect(db, timeout=30.0)
+cur = con.cursor()
+
+def cols(table):
+    return [r[1] for r in cur.execute(f"PRAGMA table_info({table})")]
+
+# sessions: id is PK, rewrite it.
+sess_cols = cols("sessions")
+row = cur.execute(
+    f"SELECT {','.join(sess_cols)} FROM sessions WHERE id=?", (src,)
+).fetchone()
+if row is None:
+    cur.execute("INSERT INTO sessions (id) VALUES (?)", (new,))
+else:
+    row = list(row)
+    row[sess_cols.index("id")] = new
+    cur.execute(
+        f"INSERT INTO sessions ({','.join(sess_cols)}) "
+        f"VALUES ({','.join('?'*len(sess_cols))})",
+        row,
+    )
+
+# Child tables with autoincrement id + session_id FK.
+for t in ("turns", "checkpoints", "session_files", "session_refs"):
+    c = cols(t)
+    ins_cols = [x for x in c if x != "id"]
+    rows = cur.execute(
+        f"SELECT {','.join(ins_cols)} FROM {t} WHERE session_id=?", (src,)
+    ).fetchall()
+    sid = ins_cols.index("session_id")
+    out = [tuple(new if i == sid else v for i, v in enumerate(r)) for r in rows]
+    if out:
+        cur.executemany(
+            f"INSERT INTO {t} ({','.join(ins_cols)}) "
+            f"VALUES ({','.join('?'*len(ins_cols))})",
+            out,
+        )
+
+# FTS5 search_index — treat as a normal table.
+fts_cols = ["content", "session_id", "source_type", "source_id"]
+rows = cur.execute(
+    f"SELECT {','.join(fts_cols)} FROM search_index WHERE session_id=?", (src,)
+).fetchall()
+sid = fts_cols.index("session_id")
+out = [tuple(new if i == sid else v for i, v in enumerate(r)) for r in rows]
+if out:
+    cur.executemany(
+        f"INSERT INTO search_index ({','.join(fts_cols)}) "
+        f"VALUES ({','.join('?'*len(fts_cols))})",
+        out,
+    )
+
+con.commit()
+con.close()
+PY
+
+cat <<EOF
+Forked: $SRC
+    →  $NEW
+
+Resume in another tmux pane:
+    copilot --resume=$NEW
+EOF
