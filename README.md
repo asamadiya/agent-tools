@@ -132,3 +132,89 @@ Requires Node.js. The shebang in `bin/copilot-status-beautifier` points at a loc
 
 - **Unofficial.** Relies on the shape of the status JSON Copilot CLI passes to `statusLine` commands. A CLI release can change the schema and break this.
 - **Hooks integration optional.** The recent-tools / recent-agents segments are populated by separate hook scripts that write into `statusline-state.json`. Without them, those segments simply don't render.
+
+## copilot-doctor
+
+Diagnose and fix common GitHub Copilot CLI session issues. The primary feature is **fix-freeze** — a safe, non-invasive repair for the BPE tokenizer freeze that affects long-running or resumed sessions with large `events.jsonl` files (>100MB).
+
+### The Problem
+
+When a Copilot CLI session accumulates a large conversation history (>100MB `events.jsonl`, >40K lines — common with resumed sessions that run background agents), the BPE tokenizer function (`aqi` in the minified `app.js`) enters an O(n²) merge loop that pegs the CPU at 90%+ and starves the Node.js event loop. Symptoms:
+
+- Pane appears frozen — typed characters appear after long delays
+- The copilot spinner animates intermittently
+- CPU at 80–100% with process state `R` (running, never sleeping)
+- The session is NOT crashed — background agents may still be working
+
+### How fix-freeze Works
+
+The fix uses the V8 inspector protocol (Chrome DevTools Protocol) to patch the running process from the outside. The approach was designed through hard-won trial-and-error to be safe for background agents:
+
+```
+1. SIGUSR1 → Node.js opens inspector port 9229 (non-intrusive)
+2. Debugger.enable → enumerate loaded scripts, find app.js (no pause)
+3. Debugger.getScriptSource → locate aqi's while-loop in source
+4. Debugger.setBreakpoint with condition "(r.splice(1), false)"
+   → conditional BP fires inside the while-loop, truncates merge
+     array so loop exits, returns false so NO pause occurs
+5. Runtime.terminateExecution → abort the currently stuck aqi call
+   → throws a catchable exception that copilot handles gracefully
+6. renice 19 + ionice idle → future protection
+```
+
+### Safety Design (Lessons Learned)
+
+| Approach | Safe? | Why |
+|----------|-------|-----|
+| `Debugger.pause` | ❌ | Triggers copilot's cancel detection → stuck "Cancelling" state |
+| `Debugger.pause` + socket destroy | ❌ | Kills background agent API streams, agents die |
+| `SIGSTOP`/`SIGCONT` throttle | ❌ | Triggers cancel detection when process resumes |
+| Conditional breakpoint + `Runtime.terminateExecution` | ✅ | No pause, no signal, no socket interference |
+
+### Usage
+
+```bash
+copilot-doctor diagnose 5              # detailed health check of pane 5
+copilot-doctor fix-freeze 5            # fix frozen pane 5
+copilot-doctor status 3                # quick one-line health status
+copilot-doctor fix-jsonl <session-id>  # repair corrupted events.jsonl
+copilot-doctor -h                      # full help
+```
+
+### Install
+
+```bash
+ln -sfn "$PWD/bin/copilot-doctor" ~/.local/bin/copilot-doctor
+pip3 install websockets    # required for V8 inspector communication
+```
+
+### Subcommands
+
+| Command | Description |
+|---------|-------------|
+| `diagnose [pane]` | Full health check: CPU, memory, events.jsonl size, process state, background agents, network. Suggests fixes. |
+| `fix-freeze [pane]` | Patches the BPE tokenizer via V8 inspector. Safe for background agents. |
+| `fix-jsonl <id>` | Repairs corrupted `events.jsonl` (concatenated lines, truncated JSON). Creates `.bak` backup. |
+| `status [pane]` | One-line health indicator (🟢 HEALTHY / 🟡 DEGRADED / 🔴 FROZEN). |
+
+### Side Effects of fix-freeze
+
+- **Token counting over-estimates.** The patched tokenizer skips BPE merges, so each character is counted as a separate token. The context bar (%) reads higher than reality. This is cosmetic — it does not affect the actual API calls or context window.
+- **"Debugger attached/ending" messages** appear in the pane. These are from the inspector connection and are harmless cosmetic noise.
+- **Inspector port 9229** remains open until the session ends. Not a security risk on localhost but be aware if port-forwarding.
+- **renice 19** is applied to the copilot process, giving it lowest scheduling priority. This helps prevent future freezes from starving the event loop.
+
+### Cautions
+
+- **Unofficial.** Reaches into V8 internals. Node.js or Copilot CLI updates can break this.
+- **Function name `aqi` is minified.** A new Copilot CLI release may rename it. The tool searches for `function aqi(` in `app.js` — if the name changes, `fix-freeze` will report an error and exit without making changes.
+- **`Runtime.terminateExecution` throws an exception** in the running JS. Copilot's error handler catches it, but it means the in-progress token count fails. Copilot retries or uses a fallback.
+- **Run `diagnose` first** if you're unsure whether the issue is a tokenizer freeze. Not all freezes have the same root cause.
+
+### Requirements
+
+- `tmux` (for pane resolution)
+- `python3` with `websockets` package
+- `strace` (optional, for deep diagnostics in `diagnose`)
+- `bc` (for CPU threshold arithmetic)
+- Linux (uses `/proc` filesystem, `ss`, `renice`, `ionice`)
