@@ -59,6 +59,12 @@ export const AgentInputSchema = z.object({
    *  it lands as a real system prompt — not as a typed-in user message.
    *  Mutually exclusive with subagent_type (use one or the other). */
   system_prompt: z.string().optional(),
+  /** Override the tmux pane to anchor this team's layout to. When set, the
+   *  spawn splits this pane (or its window's existing chain) instead of
+   *  whatever TMUX_PANE happens to be. Useful when the MCP server has been
+   *  re-spawned and TMUX_PANE follows the user's current focus, OR when you
+   *  want to pin a team to a specific pane regardless of focus. */
+  parent_pane: z.string().regex(/^%\d+$/).optional(),
 });
 
 export type AgentInput = z.infer<typeof AgentInputSchema>;
@@ -275,32 +281,38 @@ export const handleAgent = async (
   // Falls back to a separate window when the parent isn't in tmux.
   let target: string;
   let panePid: number;
-  const parentPane = process.env.TMUX_PANE;
-  const useSplitLayout = ctx.inTmux && Boolean(parentPane);
+  // Resolution order for the team's anchor pane:
+  //   1. input.parent_pane — explicit override from the caller. Pin a team
+  //      to a specific pane regardless of focus or env state.
+  //   2. Any existing agent's pane that still exists in tmux — the team's
+  //      anchor window is wherever those panes already live. Status field
+  //      is intentionally NOT consulted: tmux is the source of truth, our
+  //      `running`/`stopped` field can drift after manual kill/restart, and
+  //      a pane the user can still see is a legit chain target.
+  //   3. process.env.TMUX_PANE — fall-through for the very first spawn.
+  //      Read fresh per call because the MCP server may have been respawned
+  //      by copilot, in which case it inherited the user's *current* shell
+  //      env. That's correct for the first agent but should never override
+  //      an existing chain (handled by ordering above).
+  const explicitParent = (input as { parent_pane?: string }).parent_pane;
+  const fallbackParent = process.env.TMUX_PANE;
+  const useSplitLayout = ctx.inTmux && Boolean(explicitParent || fallbackParent);
   if (useSplitLayout) {
-    // Anchor the team's window at the FIRST agent. Once any running agent
-    // exists, every subsequent spawn chains off the most recent one — its
-    // window is the team's window, regardless of where TMUX_PANE points now.
-    //
-    // Why we don't trust TMUX_PANE for the chain: tmux exports TMUX_PANE
-    // into every shell-level child it spawns. If the user switches focus to
-    // another pane and copilot then fires a tool call (or copilot itself
-    // re-spawns the MCP server), the new MCP process inherits the
-    // user's *current* pane id, not the original team-anchor pane. Filtering
-    // chain candidates by "same window as TMUX_PANE" would then drop the
-    // legitimate team panes and we'd silently split the user's current pane
-    // instead.
-    const cur = (await import("../state.js")).loadState(deps.statePath ? { path: deps.statePath } : {});
     let chainParent: string | null = null;
-    for (const t of Object.values(cur.tasks).reverse()) {
-      if (t.status !== "running") continue;
-      if (!t.tmuxTarget || !isPaneId(t.tmuxTarget)) continue;
-      if (!(await paneExists(t.tmuxTarget))) continue;
-      chainParent = t.tmuxTarget;
-      break;
+    if (!explicitParent) {
+      const cur = (await import("../state.js")).loadState(deps.statePath ? { path: deps.statePath } : {});
+      for (const t of Object.values(cur.tasks).reverse()) {
+        if (!t.tmuxTarget || !isPaneId(t.tmuxTarget)) continue;
+        if (!(await paneExists(t.tmuxTarget))) continue;
+        chainParent = t.tmuxTarget;
+        break;
+      }
     }
-    const splitFrom = chainParent ?? parentPane!;
-    const horizontal = chainParent === null; // first agent: split parent left/right; later: stack vertically
+    const splitFrom = explicitParent ?? chainParent ?? fallbackParent!;
+    // First-in-team split is left/right (parent | new); subsequent splits
+    // stack vertically off the chain parent. Explicit parent_pane is treated
+    // as "first split" so the caller's anchor stays as the left column.
+    const horizontal = !chainParent;
     const sp = await splitPane({
       parent: splitFrom,
       command,
