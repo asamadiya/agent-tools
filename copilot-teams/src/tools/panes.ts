@@ -50,7 +50,10 @@ export const handlePaneJoin = async (
   const args = ["join-pane", "-s", src];
   if (input.target_window) args.push("-t", input.target_window);
   args.push(input.horizontal ? "-h" : "-v");
-  if (input.size_percent) args.push("-p", String(input.size_percent));
+  // tmux join-pane uses `-l <size>` (cells or N%), not `-p`. The latter is
+  // for split-window only and silently ignored here, leaving the join with
+  // no size and tmux complaining "size missing".
+  if (input.size_percent) args.push("-l", `${input.size_percent}%`);
   const r = await tmux(args);
   if (r.exit !== 0) {
     throw new Error(`tmux join-pane failed: ${r.stderr || r.stdout}`);

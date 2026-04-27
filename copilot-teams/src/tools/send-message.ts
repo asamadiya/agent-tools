@@ -83,6 +83,19 @@ export const handleSendMessage = async (
     await progress(1, undefined, "uuid lock acquired");
     if (via === "send-keys") {
       const sessionRoot = deps.sessionRoot;
+      // Wait until the agent is actually idle before typing into its pane.
+      // If we send while a turn is mid-flight, copilot's REPL queues the
+      // characters but never submits them, leaving the message visible in
+      // the input buffer and the agent stuck "0 requests" away from running.
+      const idleDeadline = Date.now() + (input.timeout_ms ?? 5 * 60_000);
+      while (Date.now() < idleDeadline) {
+        const live = sessionLiveness(id, sessionRoot);
+        if (live.state === "idle" || live.state === "starting") break;
+        if (live.state === "shutdown") {
+          throw new Error(`SendMessage: target ${id} has shut down`);
+        }
+        await new Promise((r) => setTimeout(r, 200));
+      }
       const baselineCount = sessionLiveness(id, sessionRoot).turnCount;
       await sendLine(t.tmuxTarget!, input.message);
       await progress(2, undefined, "message sent into pane; awaiting turn_end");

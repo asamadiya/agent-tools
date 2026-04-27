@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { mkdirSync, writeFileSync } from "node:fs";
+import { homedir } from "node:os";
+import { dirname, join } from "node:path";
 import { z } from "zod";
 import { logger } from "../logger.js";
 import {
@@ -54,6 +55,11 @@ export const AgentInputSchema = z.object({
   /** Per-agent working directory (overrides parent cwd). Combinable with
    *  isolation:'worktree' (which overrides cwd to a fresh worktree). */
   cwd: z.string().optional(),
+  /** Inline system prompt / persona. Materialized as a temp Copilot custom
+   *  agent (.md file under ~/.copilot/agents/) and selected via --agent so
+   *  it lands as a real system prompt — not as a typed-in user message.
+   *  Mutually exclusive with subagent_type (use one or the other). */
+  system_prompt: z.string().optional(),
 });
 
 export type AgentInput = z.infer<typeof AgentInputSchema>;
@@ -171,11 +177,27 @@ export const handleAgent = async (
     isolation = { worktree: isolationHandle.worktree, branch: isolationHandle.branch };
   }
 
+  // If the caller passed an inline system_prompt, materialize a temp Copilot
+  // custom agent under ~/.copilot/agents/ so --agent picks it up as a real
+  // system prompt. Naming pattern is recognizable for GC.
+  let agentName = input.subagent_type;
+  if (input.system_prompt) {
+    if (input.subagent_type) {
+      throw new Error("Agent: pass either subagent_type or system_prompt, not both");
+    }
+    const tmpName = `_ct_tmp_${uuid.replace(/-/g, "")}`;
+    const agentsDir = join(homedir(), ".copilot", "agents");
+    mkdirSync(agentsDir, { recursive: true });
+    const body = `---\nname: ${tmpName}\ndescription: ephemeral system prompt for copilot-teams uuid=${uuid}\n---\n\n${input.system_prompt}\n`;
+    writeFileSync(join(agentsDir, `${tmpName}.md`), body);
+    agentName = tmpName;
+  }
+
   const inv: CopilotInvocation = {
     uuid,
     background: input.run_in_background,
     ...(input.prompt ? { prompt: input.prompt } : {}),
-    ...(input.subagent_type ? { subagentType: input.subagent_type } : {}),
+    ...(agentName ? { subagentType: agentName } : {}),
     ...(input.model ? { model: input.model } : {}),
     ...(input.mode ? { mode: input.mode } : {}),
     ...(input.allowed_tools ? { allowedTools: input.allowed_tools } : {}),
@@ -280,6 +302,17 @@ export const handleAgent = async (
     });
     target = sp.target;
     panePid = sp.panePid;
+    // Make the pane title visible by enabling per-window border-status, so the
+    // user actually sees `cop:<name>` above each agent's pane. Per-window so
+    // we don't disturb other tmux windows.
+    try {
+      const { execa } = await import("execa");
+      const win = sp.windowId;
+      await execa("tmux", ["set-window-option", "-t", win, "pane-border-status", "top"], { reject: false });
+      await execa("tmux", ["set-window-option", "-t", win, "pane-border-format", " #{pane_title} "], { reject: false });
+    } catch {
+      /* cosmetic only */
+    }
   } else {
     const w = await spawnWindow({ session, windowName, command, cwd: runCwd });
     target = w.target;

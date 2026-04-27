@@ -100,10 +100,12 @@ export const spawnWindow = async (opts: SpawnWindowOpts): Promise<SpawnedWindow>
   return out;
 };
 
-// Send one line + Enter via tmux. Multi-line content: split and call per line.
+// Send a single line + Enter via tmux. Auto-fans-out multi-line content
+// through sendBlock so callers don't have to special-case it.
 export const sendLine = async (target: string, line: string): Promise<void> => {
   if (line.includes("\n")) {
-    throw new Error("sendLine: line contains a newline; split and call once per line");
+    await sendBlock(target, line);
+    return;
   }
   const r1 = await tmux(["send-keys", "-t", target, "-l", line]);
   if (r1.exitCode !== 0) {
@@ -112,6 +114,34 @@ export const sendLine = async (target: string, line: string): Promise<void> => {
   const r2 = await tmux(["send-keys", "-t", target, "Enter"]);
   if (r2.exitCode !== 0) {
     throw new Error(`tmux send-keys (Enter) failed: ${r2.stderr || r2.stdout}`);
+  }
+};
+
+/** Send a multi-line block. Internal newlines go as Shift+Enter (literal LF
+ *  in the input buffer without "submit"); a final Enter submits the block.
+ *  Mirrors how a human pastes a multi-line prompt into copilot's REPL. */
+export const sendBlock = async (target: string, block: string): Promise<void> => {
+  const normalized = block.replace(/\r\n?/g, "\n");
+  const trimmed = normalized.endsWith("\n") ? normalized.slice(0, -1) : normalized;
+  const lines = trimmed.split("\n");
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]!;
+    if (line.length > 0) {
+      const r = await tmux(["send-keys", "-t", target, "-l", line]);
+      if (r.exitCode !== 0) {
+        throw new Error(`tmux send-keys (-l) failed: ${r.stderr || r.stdout}`);
+      }
+    }
+    if (i < lines.length - 1) {
+      const r = await tmux(["send-keys", "-t", target, "S-Enter"]);
+      if (r.exitCode !== 0) {
+        throw new Error(`tmux send-keys (S-Enter) failed: ${r.stderr || r.stdout}`);
+      }
+    }
+  }
+  const submit = await tmux(["send-keys", "-t", target, "Enter"]);
+  if (submit.exitCode !== 0) {
+    throw new Error(`tmux send-keys (Enter) failed: ${submit.stderr || submit.stdout}`);
   }
 };
 

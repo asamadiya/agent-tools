@@ -1,6 +1,14 @@
+import { execa } from "execa";
+import { mkdirSync } from "node:fs";
+import { dirname } from "node:path";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { type ProgressReporter, noopProgress } from "../progress.js";
 import { handleSendMessage, type SendMessageOutput } from "./send-message.js";
+import { buildArgs } from "../copilot.js";
+import { isPaneId, paneExists } from "../tmux.js";
+import { buildBackgroundShellCommand } from "./agent.js";
+import { awaitSessionReady } from "../session-state.js";
 import {
   AgentInputSchema,
   handleAgent,
@@ -110,8 +118,88 @@ export const handleRestart = async (
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
   const t = findTask(s, input.id);
   if (!t) throw new Error(`Restart: no task addressable as ${JSON.stringify(input.id)}`);
+
+  // In-place restart: when the task has a live tmux pane id, recycle it via
+  // `tmux respawn-pane -k <new copilot command>` so the agent comes back in
+  // the same visual slot of the same window. New uuid (so events.jsonl is
+  // clean) but same pane → no orphans, no layout drift.
+  if (t.tmuxTarget && isPaneId(t.tmuxTarget) && (await paneExists(t.tmuxTarget))) {
+    const oldUuid = t.id;
+    const newUuid = randomUUID();
+    const binary = deps.binary ?? "copilot";
+    const inv = {
+      uuid: newUuid,
+      background: true,
+      ...(t.subagentType ? { subagentType: t.subagentType } : {}),
+      ...(t.model ? { model: t.model } : {}),
+    };
+    const args = buildArgs(inv);
+    const logPath = `${process.env.HOME}/.copilot/agent-teams/logs/${newUuid}.log`;
+    mkdirSync(dirname(logPath), { recursive: true });
+    const cmd = buildBackgroundShellCommand(binary, args, deps.env ?? {});
+    const r = await execa(
+      "tmux",
+      ["respawn-pane", "-k", "-t", t.tmuxTarget, cmd],
+      { reject: false },
+    );
+    if ((r.exitCode ?? 1) !== 0) {
+      throw new Error(`tmux respawn-pane failed: ${r.stderr || r.stdout}`);
+    }
+    // Stop the old task record, then create a new one with the same pane.
+    await withState(async (cur) => {
+      const old = cur.tasks[oldUuid];
+      if (old) {
+        cur.tasks[oldUuid] = { ...old, status: "stopped", updatedAt: nowIso() };
+      }
+      cur.tasks[newUuid] = {
+        id: newUuid,
+        status: "running",
+        description: t.description ?? "restarted",
+        ...(input.prompt ? { prompt: input.prompt } : t.prompt ? { prompt: t.prompt } : {}),
+        background: true,
+        tmuxTarget: t.tmuxTarget!,
+        log: logPath,
+        ...(t.name ? { name: t.name } : {}),
+        ...(t.team ? { team: t.team } : {}),
+        ...(t.subagentType ? { subagentType: t.subagentType } : {}),
+        ...(t.model ? { model: t.model } : {}),
+        createdAt: nowIso(),
+        updatedAt: nowIso(),
+      };
+      return cur;
+    }, deps.statePath ? { path: deps.statePath } : {});
+
+    // Wait for the fresh session.start, then optionally type the prompt.
+    try {
+      await awaitSessionReady(newUuid, {
+        timeoutMs: 120_000,
+        ...(deps.sessionRoot ? { root: deps.sessionRoot } : {}),
+      });
+    } catch (err) {
+      // Pane is up; events.jsonl just hasn't landed yet. Caller can poll Status.
+    }
+    if (input.prompt ?? t.prompt) {
+      const { sendLine } = await import("../tmux.js");
+      await sendLine(t.tmuxTarget!, (input.prompt ?? t.prompt)!);
+    }
+    return {
+      id: newUuid,
+      status: "running",
+      tmuxTarget: t.tmuxTarget!,
+      isolation: t.isolation ?? null,
+    };
+  }
+
+  // Fallback: no recyclable pane (foreground task, or pane gone). Stop and
+  // spawn fresh.
   if (t.status === "running") {
-    await handleTaskStop({ id: t.id }, { ...(deps.statePath ? { statePath: deps.statePath } : {}), ...(deps.sessionRoot ? { sessionRoot: deps.sessionRoot } : {}) });
+    await handleTaskStop(
+      { id: t.id },
+      {
+        ...(deps.statePath ? { statePath: deps.statePath } : {}),
+        ...(deps.sessionRoot ? { sessionRoot: deps.sessionRoot } : {}),
+      },
+    );
   }
   const config: z.infer<typeof AgentInputSchema> = AgentInputSchema.parse({
     description: t.description ?? "restarted",
@@ -184,6 +272,7 @@ export type GcInput = z.infer<typeof GcInputSchema>;
 export interface GcOutput {
   dryRun: boolean;
   orphanSessionDirsRemoved: string[];
+  ephemeralPersonaFilesRemoved: string[];
   prunedTaskIds: string[];
 }
 
@@ -204,6 +293,28 @@ export const handleGc = async (
           removeSession(u, deps.sessionRoot);
         }
       }
+    }
+  }
+
+  // Sweep ephemeral system_prompt persona files (.md) whose uuid is not in
+  // our task state. Naming pattern: `_ct_tmp_<uuid-no-dashes>.md`.
+  const ephemeralPersonaFiles: string[] = [];
+  if (input.orphan_session_dirs) {
+    try {
+      const { homedir } = await import("node:os");
+      const { readdirSync, unlinkSync } = await import("node:fs");
+      const { join } = await import("node:path");
+      const dir = join(homedir(), ".copilot", "agents");
+      const knownTrimmed = new Set(Array.from(knownUuids).map((u) => u.replace(/-/g, "")));
+      for (const f of readdirSync(dir)) {
+        const m = /^_ct_tmp_([0-9a-f]{32})\.md$/.exec(f);
+        if (!m) continue;
+        if (knownTrimmed.has(m[1]!)) continue;
+        ephemeralPersonaFiles.push(f);
+        if (!input.dry_run) unlinkSync(join(dir, f));
+      }
+    } catch {
+      /* dir missing or unreadable — nothing to GC */
     }
   }
 
@@ -238,5 +349,10 @@ export const handleGc = async (
     return cur;
   }, deps.statePath ? { path: deps.statePath } : {}).catch(() => undefined);
 
-  return { dryRun: input.dry_run, orphanSessionDirsRemoved: orphans, prunedTaskIds: pruned };
+  return {
+    dryRun: input.dry_run,
+    orphanSessionDirsRemoved: orphans,
+    ephemeralPersonaFilesRemoved: ephemeralPersonaFiles,
+    prunedTaskIds: pruned,
+  };
 };

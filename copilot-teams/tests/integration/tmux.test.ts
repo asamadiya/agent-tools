@@ -62,8 +62,17 @@ describe.skipIf(!haveTmux)("tmux integration", () => {
     await killWindow(w.target);
   });
 
-  it("rejects multi-line input", async () => {
-    await expect(sendLine("nonexistent:tgt", "a\nb")).rejects.toThrow(/newline/);
+  it("sendLine fans out multi-line content via sendBlock", async () => {
+    const name = `cop:multi-${Math.random().toString(36).slice(2, 8)}`;
+    const w = await spawnWindow({ session: SESSION, windowName: name, command: "cat" });
+    await wait(120);
+    await sendLine(w.target, "first\nsecond\nthird");
+    await wait(150);
+    const captured = await capturePane(w.target);
+    expect(captured).toContain("first");
+    expect(captured).toContain("second");
+    expect(captured).toContain("third");
+    await killWindow(w.target);
   });
 
   it("listWindows on missing session returns []", async () => {

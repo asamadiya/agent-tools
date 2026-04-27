@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { loadState, type State, type Task } from "../state.js";
 import {
-  paneCurrentCommand,
+  isPaneId,
   listWindows,
+  paneCurrentCommand,
+  paneExists,
 } from "../tmux.js";
 import {
   sessionLiveness,
@@ -57,12 +59,16 @@ export const handleStatus = async (
   let paneAlive: boolean | null = null;
   let cmd: string | null = null;
   if (t.tmuxTarget) {
-    const sep = t.tmuxTarget.indexOf(":");
-    if (sep > 0) {
-      const session = t.tmuxTarget.slice(0, sep);
-      const windowName = t.tmuxTarget.slice(sep + 1);
-      const ws = await listWindows(session);
-      paneAlive = ws.some((w) => w.windowName === windowName);
+    if (isPaneId(t.tmuxTarget)) {
+      paneAlive = await paneExists(t.tmuxTarget);
+    } else {
+      const sep = t.tmuxTarget.indexOf(":");
+      if (sep > 0) {
+        const session = t.tmuxTarget.slice(0, sep);
+        const windowName = t.tmuxTarget.slice(sep + 1);
+        const ws = await listWindows(session);
+        paneAlive = ws.some((w) => w.windowName === windowName);
+      }
     }
     if (paneAlive) {
       cmd = await paneCurrentCommand(t.tmuxTarget);
