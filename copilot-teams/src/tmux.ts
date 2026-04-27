@@ -100,6 +100,21 @@ export const spawnWindow = async (opts: SpawnWindowOpts): Promise<SpawnedWindow>
   return out;
 };
 
+/** Send literal text via tmux send-keys -l, with a `--` getopt terminator
+ *  so lines starting with `-` (common in persona/system prompts —
+ *  bullet-list lines) aren't misparsed as flags. Without `--`, content like
+ *  "- Review code" makes tmux fail with `invalid flag -`, which used to
+ *  bubble up as a tool error and trick the model into thinking the agent
+ *  was dead and recreating it. */
+const sendLiteral = async (target: string, text: string): Promise<void> => {
+  if (text.length === 0) return;
+  const r = await tmux(["send-keys", "-t", target, "-l", "--", text]);
+  if (r.exitCode !== 0) {
+    throw new Error(`tmux send-keys (-l) failed: ${r.stderr || r.stdout}`);
+  }
+};
+
+
 // Send a single line + Enter via tmux. Auto-fans-out multi-line content
 // through sendBlock so callers don't have to special-case it.
 export const sendLine = async (target: string, line: string): Promise<void> => {
@@ -107,10 +122,7 @@ export const sendLine = async (target: string, line: string): Promise<void> => {
     await sendBlock(target, line);
     return;
   }
-  const r1 = await tmux(["send-keys", "-t", target, "-l", line]);
-  if (r1.exitCode !== 0) {
-    throw new Error(`tmux send-keys (-l) failed: ${r1.stderr || r1.stdout}`);
-  }
+  await sendLiteral(target, line);
   const r2 = await tmux(["send-keys", "-t", target, "Enter"]);
   if (r2.exitCode !== 0) {
     throw new Error(`tmux send-keys (Enter) failed: ${r2.stderr || r2.stdout}`);
@@ -127,10 +139,7 @@ export const sendBlock = async (target: string, block: string): Promise<void> =>
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i]!;
     if (line.length > 0) {
-      const r = await tmux(["send-keys", "-t", target, "-l", line]);
-      if (r.exitCode !== 0) {
-        throw new Error(`tmux send-keys (-l) failed: ${r.stderr || r.stdout}`);
-      }
+      await sendLiteral(target, line);
     }
     if (i < lines.length - 1) {
       const r = await tmux(["send-keys", "-t", target, "S-Enter"]);
