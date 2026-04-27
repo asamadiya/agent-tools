@@ -221,11 +221,11 @@ pip3 install websockets    # required for V8 inspector communication
 
 ## copilot-opus1m-patch.sh
 
-Unhide `claude-opus-4.6-1m` (the 1M-context Opus variant) from the GitHub Copilot CLI's `/model` picker so it can be selected interactively.
+Unhide `claude-opus-N.M-1m` (the 1M-context Opus variants) from the GitHub Copilot CLI's `/model` picker so they can be selected interactively. Catches `4.6-1m` today and any future `4.7-1m` / `5.0-1m` etc. that ship in the same exclusion set.
 
 ### Why
 
-Copilot CLI hardcodes an exclusion set in its bundled `app.js` that hides "internal only" models from the picker. `claude-opus-4.6-1m` is on that list, so even though the backend accepts it, the CLI refuses to surface it. This patch rewrites the exclusion set in-place to drop only that entry, leaving any other hidden models (e.g. `goldeneye`) hidden.
+Copilot CLI hardcodes an exclusion set in its bundled `app.js` that hides "internal only" models from the picker. The set is anchored on `"goldeneye"` and lists every 1M-context Opus build alongside it. This patch strips out any `claude-opus-N.M-1m` entries from that set while leaving the rest of the set intact, so genuinely-internal codenames like `goldeneye` stay hidden.
 
 ### Usage
 
@@ -250,10 +250,11 @@ copilot() { copilot-opus1m-patch.sh; command copilot "$@"; }
 ### How it works
 
 1. Resolves `${XDG_CACHE_HOME:-~/.cache}/copilot/pkg/universal/<version>/app.js` from `copilot --version`. (Earlier Copilot CLI builds extracted the bundle under `~/.copilot/pkg/...`; if the patch ever stops mutating the file, double-check this path hasn't moved again.)
-2. Greps for the literal `new Set(["claude-opus-4.6-1m","goldeneye"])` exclusion set.
-3. `sed`-rewrites it in place to `new Set(["goldeneye"])`.
+2. Greps for any `new Set(["claude-opus-N.M-1m",…,"goldeneye"])` form.
+3. `sed`-rewrites it in place, removing every `claude-opus-N.M-1m` entry but preserving `goldeneye` as the anchor.
 
 ### Caveats
 
-- **Unofficial.** Reaches into Copilot CLI's bundled `app.js`. A CLI release that reorders the set, renames the variable, or minifies differently will silently no-op (the grep won't match). Re-inspect `app.js` if `/model` stops listing `opus-4.6-1m` after a CLI upgrade.
+- **Unofficial.** Reaches into Copilot CLI's bundled `app.js`. A CLI release that drops the `goldeneye` anchor, splits the exclusion set, or minifies its construction differently will silently no-op (the grep won't match). Re-inspect `app.js` if `/model` stops listing the 1m variants after a CLI upgrade.
+- **Future model not always present.** The patch can only unhide models the CLI bundle already knows about. If e.g. `claude-opus-4.7-1m` doesn't appear anywhere in `app.js`, that means the CLI hasn't been built with that identifier yet — a CLI upgrade is the only fix, and the patch will pick it up automatically once it lands in the exclusion set.
 - **Internal-only model.** This unhides a model LinkedIn/GitHub considers internal. Don't redistribute the patch outside contexts where you're authorized to use that model.
