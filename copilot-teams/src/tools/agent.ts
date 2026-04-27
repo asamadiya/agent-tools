@@ -319,9 +319,12 @@ export const handleAgent = async (
       // 3. Decide split target
       const splitFrom =
         explicitParent ?? chainParent ?? anchorPane ?? fallbackParent!;
-      // Horizontal (parent | new) only on the very first split. After that,
-      // stack vertically off whatever's already there.
-      const horizontal = !chainParent && !anchorPane;
+      // Horizontal (parent | new) when there's no live chain to stack onto:
+      // either no agents have ever spawned, OR all prior agents have died
+      // and only the anchor survives. Either way the next agent is the
+      // start of a fresh column to the right of the anchor. Only stack
+      // vertically when there's an actual live agent pane to chain off.
+      const horizontal = !chainParent;
 
       const sp = await splitPane({
         parent: splitFrom,
