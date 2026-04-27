@@ -249,7 +249,7 @@ copilot() { copilot-opus1m-patch.sh; command copilot "$@"; }
 
 ### How it works
 
-1. Resolves `~/.copilot/pkg/universal/<version>/app.js` from `copilot --version`.
+1. Resolves `${XDG_CACHE_HOME:-~/.cache}/copilot/pkg/universal/<version>/app.js` from `copilot --version`. (Earlier Copilot CLI builds extracted the bundle under `~/.copilot/pkg/...`; if the patch ever stops mutating the file, double-check this path hasn't moved again.)
 2. Greps for the literal `new Set(["claude-opus-4.6-1m","goldeneye"])` exclusion set.
 3. `sed`-rewrites it in place to `new Set(["goldeneye"])`.
 

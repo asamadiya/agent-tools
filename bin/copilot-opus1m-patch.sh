@@ -7,7 +7,7 @@
 
 set -euo pipefail
 
-PKG_DIR="$HOME/.copilot/pkg/universal"
+PKG_DIR="${XDG_CACHE_HOME:-$HOME/.cache}/copilot/pkg/universal"
 VER=$(copilot --version 2>/dev/null | grep -oP '\d+\.\d+\.\d+')
 APP="$PKG_DIR/$VER/app.js"
 
