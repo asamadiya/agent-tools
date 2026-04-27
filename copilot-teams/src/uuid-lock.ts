@@ -50,3 +50,29 @@ export const withUuidLock = async <T>(
     }
   }
 };
+
+/** Global spawn lock. Held only around the critical section of "decide
+ *  anchor + split + record state" so concurrent Agent calls serialize and
+ *  the second one sees the first one's pane in state. Released before the
+ *  long awaitSessionReady / awaitTurnEnd phase so spawns don't block each
+ *  other on slow startups. */
+export const withSpawnLock = async <T>(
+  fn: () => Promise<T>,
+  opts: { lockRetries?: number; staleMs?: number } = {},
+): Promise<T> => {
+  const path = ensureLockFile("_spawn");
+  const release = await lockfile.lock(path, {
+    retries: { retries: opts.lockRetries ?? 120, minTimeout: 25, maxTimeout: 300 },
+    stale: opts.staleMs ?? 15_000,
+    realpath: false,
+  });
+  try {
+    return await fn();
+  } finally {
+    try {
+      await release();
+    } catch (err) {
+      logger.warn({ err }, "spawn-lock: release failed (ignored)");
+    }
+  }
+};

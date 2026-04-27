@@ -54,9 +54,20 @@ export const TeamSchema = z.object({
 });
 export type Team = z.infer<typeof TeamSchema>;
 
+export const AnchorSchema = z.object({
+  paneId: z.string(),
+  windowId: z.string().optional(),
+  setAt: z.string(),
+});
+export type Anchor = z.infer<typeof AnchorSchema>;
+
 export const StateSchema = z.object({
   tasks: z.record(z.string(), TaskSchema).default({}),
   teams: z.record(z.string(), TeamSchema).default({}),
+  /** The pane the team is anchored to. Persisted across MCP server respawns
+   *  so re-launches don't follow the user's current TMUX_PANE around. Cleared
+   *  when the pane no longer exists and there are no live agents. */
+  anchor: AnchorSchema.nullable().default(null),
 });
 export type State = z.infer<typeof StateSchema>;
 
@@ -68,7 +79,7 @@ export interface StateOptions {
   lockRetries?: number;
 }
 
-const empty = (): State => ({ tasks: {}, teams: {} });
+const empty = (): State => ({ tasks: {}, teams: {}, anchor: null });
 
 const ensureFile = (path: string): void => {
   mkdirSync(dirname(path), { recursive: true });

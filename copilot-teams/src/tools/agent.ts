@@ -282,57 +282,102 @@ export const handleAgent = async (
   let target: string;
   let panePid: number;
   // Resolution order for the team's anchor pane:
-  //   1. input.parent_pane — explicit override from the caller. Pin a team
-  //      to a specific pane regardless of focus or env state.
-  //   2. Any existing agent's pane that still exists in tmux — the team's
-  //      anchor window is wherever those panes already live. Status field
-  //      is intentionally NOT consulted: tmux is the source of truth, our
-  //      `running`/`stopped` field can drift after manual kill/restart, and
-  //      a pane the user can still see is a legit chain target.
-  //   3. process.env.TMUX_PANE — fall-through for the very first spawn.
-  //      Read fresh per call because the MCP server may have been respawned
-  //      by copilot, in which case it inherited the user's *current* shell
-  //      env. That's correct for the first agent but should never override
-  //      an existing chain (handled by ordering above).
+  //   1. input.parent_pane — explicit override from the caller.
+  //   2. state.anchor.paneId (if pane still exists in tmux) — persisted so
+  //      MCP server respawns don't drift to the user's current focus.
+  //   3. Any existing agent's pane that still exists in tmux — chain target.
+  //   4. process.env.TMUX_PANE — first-spawn fallback only.
+  //
+  // The whole spawn critical section runs inside withSpawnLock so concurrent
+  // Agent calls serialize and the second one sees the first one's pane in
+  // state. The lock is released before the long-running awaitSessionReady /
+  // awaitTurnEnd phase so spawns don't block each other on slow startup.
   const explicitParent = (input as { parent_pane?: string }).parent_pane;
   const fallbackParent = process.env.TMUX_PANE;
   const useSplitLayout = ctx.inTmux && Boolean(explicitParent || fallbackParent);
   if (useSplitLayout) {
-    let chainParent: string | null = null;
-    if (!explicitParent) {
-      const cur = (await import("../state.js")).loadState(deps.statePath ? { path: deps.statePath } : {});
+    const { withSpawnLock } = await import("../uuid-lock.js");
+    const stateMod = await import("../state.js");
+    const splitResult = await withSpawnLock(async () => {
+      const cur = stateMod.loadState(deps.statePath ? { path: deps.statePath } : {});
+
+      // 1. Anchor lookup
+      let anchorPane: string | null = null;
+      if (cur.anchor && (await paneExists(cur.anchor.paneId))) {
+        anchorPane = cur.anchor.paneId;
+      }
+
+      // 2. Chain candidate from existing agents
+      let chainParent: string | null = null;
       for (const t of Object.values(cur.tasks).reverse()) {
         if (!t.tmuxTarget || !isPaneId(t.tmuxTarget)) continue;
         if (!(await paneExists(t.tmuxTarget))) continue;
         chainParent = t.tmuxTarget;
         break;
       }
-    }
-    const splitFrom = explicitParent ?? chainParent ?? fallbackParent!;
-    // First-in-team split is left/right (parent | new); subsequent splits
-    // stack vertically off the chain parent. Explicit parent_pane is treated
-    // as "first split" so the caller's anchor stays as the left column.
-    const horizontal = !chainParent;
-    const sp = await splitPane({
-      parent: splitFrom,
-      command,
-      ...(runCwd !== process.cwd() ? { cwd: runCwd } : {}),
-      horizontal,
-      paneTitle: windowName,
+
+      // 3. Decide split target
+      const splitFrom =
+        explicitParent ?? chainParent ?? anchorPane ?? fallbackParent!;
+      // Horizontal (parent | new) only on the very first split. After that,
+      // stack vertically off whatever's already there.
+      const horizontal = !chainParent && !anchorPane;
+
+      const sp = await splitPane({
+        parent: splitFrom,
+        command,
+        ...(runCwd !== process.cwd() ? { cwd: runCwd } : {}),
+        horizontal,
+        paneTitle: windowName,
+      });
+
+      // Cosmetic — pane title visible per-window only.
+      try {
+        const { execa } = await import("execa");
+        const win = sp.windowId;
+        await execa("tmux", ["set-window-option", "-t", win, "pane-border-status", "top"], { reject: false });
+        await execa("tmux", ["set-window-option", "-t", win, "pane-border-format", " #{pane_title} "], { reject: false });
+      } catch { /* cosmetic only */ }
+
+      // Persist anchor (the originating left-column pane) on first spawn so
+      // future spawns from this or a re-spawned MCP server reuse it.
+      const newAnchor =
+        cur.anchor && (await paneExists(cur.anchor.paneId))
+          ? cur.anchor
+          : { paneId: explicitParent ?? fallbackParent!, ...(sp.windowId ? { windowId: sp.windowId } : {}), setAt: nowIso() };
+
+      // Record the new task atomically with the same state mutation. We do
+      // this here so a concurrent caller in the next iteration of the lock
+      // observes our pane via paneExists() OR tasks list.
+      await stateMod.withState((s) => {
+        s.anchor = newAnchor;
+        if (input.team_name && !s.teams[input.team_name]) {
+          s.teams[input.team_name] = { name: input.team_name, createdAt: nowIso() };
+        }
+        s.tasks[uuid] = {
+          id: uuid,
+          status: "running",
+          createdAt: nowIso(),
+          updatedAt: nowIso(),
+          description: input.description,
+          ...(input.prompt ? { prompt: input.prompt } : {}),
+          background: input.run_in_background,
+          ...(input.name ? { name: input.name } : {}),
+          ...(input.team_name ? { team: input.team_name } : {}),
+          ...(input.subagent_type ? { subagentType: input.subagent_type } : {}),
+          ...(input.model ? { model: input.model } : {}),
+          ...(isolation ? { isolation } : {}),
+          tmuxTarget: sp.target,
+          pid: sp.panePid,
+          log: logPath,
+        };
+        return s;
+      }, deps.statePath ? { path: deps.statePath } : {});
+
+      return { target: sp.target, panePid: sp.panePid };
     });
-    target = sp.target;
-    panePid = sp.panePid;
-    // Make the pane title visible by enabling per-window border-status, so the
-    // user actually sees `cop:<name>` above each agent's pane. Per-window so
-    // we don't disturb other tmux windows.
-    try {
-      const { execa } = await import("execa");
-      const win = sp.windowId;
-      await execa("tmux", ["set-window-option", "-t", win, "pane-border-status", "top"], { reject: false });
-      await execa("tmux", ["set-window-option", "-t", win, "pane-border-format", " #{pane_title} "], { reject: false });
-    } catch {
-      /* cosmetic only */
-    }
+    target = splitResult.target;
+    panePid = splitResult.panePid;
   } else {
     const w = await spawnWindow({ session, windowName, command, cwd: runCwd });
     target = w.target;

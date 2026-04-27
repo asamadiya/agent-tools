@@ -63,7 +63,7 @@ const reconcileTask = async (t: Task, sessionRoot?: string): Promise<Task> => {
 };
 
 const reconcileAll = async (s: State, sessionRoot?: string): Promise<State> => {
-  const next: State = { tasks: {}, teams: s.teams };
+  const next: State = { tasks: {}, teams: s.teams, anchor: s.anchor };
   for (const [id, t] of Object.entries(s.tasks)) {
     next.tasks[id] = await reconcileTask(t, sessionRoot);
   }

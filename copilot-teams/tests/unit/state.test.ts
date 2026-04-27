@@ -26,7 +26,7 @@ afterEach(() => {
 describe("loadState", () => {
   it("creates an empty state file when none exists", () => {
     const s = loadState({ path });
-    expect(s).toEqual({ tasks: {}, teams: {} });
+    expect(s).toEqual({ tasks: {}, teams: {}, anchor: null });
     expect(existsSync(path)).toBe(true);
   });
 
@@ -51,7 +51,7 @@ describe("loadState", () => {
   it("backs up and resets on corrupt JSON", () => {
     writeFileSync(path, "{not valid json");
     const s = loadState({ path });
-    expect(s).toEqual({ tasks: {}, teams: {} });
+    expect(s).toEqual({ tasks: {}, teams: {}, anchor: null });
     const backups = readdirSync(dir).filter((f) => f.includes(".corrupt-"));
     expect(backups.length).toBeGreaterThan(0);
   });
@@ -91,7 +91,7 @@ describe("saveState", () => {
 describe("withState", () => {
   it("serializes concurrent mutations under a lock", async () => {
     const N = 30;
-    saveState({ tasks: {}, teams: {} }, { path });
+    saveState({ tasks: {}, teams: {}, anchor: null }, { path });
     let calls = 0;
     await Promise.all(
       Array.from({ length: N }).map(() =>
@@ -114,18 +114,18 @@ describe("withState", () => {
   });
 
   it("does not write if mutator throws", async () => {
-    saveState({ tasks: {}, teams: {} }, { path });
+    saveState({ tasks: {}, teams: {}, anchor: null }, { path });
     await expect(
       withState(() => {
         throw new Error("boom");
       }, { path }),
     ).rejects.toThrow("boom");
     const after = loadState({ path });
-    expect(after).toEqual({ tasks: {}, teams: {} });
+    expect(after).toEqual({ tasks: {}, teams: {}, anchor: null });
   });
 
   it("returns result from {state, result} return shape", async () => {
-    saveState({ tasks: {}, teams: {} }, { path });
+    saveState({ tasks: {}, teams: {}, anchor: null }, { path });
     const out = await withState((s) => {
       const id = "u";
       s.tasks[id] = {
