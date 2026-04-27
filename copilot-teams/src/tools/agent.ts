@@ -20,7 +20,6 @@ import {
   spawnWindow,
   splitPane,
   tmuxAvailable,
-  windowOf,
 } from "../tmux.js";
 import { addWorktree, finalizeWorktree, generateBranchName, isGitRepo } from "../worktree.js";
 import {
@@ -279,15 +278,24 @@ export const handleAgent = async (
   const parentPane = process.env.TMUX_PANE;
   const useSplitLayout = ctx.inTmux && Boolean(parentPane);
   if (useSplitLayout) {
-    const parentWindow = await windowOf(parentPane!);
-    // Find a sibling agent pane in the same window to chain-split off of.
+    // Anchor the team's window at the FIRST agent. Once any running agent
+    // exists, every subsequent spawn chains off the most recent one — its
+    // window is the team's window, regardless of where TMUX_PANE points now.
+    //
+    // Why we don't trust TMUX_PANE for the chain: tmux exports TMUX_PANE
+    // into every shell-level child it spawns. If the user switches focus to
+    // another pane and copilot then fires a tool call (or copilot itself
+    // re-spawns the MCP server), the new MCP process inherits the
+    // user's *current* pane id, not the original team-anchor pane. Filtering
+    // chain candidates by "same window as TMUX_PANE" would then drop the
+    // legitimate team panes and we'd silently split the user's current pane
+    // instead.
     const cur = (await import("../state.js")).loadState(deps.statePath ? { path: deps.statePath } : {});
     let chainParent: string | null = null;
     for (const t of Object.values(cur.tasks).reverse()) {
       if (t.status !== "running") continue;
       if (!t.tmuxTarget || !isPaneId(t.tmuxTarget)) continue;
       if (!(await paneExists(t.tmuxTarget))) continue;
-      if (parentWindow && (await windowOf(t.tmuxTarget)) !== parentWindow) continue;
       chainParent = t.tmuxTarget;
       break;
     }
