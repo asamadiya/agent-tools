@@ -218,3 +218,42 @@ pip3 install websockets    # required for V8 inspector communication
 - `strace` (optional, for deep diagnostics in `diagnose`)
 - `bc` (for CPU threshold arithmetic)
 - Linux (uses `/proc` filesystem, `ss`, `renice`, `ionice`)
+
+## copilot-opus1m-patch.sh
+
+Unhide `claude-opus-4.6-1m` (the 1M-context Opus variant) from the GitHub Copilot CLI's `/model` picker so it can be selected interactively.
+
+### Why
+
+Copilot CLI hardcodes an exclusion set in its bundled `app.js` that hides "internal only" models from the picker. `claude-opus-4.6-1m` is on that list, so even though the backend accepts it, the CLI refuses to surface it. This patch rewrites the exclusion set in-place to drop only that entry, leaving any other hidden models (e.g. `goldeneye`) hidden.
+
+### Usage
+
+```
+copilot-opus1m-patch.sh
+```
+
+No arguments. Idempotent — safe to run on every Copilot CLI launch (e.g. from a shell hook or wrapper). Exits 0 silently if the bundled `app.js` is missing or already patched.
+
+### Install
+
+```
+ln -sfn "$PWD/bin/copilot-opus1m-patch.sh" ~/.local/bin/copilot-opus1m-patch.sh
+```
+
+Or invoke directly. Wire into a `copilot` shell wrapper to re-apply after CLI upgrades:
+
+```bash
+copilot() { copilot-opus1m-patch.sh; command copilot "$@"; }
+```
+
+### How it works
+
+1. Resolves `~/.copilot/pkg/universal/<version>/app.js` from `copilot --version`.
+2. Greps for the literal `new Set(["claude-opus-4.6-1m","goldeneye"])` exclusion set.
+3. `sed`-rewrites it in place to `new Set(["goldeneye"])`.
+
+### Caveats
+
+- **Unofficial.** Reaches into Copilot CLI's bundled `app.js`. A CLI release that reorders the set, renames the variable, or minifies differently will silently no-op (the grep won't match). Re-inspect `app.js` if `/model` stops listing `opus-4.6-1m` after a CLI upgrade.
+- **Internal-only model.** This unhides a model LinkedIn/GitHub considers internal. Don't redistribute the patch outside contexts where you're authorized to use that model.
