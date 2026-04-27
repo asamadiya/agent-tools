@@ -392,28 +392,31 @@ export const handleAgent = async (
 
   await progress(2, undefined, "tmux pane spawned");
 
-  // Optimistically wait for events.jsonl session.start so we can confidently
-  // type the initial prompt in. Real copilot can take 30-60s on cold start,
-  // so the timeout is generous. If it doesn't land we log + continue — the
-  // pane is alive, the user can attach and watch / call Status later.
-  try {
-    await awaitSessionReady(uuid, {
-      timeoutMs: input.wait_first_turn_ms ? Math.max(120_000, input.wait_first_turn_ms) : 120_000,
-      ...(deps.sessionRoot ? { root: deps.sessionRoot } : {}),
-    });
-    await progress(3, undefined, "session.start landed");
-  } catch (err) {
-    logger.warn(
-      { err, uuid, target },
-      "agent: events.jsonl session.start did not land in time; pane is up, continuing",
-    );
-    // Don't mark stopped — the pane is alive and the session may still be
-    // initializing. Caller can poll Status to wait for ready=true.
-  }
-
-  // If the caller gave an initial prompt, type it in.
+  // Don't block on awaitSessionReady by default — real copilot cold-start is
+  // 5–60s and a silent wait makes Agent feel hung. The pane is up and copilot
+  // is starting; Status / SendMessage handle "is it actually ready" semantics
+  // on the next call (SendMessage's idle-poll waits for state != busy before
+  // typing). Two cases:
+  //   - wait_first_turn_ms > 0: caller wants the first turn's content
+  //     synchronously, so we briefly wait for session.start (so the prompt
+  //     isn't typed before the REPL is up), sendLine, then awaitTurnEnd. If
+  //     session.start lags we still send (queued at the prompt) and let
+  //     awaitTurnEnd do the heavy lifting.
+  //   - default: send the prompt right away (it queues at copilot's REPL
+  //     prompt) and return. ~200ms total instead of 5-60s+.
   let firstTurn: { turnId: string; content: string } | null = null;
   if (input.prompt) {
+    if ((input.wait_first_turn_ms ?? 0) > 0) {
+      try {
+        await awaitSessionReady(uuid, {
+          timeoutMs: 30_000,
+          ...(deps.sessionRoot ? { root: deps.sessionRoot } : {}),
+        });
+        await progress(3, undefined, "session.start landed");
+      } catch (err) {
+        logger.warn({ err, uuid, target }, "agent: session.start delayed; sending prompt anyway");
+      }
+    }
     await sendLine(target, input.prompt);
     await progress(4, undefined, "initial prompt sent");
     if ((input.wait_first_turn_ms ?? 0) > 0) {
