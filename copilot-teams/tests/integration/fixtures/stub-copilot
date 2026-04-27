@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+# stub-copilot — minimal mock of Copilot CLI for integration tests.
+#
+# Modes:
+#   --resume=<uuid> [-p <prompt> -s] [--allow-all-tools] ...
+#       One-shot: print reply for prompt, exit.
+#   --resume=<uuid>            (no -p)
+#       Persistent REPL: write session.start, read stdin line-by-line,
+#       emit user.message + assistant.turn_start/message/turn_end per line,
+#       echo reply to stdout. Exit on EOF / Ctrl+D, write session.shutdown.
+#
+# Persistence:
+#   Per-uuid kv state at $STUB_COPILOT_DIR/<uuid>.kv  (round-trip "remember"/"what is")
+#   events.jsonl at  $COPILOT_SESSION_ROOT/<uuid>/events.jsonl  (new-style v2 transcript)
+
+set -euo pipefail
+
+STUB_DIR="${STUB_COPILOT_DIR:-/tmp/stub-copilot}"
+SESSION_ROOT="${COPILOT_SESSION_ROOT:-$HOME/.copilot/session-state}"
+mkdir -p "$STUB_DIR"
+
+uuid=""
+prompt=""
+mode="" # p (one-shot) | i (persistent)
+while (($#)); do
+  case "$1" in
+    --resume=*) uuid="${1#--resume=}" ;;
+    -p|--prompt) shift; prompt="${1:-}"; mode=p ;;
+    -i|--interactive) shift; prompt="${1:-}"; mode=p ;;
+    --name=*|--agent|--model|--mode|--add-dir|--name) ;;
+    --allow-all-tools|-s|--silent|--allow-tool=*|--deny-tool=*) ;;
+    *) ;;
+  esac
+  shift || true
+done
+
+if [[ -z "$uuid" ]]; then
+  uuid="00000000-0000-0000-0000-000000000000"
+fi
+
+# kv state for stable round-trip semantics
+state_file="$STUB_DIR/$uuid.kv"
+touch "$state_file"
+
+# session-state events.jsonl
+session_dir="$SESSION_ROOT/$uuid"
+mkdir -p "$session_dir"
+events_file="$session_dir/events.jsonl"
+
+iso() { date -u +%Y-%m-%dT%H:%M:%S.%3NZ; }
+
+emit_event() {
+  local etype="$1" data="$2"
+  local id
+  id=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || echo "$uuid-$RANDOM")
+  printf '{"type":"%s","data":%s,"id":"%s","timestamp":"%s","parentId":null}\n' \
+    "$etype" "$data" "$id" "$(iso)" >> "$events_file"
+}
+
+reply_for() {
+  local p="$1"
+  case "$p" in
+    "say "*) printf '%s' "${p#say }" ;;
+    "remember "*=*)
+      kv="${p#remember }"; key="${kv%%=*}"; val="${kv#*=}"
+      printf '%s=%s\n' "$key" "$val" >> "$state_file"
+      printf 'ok'
+      ;;
+    "what is "*"?")
+      key="${p#what is }"; key="${key%\?}"
+      val=$(grep "^$key=" "$state_file" | tail -n1 | cut -d= -f2- || true)
+      printf '%s' "${val:-MISSING}"
+      ;;
+    *) printf 'STUB_OK: %s' "$p" ;;
+  esac
+}
+
+if [[ "$mode" == "p" ]]; then
+  # One-shot.
+  emit_event session.start "{\"sessionId\":\"$uuid\"}"
+  emit_event user.message "$(printf '{"content":%s}' "$(printf '%s' "$prompt" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')")"
+  turn=0
+  emit_event assistant.turn_start "{\"turnId\":\"$turn\"}"
+  reply=$(reply_for "$prompt")
+  emit_event assistant.message "$(printf '{"content":%s}' "$(printf '%s' "$reply" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')")"
+  emit_event assistant.turn_end "{\"turnId\":\"$turn\"}"
+  printf '%s\n' "$reply"
+  emit_event session.shutdown "{\"shutdownType\":\"routine\"}"
+  exit 0
+fi
+
+# Persistent REPL.
+emit_event session.start "{\"sessionId\":\"$uuid\"}"
+echo "stub-copilot REPL ready (uuid=$uuid)"
+
+turn=0
+trap 'emit_event session.shutdown "{\"shutdownType\":\"routine\"}"; exit 0' INT TERM
+
+while IFS= read -r line; do
+  [[ -z "$line" ]] && continue
+  emit_event user.message "$(printf '{"content":%s}' "$(printf '%s' "$line" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')")"
+  emit_event assistant.turn_start "{\"turnId\":\"$turn\"}"
+  reply=$(reply_for "$line")
+  emit_event assistant.message "$(printf '{"content":%s}' "$(printf '%s' "$reply" | python3 -c 'import sys,json; print(json.dumps(sys.stdin.read()))')")"
+  emit_event assistant.turn_end "{\"turnId\":\"$turn\"}"
+  printf '%s\n' "$reply"
+  turn=$((turn + 1))
+done
+
+emit_event session.shutdown "{\"shutdownType\":\"routine\"}"

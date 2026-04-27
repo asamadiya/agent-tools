@@ -1,0 +1,43 @@
+{
+  "name": "copilot-teams",
+  "version": "0.1.0",
+  "description": "Agent-teams MCP server for GitHub Copilot CLI — Claude Code Agent/SendMessage/Team tool surface, tmux-backed.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=20"
+  },
+  "main": "dist/server.js",
+  "bin": {
+    "copilot-teams-server": "dist/server.js"
+  },
+  "scripts": {
+    "build": "tsc -p .",
+    "build:watch": "tsc -p . --watch",
+    "start": "node dist/server.js",
+    "start:debug": "node --inspect=127.0.0.1:9229 dist/server.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run tests/unit",
+    "test:contract": "vitest run tests/contract",
+    "test:integration": "vitest run tests/integration",
+    "test:e2e": "E2E=1 vitest run tests/e2e",
+    "test:coverage": "vitest run --coverage",
+    "typecheck": "tsc -p . --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "execa": "^9.5.2",
+    "pino": "^9.5.0",
+    "proper-lockfile": "^4.1.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "@types/proper-lockfile": "^4.1.4",
+    "@vitest/coverage-v8": "^2.1.8",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  }
+}

@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# copilot-teams — entry point for the agent-teams MCP server. Registered with
+# `copilot mcp add agent-teams /path/to/this`. Stdio transport.
+
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVER="$HERE/../copilot-teams/dist/server.js"
+
+if [[ ! -f "$SERVER" ]]; then
+  echo "copilot-teams: build artifact missing at $SERVER" >&2
+  echo "  cd $HERE/../copilot-teams && npm ci && npm run build" >&2
+  exit 1
+fi
+
+exec node "$SERVER" "$@"

@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# copilot-teams-debug — same as copilot-teams but with --inspect on for
+# attaching Chrome DevTools / VS Code to a misbehaving live session.
+# Swap this in via `copilot mcp add agent-teams .../bin/copilot-teams-debug`,
+# then visit chrome://inspect (or use the VS Code Node Attach launch config).
+
+set -euo pipefail
+
+HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SERVER="$HERE/../copilot-teams/dist/server.js"
+PORT="${COPILOT_TEAMS_INSPECT_PORT:-9229}"
+
+if [[ ! -f "$SERVER" ]]; then
+  echo "copilot-teams: build artifact missing at $SERVER" >&2
+  exit 1
+fi
+
+exec node "--inspect=127.0.0.1:${PORT}" "$SERVER" "$@"
