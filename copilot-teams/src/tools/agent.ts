@@ -331,12 +331,24 @@ export const handleAgent = async (
         paneTitle: windowName,
       });
 
-      // Cosmetic — pane title visible per-window only.
+      // Make the agent's identity visible above its pane.
+      //
+      // tmux's pane_title is unreliable here because copilot CLI emits an OSC
+      // title-set escape on startup ("GitHub Copilot") that overwrites
+      // whatever we put there. We instead set a tmux *user option* on the
+      // pane (`@cop_name`) which copilot can't touch, and reference it in
+      // pane-border-format. Falls back to pane_title if @cop_name isn't set
+      // (so the parent's pane keeps its normal title).
       try {
         const { execa } = await import("execa");
         const win = sp.windowId;
+        await execa("tmux", ["set-option", "-p", "-t", sp.target, "@cop_name", windowName], { reject: false });
         await execa("tmux", ["set-window-option", "-t", win, "pane-border-status", "top"], { reject: false });
-        await execa("tmux", ["set-window-option", "-t", win, "pane-border-format", " #{pane_title} "], { reject: false });
+        await execa("tmux", [
+          "set-window-option", "-t", win, "pane-border-format",
+          // If @cop_name is set, show ` cop:<name> `. Otherwise default to title.
+          " #{?@cop_name,#{@cop_name},#{pane_title}} ",
+        ], { reject: false });
       } catch { /* cosmetic only */ }
 
       // Persist anchor (the originating left-column pane) on first spawn so
