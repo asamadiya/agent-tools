@@ -17,13 +17,11 @@ import {
 } from "./agent.js";
 import { handleTaskStop } from "./tasks.js";
 import { listAllSessionUuids, removeSession } from "../session-state.js";
-import { loadState, withState, nowIso, type State, type Task } from "../state.js";
+import { loadState, resolveTask, withState, nowIso, type State, type Task } from "../state.js";
 import { logger } from "../logger.js";
 
-const findTask = (s: State, id: string): Task | null => {
-  if (s.tasks[id]) return s.tasks[id]!;
-  for (const t of Object.values(s.tasks)) if (t.name === id) return t;
-  return null;
+const findTask = async (s: State, id: string): Promise<Task | null> => {
+  return resolveTask(s, id, paneExists);
 };
 
 // SendToTeam --------------------------------------------------------------
@@ -116,7 +114,7 @@ export const handleRestart = async (
 ): Promise<AgentOutput> => {
   const input = RestartInputSchema.parse(raw);
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
-  const t = findTask(s, input.id);
+  const t = await findTask(s, input.id);
   if (!t) throw new Error(`Restart: no task addressable as ${JSON.stringify(input.id)}`);
 
   // In-place restart: when the task has a live tmux pane id, recycle it via
@@ -222,7 +220,7 @@ export const handlePause = async (
 ): Promise<{ id: string; signaled: boolean }> => {
   const input = PauseInputSchema.parse(raw);
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
-  const t = findTask(s, input.id);
+  const t = await findTask(s, input.id);
   if (!t) throw new Error(`Pause: no task ${input.id}`);
   if (typeof t.pid !== "number" || t.pid <= 0) {
     throw new Error(`Pause: task ${t.id} has no pid (foreground task?)`);
@@ -243,7 +241,7 @@ export const handleResume = async (
 ): Promise<{ id: string; signaled: boolean }> => {
   const input = ResumeInputSchema.parse(raw);
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
-  const t = findTask(s, input.id);
+  const t = await findTask(s, input.id);
   if (!t) throw new Error(`Resume: no task ${input.id}`);
   if (typeof t.pid !== "number" || t.pid <= 0) {
     throw new Error(`Resume: task ${t.id} has no pid`);

@@ -1,13 +1,11 @@
 import { execa } from "execa";
 import { z } from "zod";
-import { loadState, type State, type Task } from "../state.js";
+import { loadState, resolveTask, type State, type Task } from "../state.js";
+import { paneExists } from "../tmux.js";
 import { logger } from "../logger.js";
 
-const findTask = (s: State, id: string): Task | null => {
-  if (s.tasks[id]) return s.tasks[id]!;
-  for (const t of Object.values(s.tasks)) if (t.name === id) return t;
-  return null;
-};
+const findTask = async (s: State, id: string): Promise<Task | null> =>
+  resolveTask(s, id, paneExists);
 
 const tmux = async (args: string[]): Promise<{ exit: number; stdout: string; stderr: string }> => {
   const r = await execa("tmux", args, { reject: false });
@@ -44,7 +42,7 @@ export const handlePaneJoin = async (
 ): Promise<{ id: string; result: string }> => {
   const input = PaneJoinInputSchema.parse(raw);
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
-  const t = findTask(s, input.id);
+  const t = await findTask(s, input.id);
   if (!t) throw new Error(`PaneJoin: no task addressable as ${JSON.stringify(input.id)}`);
   const src = requireTarget(t);
   const args = ["join-pane", "-s", src];
@@ -79,7 +77,7 @@ export const handlePaneBreak = async (
 ): Promise<{ id: string; result: string }> => {
   const input = PaneBreakInputSchema.parse(raw);
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
-  const t = findTask(s, input.id);
+  const t = await findTask(s, input.id);
   if (!t) throw new Error(`PaneBreak: no task ${input.id}`);
   const src = requireTarget(t);
   const args = ["break-pane", "-s", src];
@@ -98,7 +96,7 @@ export const handlePaneFocus = async (
 ): Promise<{ id: string }> => {
   const input = PaneFocusInputSchema.parse(raw);
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
-  const t = findTask(s, input.id);
+  const t = await findTask(s, input.id);
   if (!t) throw new Error(`PaneFocus: no task ${input.id}`);
   const target = requireTarget(t);
   // Try select-window first (window target); if it's a pane in a current
@@ -129,7 +127,7 @@ export const handlePaneResize = async (
 ): Promise<{ id: string }> => {
   const input = PaneResizeInputSchema.parse(raw);
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
-  const t = findTask(s, input.id);
+  const t = await findTask(s, input.id);
   if (!t) throw new Error(`PaneResize: no task ${input.id}`);
   const target = requireTarget(t);
   const args = ["resize-pane", "-t", target];
@@ -157,8 +155,8 @@ export const handlePaneSwap = async (
 ): Promise<{ a: string; b: string }> => {
   const input = PaneSwapInputSchema.parse(raw);
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
-  const a = findTask(s, input.id);
-  const b = findTask(s, input.with_id);
+  const a = await findTask(s, input.id);
+  const b = await findTask(s, input.with_id);
   if (!a || !b) throw new Error("PaneSwap: one or both tasks not found");
   const aTarget = requireTarget(a);
   const bTarget = requireTarget(b);

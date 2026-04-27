@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { isUuid, runForeground } from "../copilot.js";
 import { loadState, nowIso, withState, type State } from "../state.js";
-import { sendLine } from "../tmux.js";
+import { paneExists, sendLine } from "../tmux.js";
 import { awaitTurnEnd, sessionLiveness } from "../session-state.js";
 import { withUuidLock } from "../uuid-lock.js";
 import { logger } from "../logger.js";
@@ -43,12 +43,43 @@ export interface SendMessageDeps {
   sessionRoot?: string;
 }
 
-const findTaskId = (s: State, to: string): string | null => {
+/** Resolve an addressable name (or uuid) to a task id, preferring tasks
+ *  whose pane is actually alive in tmux right now and whose state field
+ *  says running. State entries accumulate over time (stopped/exited tasks
+ *  with the same name pile up), so iterating Object.entries in insertion
+ *  order would consistently return the OLDEST entry first — typically a
+ *  long-dead pane belonging to a previous session — and SendMessage would
+ *  type into a ghost. We score candidates and pick the freshest live one. */
+const findTaskId = async (s: State, to: string): Promise<string | null> => {
   if (s.tasks[to]) return to;
-  for (const [id, t] of Object.entries(s.tasks)) {
-    if (t.name === to) return id;
-  }
-  return null;
+  // Collect every task with the matching name.
+  const candidates = Object.entries(s.tasks)
+    .filter(([, t]) => t.name === to)
+    .map(([id, t]) => ({ id, t }));
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0]!.id;
+
+  // Score each: prefer running + live pane, then running, then most recent.
+  const scored = await Promise.all(
+    candidates.map(async ({ id, t }) => {
+      let alive = false;
+      if (t.tmuxTarget && t.tmuxTarget.startsWith("%")) {
+        try { alive = await paneExists(t.tmuxTarget); } catch { /* ignore */ }
+      }
+      const running = t.status === "running";
+      const updated = Date.parse(t.updatedAt) || 0;
+      return { id, alive, running, updated };
+    }),
+  );
+  scored.sort((a, b) => {
+    // Live pane wins outright.
+    if (a.alive !== b.alive) return a.alive ? -1 : 1;
+    // Among same-aliveness, running wins.
+    if (a.running !== b.running) return a.running ? -1 : 1;
+    // Tiebreak on freshness.
+    return b.updated - a.updated;
+  });
+  return scored[0]!.id;
 };
 
 export const handleSendMessage = async (
@@ -59,7 +90,7 @@ export const handleSendMessage = async (
   const input = SendMessageInputSchema.parse(raw);
   const stateOpts = deps.statePath ? { path: deps.statePath } : {};
   const s = loadState(stateOpts);
-  const id = findTaskId(s, input.to);
+  const id = await findTaskId(s, input.to);
   if (!id) {
     throw new Error(`SendMessage: no task addressable as ${JSON.stringify(input.to)}`);
   }

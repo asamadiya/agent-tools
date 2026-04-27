@@ -161,3 +161,38 @@ export const withState = async <T>(
 };
 
 export const nowIso = (): string => new Date().toISOString();
+
+/** Resolve `id` (uuid or human name) to a task, preferring live > running >
+ *  most recent so accumulated stale entries don't shadow the actual current
+ *  agent. `isAlive(target)` is injected so the caller chooses the liveness
+ *  test (typically tmux paneExists). */
+export const resolveTask = async (
+  s: State,
+  id: string,
+  isAlive: (tmuxTarget: string) => Promise<boolean>,
+): Promise<Task | null> => {
+  if (s.tasks[id]) return s.tasks[id]!;
+  const candidates = Object.values(s.tasks).filter((t) => t.name === id);
+  if (candidates.length === 0) return null;
+  if (candidates.length === 1) return candidates[0]!;
+  const scored = await Promise.all(
+    candidates.map(async (t) => {
+      let alive = false;
+      if (t.tmuxTarget && t.tmuxTarget.startsWith("%")) {
+        try { alive = await isAlive(t.tmuxTarget); } catch { /* ignore */ }
+      }
+      return {
+        t,
+        alive,
+        running: t.status === "running",
+        updated: Date.parse(t.updatedAt) || 0,
+      };
+    }),
+  );
+  scored.sort((a, b) => {
+    if (a.alive !== b.alive) return a.alive ? -1 : 1;
+    if (a.running !== b.running) return a.running ? -1 : 1;
+    return b.updated - a.updated;
+  });
+  return scored[0]!.t;
+};

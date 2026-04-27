@@ -1,7 +1,7 @@
 import { execa } from "execa";
 import { z } from "zod";
-import { loadState, type State, type Task } from "../state.js";
-import { isPaneId } from "../tmux.js";
+import { loadState, resolveTask, type Task } from "../state.js";
+import { isPaneId, paneExists } from "../tmux.js";
 import { logger } from "../logger.js";
 
 export const AttachInputSchema = z.object({
@@ -29,12 +29,6 @@ export interface AttachOutput {
   executed: boolean;
 }
 
-const findTaskById = (s: State, id: string): Task | null => {
-  if (s.tasks[id]) return s.tasks[id]!;
-  for (const t of Object.values(s.tasks)) if (t.name === id) return t;
-  return null;
-};
-
 const tmux = async (args: string[]): Promise<{ exit: number; stdout: string; stderr: string }> => {
   const r = await execa("tmux", args, { reject: false });
   return { exit: r.exitCode ?? 1, stdout: r.stdout?.toString() ?? "", stderr: r.stderr?.toString() ?? "" };
@@ -46,7 +40,7 @@ export const handleAttach = async (
 ): Promise<AttachOutput> => {
   const input = AttachInputSchema.parse(raw);
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
-  const t = findTaskById(s, input.id);
+  const t = await resolveTask(s, input.id, paneExists);
   if (!t) throw new Error(`Attach: no task addressable as ${JSON.stringify(input.id)}`);
   if (!t.tmuxTarget) {
     throw new Error(`Attach: task ${t.id} has no tmuxTarget (not a background agent)`);

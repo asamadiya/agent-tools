@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { loadState, type State, type Task } from "../state.js";
+import { loadState, resolveTask, type Task } from "../state.js";
 import {
   isPaneId,
   listWindows,
@@ -39,19 +39,13 @@ export interface StatusOutput {
   ready: boolean;
 }
 
-const findTask = (s: State, id: string): Task | null => {
-  if (s.tasks[id]) return s.tasks[id]!;
-  for (const t of Object.values(s.tasks)) if (t.name === id) return t;
-  return null;
-};
-
 export const handleStatus = async (
   raw: unknown,
   deps: { statePath?: string; sessionRoot?: string },
 ): Promise<StatusOutput> => {
   const input = StatusInputSchema.parse(raw);
   const s = loadState(deps.statePath ? { path: deps.statePath } : {});
-  const t = findTask(s, input.id);
+  const t = await resolveTask(s, input.id, paneExists);
   if (!t) throw new Error(`Status: no task addressable as ${JSON.stringify(input.id)}`);
 
   const live = sessionLiveness(t.id, deps.sessionRoot);
