@@ -169,17 +169,31 @@ The fix uses the V8 inspector protocol (Chrome DevTools Protocol) to patch the r
 | `Debugger.pause` | ❌ | Triggers copilot's cancel detection → stuck "Cancelling" state |
 | `Debugger.pause` + socket destroy | ❌ | Kills background agent API streams, agents die |
 | `SIGSTOP`/`SIGCONT` throttle | ❌ | Triggers cancel detection when process resumes |
+| `SIGINT` to resolve "Cancelling" | ❌ | Kills the entire process including all background agents |
 | Conditional breakpoint + `Runtime.terminateExecution` | ✅ | No pause, no signal, no socket interference |
 
 ### Usage
 
 ```bash
-copilot-doctor diagnose 5              # detailed health check of pane 5
-copilot-doctor fix-freeze 5            # fix frozen pane 5
-copilot-doctor status 3                # quick one-line health status
-copilot-doctor fix-jsonl <session-id>  # repair corrupted events.jsonl
-copilot-doctor -h                      # full help
+copilot-doctor diagnose 5                          # detailed health check of pane 5
+copilot-doctor fix-freeze 5                        # fix frozen pane 5
+copilot-doctor status 3                            # quick one-line health status
+copilot-doctor fix-jsonl <session-id>              # repair stale locks + corrupted events.jsonl
+copilot-doctor fix-jsonl --locks-only <session-id> # only drop stale lock files
+copilot-doctor fix-jsonl --force <session-id>      # repair while owner is live (DANGEROUS)
+copilot-doctor -h                                  # full help
 ```
+
+### When `copilot --resume <id>` returns nothing → `fix-jsonl`
+
+> **Agents:** if the user reports that `copilot --yolo --resume <session-id>` exits silently, hangs, or returns nothing, **run `copilot-doctor fix-jsonl <session-id>`** before doing anything else. It is idempotent and prints "already clean" when there's nothing to fix.
+
+This is by far the most common cause of "I can't resume my session" reports. Two failure modes, both fixed automatically:
+
+1. **Stale `inuse.<pid>.lock` files** left after a tmux/pod/host crash. Copilot's "alreadyInUse" check sees these and refuses to attach. `fix-jsonl` removes lock files whose pids are dead, and refuses (without `--force`) when a live copilot still owns the session.
+2. **Torn `events.jsonl` lines** when a write was interrupted mid-flush — typically a partial event followed by a complete event glued onto the same line. `fix-jsonl` first tries a two-way split (keep both halves if both parse), falls back to dropping the truncated prefix and keeping the longest valid suffix. Multi-event concatenations are handled.
+
+Backups are timestamped (`events.jsonl.before-repair.<unix-ts>`) so previous repairs are never overwritten. Original `0600` permissions are preserved.
 
 ### Install
 
@@ -194,11 +208,12 @@ pip3 install websockets    # required for V8 inspector communication
 |---------|-------------|
 | `diagnose [pane]` | Full health check: CPU, memory, events.jsonl size, process state, background agents, network. Suggests fixes. |
 | `fix-freeze [pane]` | Patches the BPE tokenizer via V8 inspector. Safe for background agents. |
-| `fix-jsonl <id>` | Repairs corrupted `events.jsonl` (concatenated lines, truncated JSON). Creates `.bak` backup. |
+| `fix-jsonl <id>` | Repairs stale `inuse.*.lock` files **and** corrupted `events.jsonl` (concatenated lines, torn writes) — the standard fix when `copilot --resume` returns nothing. Refuses if a live copilot owns the session unless `--force`. Idempotent: prints "already clean" when there's nothing to do. Timestamped backups. |
 | `status [pane]` | One-line health indicator (🟢 HEALTHY / 🟡 DEGRADED / 🔴 FROZEN). |
 
 ### Side Effects of fix-freeze
 
+- **"Cancelling" state may appear.** `Runtime.terminateExecution` throws an exception that can trigger copilot's cancel detection. This is cosmetic and temporary — the session remains functional. **DO NOT** attempt to fix it by sending SIGINT or Ctrl+C (this kills the process). Wait for background agents to finish, or resume the session with `--resume`.
 - **Token counting over-estimates.** The patched tokenizer skips BPE merges, so each character is counted as a separate token. The context bar (%) reads higher than reality. This is cosmetic — it does not affect the actual API calls or context window.
 - **"Debugger attached/ending" messages** appear in the pane. These are from the inspector connection and are harmless cosmetic noise.
 - **Inspector port 9229** remains open until the session ends. Not a security risk on localhost but be aware if port-forwarding.

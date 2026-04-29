@@ -1,0 +1,606 @@
+#!/usr/bin/env bash
+# copilot-doctor — diagnose and fix common GitHub Copilot CLI session issues.
+#
+# Usage:
+#   copilot-doctor diagnose [<pane>]                       # diagnose a frozen/slow pane (default: current)
+#   copilot-doctor fix-freeze [<pane>]                     # fix BPE tokenizer freeze in a running session
+#   copilot-doctor fix-jsonl [--force] [--locks-only] <session-id>
+#                                                          # repair stale locks + corrupted events.jsonl
+#   copilot-doctor status [<pane>]                         # quick health check on a copilot pane
+#   copilot-doctor -h | --help
+#
+# The fix-freeze subcommand uses the V8 inspector protocol to patch a hot
+# O(n²) BPE tokenizer loop that causes session freezes on large sessions
+# (>100MB events.jsonl / >40k lines). It does NOT pause the process or
+# kill background agents — all patching is done via Runtime.evaluate and
+# Runtime.terminateExecution during the event loop's idle moments.
+#
+# Unofficial: reaches into ~/.copilot private storage and uses the Node.js
+# inspector protocol. A Copilot CLI update can change internals and break this.
+
+set -euo pipefail
+
+VERSION="0.1.0"
+SCRIPT_DIR="$(cd "$(dirname "$(readlink -f "$0")")" && pwd)"
+LIB_DIR="$SCRIPT_DIR/../lib"
+
+# ─── Colors ──────────────────────────────────────────────────────────────────
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[0;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+DIM='\033[2m'
+NC='\033[0m'
+
+info()  { echo -e "${BLUE}ℹ${NC} $*"; }
+ok()    { echo -e "${GREEN}✓${NC} $*"; }
+warn()  { echo -e "${YELLOW}⚠${NC} $*"; }
+err()   { echo -e "${RED}✗${NC} $*"; }
+die()   { err "$*"; exit 1; }
+header(){ echo -e "\n${BOLD}${CYAN}── $* ──${NC}"; }
+
+# ─── Helpers ─────────────────────────────────────────────────────────────────
+
+# Resolve pane argument to a tmux pane target
+resolve_pane() {
+    local pane="${1:-}"
+    if [[ -z "$pane" ]]; then
+        # Auto-detect: try current pane
+        pane="$(tmux display-message -p '#{pane_index}' 2>/dev/null || echo "")"
+        if [[ -z "$pane" ]]; then
+            die "Cannot detect current pane. Specify one: copilot-doctor diagnose <pane>"
+        fi
+    fi
+    echo "$pane"
+}
+
+# Get the copilot Node.js PID from a tmux pane
+get_copilot_pid() {
+    local pane="$1"
+    local shell_pid
+    shell_pid=$(tmux list-panes -t "$pane" -F '#{pane_pid}' 2>/dev/null | head -1)
+    [[ -n "$shell_pid" ]] || die "Cannot find pane $pane"
+
+    # Walk process tree to find the actual Node.js copilot process
+    local node_pid
+    node_pid=$(ps --forest -o pid=,cmd= -g "$(ps -o sid= -p "$shell_pid")" 2>/dev/null \
+        | grep '/copilot ' | grep -v 'extension_bootstrap' | grep -v 'bash' \
+        | tail -1 | awk '{print $1}')
+
+    if [[ -z "$node_pid" ]]; then
+        # Try direct children
+        node_pid=$(ps --ppid "$shell_pid" -o pid=,cmd= 2>/dev/null \
+            | grep 'copilot' | head -1 | awk '{print $1}')
+        if [[ -n "$node_pid" ]]; then
+            # Get the actual node child
+            local child
+            child=$(ps --ppid "$node_pid" -o pid=,cmd= 2>/dev/null \
+                | grep 'copilot' | grep -v 'extension_bootstrap' | head -1 | awk '{print $1}')
+            [[ -n "$child" ]] && node_pid="$child"
+        fi
+    fi
+
+    [[ -n "$node_pid" ]] || die "No copilot process found in pane $pane"
+    echo "$node_pid"
+}
+
+# Get session ID from a copilot PID
+get_session_id() {
+    local pid="$1"
+    local cmdline
+    cmdline=$(cat "/proc/$pid/cmdline" 2>/dev/null | tr '\0' ' ')
+    echo "$cmdline" | grep -oP 'resume=\K[a-f0-9-]+' || echo ""
+}
+
+# ─── diagnose ────────────────────────────────────────────────────────────────
+
+cmd_diagnose() {
+    local pane
+    pane=$(resolve_pane "${1:-}")
+    header "Diagnosing pane $pane"
+
+    # 1. Find copilot process
+    local pid
+    pid=$(get_copilot_pid "$pane") || exit 1
+    ok "Copilot Node.js PID: $pid"
+
+    # 2. CPU and memory
+    local cpu state rss etime
+    read -r cpu state rss etime < <(ps -o %cpu=,stat=,rss=,etime= -p "$pid" --no-headers)
+    local rss_mb=$((rss / 1024))
+    echo -e "   CPU: ${BOLD}${cpu}%${NC}  State: ${BOLD}${state}${NC}  RSS: ${BOLD}${rss_mb} MB${NC}  Uptime: ${DIM}${etime}${NC}"
+
+    if (( $(echo "$cpu > 80" | bc -l 2>/dev/null || echo 0) )); then
+        warn "CPU > 80% — likely stuck in tokenizer spin loop"
+    elif (( $(echo "$cpu > 50" | bc -l 2>/dev/null || echo 0) )); then
+        warn "CPU > 50% — elevated, possibly intermittent freeze"
+    else
+        ok "CPU usage looks healthy"
+    fi
+
+    # 3. Session and events.jsonl
+    local session_id
+    session_id=$(get_session_id "$pid")
+    if [[ -n "$session_id" ]]; then
+        local events="$HOME/.copilot/session-state/$session_id/events.jsonl"
+        if [[ -f "$events" ]]; then
+            local size_mb lines
+            size_mb=$(du -m "$events" | awk '{print $1}')
+            lines=$(wc -l < "$events")
+            echo -e "   Session: ${DIM}${session_id}${NC}"
+            echo -e "   events.jsonl: ${BOLD}${size_mb} MB${NC} / ${BOLD}${lines}${NC} lines"
+            if (( size_mb > 100 )); then
+                warn "events.jsonl > 100 MB — high risk of BPE tokenizer freeze"
+            elif (( size_mb > 50 )); then
+                warn "events.jsonl > 50 MB — moderate freeze risk"
+            else
+                ok "events.jsonl size is reasonable"
+            fi
+        fi
+    else
+        echo -e "   ${DIM}(not a resumed session)${NC}"
+    fi
+
+    # 4. Check process state
+    if [[ "$state" == *"R"* ]]; then
+        local syscall_check
+        syscall_check=$(timeout 2 strace -p "$pid" -c 2>&1 || true)
+        if echo "$syscall_check" | grep -q "getpid"; then
+            warn "Process in getpid spin — classic BPE tokenizer freeze"
+            info "Fix with: ${BOLD}copilot-doctor fix-freeze $pane${NC}"
+        fi
+    fi
+
+    # 5. Background agents
+    header "Child Processes"
+    local children
+    children=$(ps --ppid "$pid" -o pid=,stat=,%cpu=,etime=,cmd= --no-headers 2>/dev/null || true)
+    if [[ -n "$children" ]]; then
+        local ext_count=0 agent_count=0
+        while IFS= read -r line; do
+            if echo "$line" | grep -q "extension_bootstrap"; then
+                ext_count=$((ext_count + 1))
+            elif echo "$line" | grep -q "bash"; then
+                agent_count=$((agent_count + 1))
+                echo -e "   ${GREEN}Agent shell:${NC} $line"
+            fi
+        done <<< "$children"
+        echo -e "   Extensions: ${ext_count}  Agent shells: ${agent_count}"
+    else
+        echo -e "   ${DIM}(no child processes)${NC}"
+    fi
+
+    # 6. Network connections
+    local conns
+    conns=$(ss -tnp 2>/dev/null | grep "pid=$pid" | wc -l)
+    echo -e "   Active TCP connections: ${conns}"
+}
+
+# ─── fix-freeze ──────────────────────────────────────────────────────────────
+
+cmd_fix_freeze() {
+    local pane
+    pane=$(resolve_pane "${1:-}")
+    header "Fixing BPE tokenizer freeze in pane $pane"
+
+    # 1. Find and validate
+    local pid
+    pid=$(get_copilot_pid "$pane") || exit 1
+    ok "Copilot Node.js PID: $pid"
+
+    local cpu
+    cpu=$(ps -o %cpu= -p "$pid" --no-headers | tr -d ' ')
+    info "Current CPU: ${cpu}%"
+
+    # 2. Snapshot background agents BEFORE we do anything
+    header "Pre-flight Safety Check"
+    local agents_before
+    agents_before=$(ps --ppid "$pid" -o pid=,cmd= --no-headers 2>/dev/null | grep "bash" | awk '{print $1}' || true)
+    local agent_count
+    agent_count=$(echo "$agents_before" | grep -c . 2>/dev/null || echo 0)
+    info "Background agent shells: $agent_count"
+    if [[ -n "$agents_before" ]]; then
+        echo -e "   PIDs: ${DIM}${agents_before//$'\n'/, }${NC}"
+    fi
+
+    # 3. Enable Node.js inspector via SIGUSR1 (non-intrusive)
+    header "Enabling V8 Inspector"
+    info "Sending SIGUSR1 to PID $pid (non-intrusive, no pause)..."
+    kill -USR1 "$pid" 2>/dev/null || die "Cannot send SIGUSR1 to $pid"
+    sleep 2
+
+    # Check inspector port
+    local inspector_port
+    inspector_port=$(ss -tlnp 2>/dev/null | grep "pid=$pid" | grep -oP ':\K\d+(?=\s)' | head -1)
+    if [[ -z "$inspector_port" ]]; then
+        die "Inspector did not open. Process may not be a Node.js copilot instance."
+    fi
+    ok "Inspector listening on port $inspector_port"
+
+    # Get websocket URL
+    local ws_url
+    ws_url=$(curl -s "http://127.0.0.1:$inspector_port/json" \
+        | python3 -c "import json,sys; d=json.load(sys.stdin); print(d[0]['webSocketDebuggerUrl'])" 2>/dev/null)
+    [[ -n "$ws_url" ]] || die "Cannot get inspector websocket URL"
+    ok "WebSocket: $ws_url"
+
+    # 4. Apply the fix
+    header "Applying Fix"
+    info "Phase 1: Setting conditional breakpoint in aqi's while-loop..."
+    info "Phase 2: Terminating current stuck aqi call..."
+    info "Phase 3: Applying renice for future protection..."
+
+    python3 "$LIB_DIR/fix_freeze.py" "$ws_url" "$pid"
+    local exit_code=$?
+
+    if [[ $exit_code -ne 0 ]]; then
+        die "Fix script failed with exit code $exit_code"
+    fi
+
+    # 5. Apply OS-level protections
+    renice 19 -p "$pid" >/dev/null 2>&1 && ok "Reniced to 19 (lowest priority)" || warn "Could not renice"
+    ionice -c 3 -p "$pid" 2>/dev/null && ok "I/O priority set to idle" || true
+
+    # 6. Post-flight safety check
+    header "Post-flight Safety Check"
+    sleep 3
+    local cpu_after
+    cpu_after=$(ps -o %cpu= -p "$pid" --no-headers 2>/dev/null | tr -d ' ')
+    local state_after
+    state_after=$(ps -o stat= -p "$pid" --no-headers 2>/dev/null)
+    echo -e "   CPU: ${BOLD}${cpu}% → ${cpu_after}%${NC}  State: ${BOLD}${state_after}${NC}"
+
+    # Verify agents survived
+    local agents_after
+    agents_after=$(ps --ppid "$pid" -o pid=,cmd= --no-headers 2>/dev/null | grep "bash" | awk '{print $1}' || true)
+    local agent_count_after
+    agent_count_after=$(echo "$agents_after" | grep -c . 2>/dev/null || echo 0)
+
+    if [[ -n "$agents_before" ]]; then
+        local survived=0 lost=0
+        for apid in $agents_before; do
+            if kill -0 "$apid" 2>/dev/null; then
+                survived=$((survived + 1))
+            else
+                lost=$((lost + 1))
+            fi
+        done
+        if [[ $lost -eq 0 ]]; then
+            ok "All $survived background agent(s) survived"
+        else
+            warn "$lost of $agent_count agent shell(s) lost (may have finished normally)"
+        fi
+    fi
+
+    # Summary
+    header "Summary"
+    if (( $(echo "$cpu_after < 30" | bc -l 2>/dev/null || echo 0) )); then
+        ok "Fix successful! CPU dropped from ${cpu}% to ${cpu_after}%"
+        info "The conditional breakpoint will prevent future aqi freezes in this session."
+        info "Token counting will over-estimate slightly (harmless — only affects context bar)."
+        echo ""
+        warn "KNOWN SIDE EFFECT: The UI may enter a 'Cancelling' state."
+        info "This is cosmetic and temporary. DO NOT try to fix it by:"
+        info "  • Pressing Ctrl+C or sending SIGINT (kills the process)"
+        info "  • Running fix-freeze again while Cancelling"
+        info "Instead, wait for background agents to finish. The prompt will return."
+        info "If Cancelling persists after agents complete, resume the session:"
+        info "  copilot --resume=<session-id>"
+    else
+        warn "CPU is still ${cpu_after}%. The fix may need a moment to take full effect."
+        info "If the pane is still frozen after 30 seconds, run this command again."
+    fi
+}
+
+# ─── fix-jsonl ───────────────────────────────────────────────────────────────
+
+cmd_fix_jsonl() {
+    local session_id="" force=0 locks_only=0
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --force)       force=1; shift ;;
+            --locks-only)  locks_only=1; shift ;;
+            -h|--help)     echo "Usage: copilot-doctor fix-jsonl [--force] [--locks-only] <session-id>"; return 0 ;;
+            -*)            die "fix-jsonl: unknown flag '$1'" ;;
+            *)             [[ -z "$session_id" ]] || die "fix-jsonl: extra arg '$1'"; session_id="$1"; shift ;;
+        esac
+    done
+    [[ -n "$session_id" ]] || die "Usage: copilot-doctor fix-jsonl [--force] [--locks-only] <session-id>"
+
+    local dir="$HOME/.copilot/session-state/$session_id"
+    local events="$dir/events.jsonl"
+    [[ -d "$dir" ]] || die "No session dir at $dir"
+    [[ -f "$events" ]] || die "No events.jsonl at $events"
+
+    header "Doctoring events.jsonl for $session_id"
+
+    # ─── 1. Stale-lock + live-process check ──────────────────────────────────
+    # Each lock file (inuse.<pid>.lock) names the pid that owns the session.
+    # Live owner → refuse without --force. Dead owner → remove the lock.
+    local locks=()
+    shopt -s nullglob
+    locks=("$dir"/inuse.*.lock)
+    shopt -u nullglob
+
+    local live_owner=""
+    if (( ${#locks[@]} > 0 )); then
+        info "Found ${#locks[@]} lock file(s)"
+        local f pid base
+        for f in "${locks[@]}"; do
+            base="$(basename "$f")"
+            pid="${base#inuse.}"; pid="${pid%.lock}"
+            if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
+                local cmd
+                cmd="$(ps -p "$pid" -o args= 2>/dev/null | head -c 160 || true)"
+                warn "$base → pid $pid is LIVE: $cmd"
+                live_owner="$pid"
+            else
+                if [[ $locks_only -eq 1 || -z "$live_owner" ]]; then
+                    rm -f "$f" && ok "removed stale lock for dead pid $pid"
+                fi
+            fi
+        done
+    else
+        info "No lock files present"
+    fi
+
+    if [[ -n "$live_owner" && $force -eq 0 ]]; then
+        die "Session is in use by live pid $live_owner. Pass --force to override (DANGEROUS — may corrupt the running session)."
+    fi
+
+    if [[ $locks_only -eq 1 ]]; then
+        ok "locks-only: done"
+        return 0
+    fi
+
+    # ─── 2. Validate JSONL (skip rewrite if already clean) ────────────────────
+    local size
+    size=$(du -h "$events" | awk '{print $1}')
+    info "Validating events.jsonl ($size)…"
+
+    local validate_out bad
+    validate_out=$(python3 - "$events" <<'PYEOF'
+import json, sys
+src = sys.argv[1]
+ok = bad = 0
+bads = []
+with open(src, 'rb') as f:
+    for i, l in enumerate(f, 1):
+        try: json.loads(l); ok += 1
+        except Exception: bad += 1; bads.append(i)
+print(f"OK={ok} BAD={bad}")
+for i in bads[:10]: print(f"  bad line {i}")
+if len(bads) > 10: print(f"  …and {len(bads)-10} more")
+PYEOF
+)
+    echo "$validate_out" | sed 's/^/  /'
+    bad=$(echo "$validate_out" | awk -F'[= ]' '/^OK=/{print $4}')
+
+    if [[ "${bad:-0}" -eq 0 ]]; then
+        ok "events.jsonl already clean — no repair needed"
+        info "Resume with: copilot --yolo --resume $session_id"
+        return 0
+    fi
+
+    # ─── 3. Backup + repair (multi-event torn lines supported) ────────────────
+    local ts backup
+    ts="$(date +%s)"
+    backup="$events.before-repair.$ts"
+    cp -p "$events" "$backup"
+    ok "Backup: $backup"
+
+    info "Repairing torn lines…"
+    if ! python3 - "$events" <<'PYEOF'
+import json, os, re, stat, sys
+src = sys.argv[1]
+tmp = src + ".repair.tmp"
+mode = stat.S_IMODE(os.stat(src).st_mode)
+in_n = out_n = repaired = dropped = 0
+TYPE_RE = re.compile(rb'\{"type":')
+
+with open(src, 'rb') as fin, open(tmp, 'wb') as fout:
+    for ln, raw in enumerate(fin, 1):
+        in_n += 1
+        try:
+            json.loads(raw)
+            fout.write(raw); out_n += 1; continue
+        except Exception:
+            pass
+        s = raw.rstrip(b'\n')
+        positions = [m.start() for m in TYPE_RE.finditer(s)]
+        recovered = 0
+
+        # Prefer two-way split: keep both halves if both parse.
+        for p in positions[1:]:
+            head, tail = s[:p], s[p:]
+            try:
+                json.loads(head); json.loads(tail)
+                fout.write(head + b'\n'); fout.write(tail + b'\n')
+                out_n += 2; recovered = 2
+                print(f"  line {ln}: split at {p}, kept BOTH halves")
+                break
+            except Exception:
+                continue
+
+        # Fallback: keep only the longest valid suffix (drop torn prefix).
+        if recovered == 0:
+            for p in positions[1:]:
+                tail = s[p:]
+                try:
+                    json.loads(tail)
+                    fout.write(tail + b'\n'); out_n += 1; recovered = 1
+                    print(f"  line {ln}: dropped {p}-byte truncated prefix, kept tail event ({len(tail)} bytes)")
+                    break
+                except Exception:
+                    continue
+
+        if recovered == 0:
+            dropped += 1
+            print(f"  line {ln}: UNREPAIRABLE, dropping ({len(s)} bytes)")
+        else:
+            repaired += 1
+
+os.chmod(tmp, mode)
+os.replace(tmp, src)
+print(f"\nin_lines={in_n} out_lines={out_n} repaired={repaired} unrepairable={dropped}")
+PYEOF
+    then
+        err "Repair script failed. Backup: $backup"
+        return 1
+    fi
+
+    # ─── 4. Final validation ──────────────────────────────────────────────────
+    if python3 - "$events" <<'PYEOF'
+import json, sys
+src = sys.argv[1]
+ok = bad = 0
+with open(src, 'rb') as f:
+    for i, l in enumerate(f, 1):
+        try: json.loads(l); ok += 1
+        except Exception as e:
+            bad += 1
+            if bad <= 5: print(f"  STILL BAD line {i}: {str(e)[:100]}")
+print(f"final ok={ok} bad={bad}")
+sys.exit(1 if bad else 0)
+PYEOF
+    then
+        ok "Repair complete: $events"
+        info "Resume with: copilot --yolo --resume $session_id"
+    else
+        err "Some lines still invalid. Backup retained at $backup"
+        return 1
+    fi
+}
+
+# ─── status ──────────────────────────────────────────────────────────────────
+
+cmd_status() {
+    local pane
+    pane=$(resolve_pane "${1:-}")
+
+    local shell_pid
+    shell_pid=$(tmux list-panes -t "$pane" -F '#{pane_pid}' 2>/dev/null | head -1)
+    [[ -n "$shell_pid" ]] || die "Cannot find pane $pane"
+
+    local pid
+    pid=$(get_copilot_pid "$pane" 2>/dev/null) || {
+        echo -e "Pane $pane: ${DIM}no copilot process${NC}"
+        return
+    }
+
+    local cpu state rss
+    read -r cpu state rss < <(ps -o %cpu=,stat=,rss= -p "$pid" --no-headers)
+    local rss_mb=$((rss / 1024))
+
+    local icon color status_text
+    if (( $(echo "$cpu > 80" | bc -l 2>/dev/null || echo 0) )); then
+        icon="🔴" color="$RED" status_text="FROZEN (CPU ${cpu}%)"
+    elif (( $(echo "$cpu > 50" | bc -l 2>/dev/null || echo 0) )); then
+        icon="🟡" color="$YELLOW" status_text="DEGRADED (CPU ${cpu}%)"
+    else
+        icon="🟢" color="$GREEN" status_text="HEALTHY (CPU ${cpu}%)"
+    fi
+
+    echo -e "Pane $pane: ${icon} ${color}${status_text}${NC}  RSS=${rss_mb}MB  PID=$pid"
+}
+
+# ─── help ────────────────────────────────────────────────────────────────────
+
+cmd_help() {
+    cat <<'EOF'
+copilot-doctor — diagnose and fix common GitHub Copilot CLI session issues
+
+USAGE
+    copilot-doctor diagnose [<pane>]                       Detailed health check of a copilot pane
+    copilot-doctor fix-freeze [<pane>]                     Fix BPE tokenizer freeze (safe, non-invasive)
+    copilot-doctor fix-jsonl [--force] [--locks-only] <session-id>
+                                                           Repair stale locks + corrupted events.jsonl
+    copilot-doctor status [<pane>]                         Quick one-line health status
+    copilot-doctor -h | --help                             Show this help
+
+SUBCOMMANDS
+    diagnose    Checks CPU, memory, events.jsonl size, process state, background
+                agents, and network connections. Suggests fixes if issues found.
+
+    fix-freeze  The main fix for frozen/unresponsive copilot sessions. Uses the
+                V8 inspector protocol to patch the BPE tokenizer's O(n²) merge
+                loop that causes freezes on large sessions (>100MB events.jsonl).
+
+                SAFETY GUARANTEES:
+                • Does NOT use Debugger.pause (which can trigger cancel state)
+                • Does NOT destroy TLS sockets (which kills background agents)
+                • Does NOT send SIGSTOP/SIGCONT (which causes UI state corruption)
+                • Uses only Runtime.terminateExecution + conditional breakpoints
+                • Background agents, extension workers, and sub-processes are
+                  verified before and after the fix
+
+                WHAT IT DOES:
+                1. Sends SIGUSR1 to open the Node.js inspector (non-intrusive)
+                2. Sets a conditional breakpoint inside aqi's while-loop that
+                   truncates the merge array (condition returns false → no pause)
+                3. Calls Runtime.terminateExecution to abort the current stuck
+                   aqi call (throws a catchable exception copilot handles)
+                4. Applies renice 19 + ionice idle for future protection
+
+                SIDE EFFECTS:
+                • Token counting over-estimates slightly (context bar shows higher %)
+                • "Debugger attached/ending" messages appear in the pane (cosmetic)
+                • Inspector port 9229 remains open until session ends
+
+    fix-jsonl   Repairs the most common reasons `copilot --resume` returns
+                nothing or hangs:
+                  1. Stale `inuse.<pid>.lock` files left by crashed processes
+                     (tmux server killed, pod evicted, OOM, etc.)
+                  2. Torn `events.jsonl` lines from interrupted writes — most
+                     often two events concatenated into one malformed line.
+
+                Refuses to run if a live copilot process owns the session
+                (use --force to override; DANGEROUS while session is open).
+                Skips rewrite if events.jsonl is already valid.
+                Backups: events.jsonl.before-repair.<unix-ts> (timestamped,
+                so previous backups are preserved across runs).
+
+                Flags:
+                  --force        Repair even if a live owner is detected
+                  --locks-only   Only clean up stale lock files, leave JSONL alone
+
+    status      Quick one-line health check showing CPU, memory, and freeze risk.
+                Useful in tmux status line scripts.
+
+EXAMPLES
+    copilot-doctor diagnose 5                          # diagnose pane 5
+    copilot-doctor fix-freeze 5                        # fix frozen pane 5
+    copilot-doctor status 3                            # quick check on pane 3
+    copilot-doctor fix-jsonl a0b7405b-5795-...         # repair a session
+    copilot-doctor fix-jsonl --locks-only <session-id> # only drop stale locks
+    copilot-doctor fix-jsonl --force <session-id>      # repair while owner is alive
+
+REQUIREMENTS
+    • tmux (for pane resolution)
+    • python3 with websockets package (pip3 install websockets)
+    • strace (optional, for diagnose deep-check)
+    • bc (for CPU threshold checks)
+
+CAUTIONS
+    • Unofficial tool — reaches into Copilot CLI internals
+    • The V8 inspector protocol can change between Node.js versions
+    • fix-freeze patches a minified function name (aqi) which may change
+      in future Copilot CLI releases
+    • Always verify background agents survived after fix-freeze
+EOF
+}
+
+# ─── Main ────────────────────────────────────────────────────────────────────
+
+case "${1:-}" in
+    diagnose)    shift; cmd_diagnose "$@" ;;
+    fix-freeze)  shift; cmd_fix_freeze "$@" ;;
+    fix-jsonl)   shift; cmd_fix_jsonl "$@" ;;
+    status)      shift; cmd_status "$@" ;;
+    -h|--help|help|"")  cmd_help ;;
+    -V|--version) echo "copilot-doctor $VERSION" ;;
+    *) die "Unknown command: $1. Run 'copilot-doctor --help' for usage." ;;
+esac
