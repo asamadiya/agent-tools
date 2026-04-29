@@ -487,6 +487,138 @@ serialization.
 
 ---
 
+## S19 — worker → worker SendMessage resolves the live sibling, no respawn ✅ PASS
+
+**Story.** A child copilot session (e.g. `tpm`) uses agent-teams to message
+a sibling (e.g. `ci-chaser`). The user reported that tpm couldn't find
+ci-chaser by name and spawned a new ci-chaser instead. With the
+`resolveTask` fix this should resolve correctly. Both parent-MCP and
+child-MCP load the same shared `state.json` and call `handleSendMessage`
+with the same `statePath`/`sessionRoot`/`binary` deps — that's the contract.
+
+**Setup.** Spawn `tpm` and `ci-chaser` as siblings. Snapshot task count.
+
+**Steps.**
+
+1. Spawn `tpm`, `ci-chaser` (background).
+2. Make a SECOND `handleSendMessage({to: "ci-chaser", ...})` call against
+   the same `statePath`/`sessionRoot` (simulates the child MCP).
+3. Verify resolved `id` is `ci-chaser`'s uuid, not tpm's, not a new spawn.
+
+**Expected.**
+
+- `r.id === ciChaser.id`.
+- `r.via === "send-keys"` (live pane resolved).
+- Task count unchanged (no orphan respawn).
+- tpm's events.jsonl does NOT contain the message; ci-chaser's DOES.
+
+**Why it would regress.** Resolver regressing back to "first match" or to
+"oldest-by-insertion-order" would address tpm (or whichever name comes
+first) instead of the requested `to`. Or, if a fallback path silently
+spawned on miss, task count would grow.
+
+**Lives in:** `tests/integration/cross-agent-reliability.test.ts`.
+
+---
+
+## S20 — find-by-name after extended idle resolves the live pane ✅ PASS
+
+**Story.** The user reported "after some idle time tpm couldn't find
+ci-chaser". Existing tests resolve names within ms of spawn. We need to
+exercise the resolver against tasks whose `updatedAt` is old. Idle age
+must NOT disqualify a live, running entry.
+
+**Setup.** Spawn `tpm` and `ci-chaser`. Rewrite `state.json` to push every
+task's `updatedAt` 60s into the past — simulating idle without sleeping.
+
+**Steps.**
+
+1. Spawn `tpm`, `ci-chaser` (foreground enough to have first turn).
+2. Backdate every task's `updatedAt` to 60s ago.
+3. `SendMessage({to: "ci-chaser", message: "say AFTER_IDLE"})`.
+
+**Expected.**
+
+- `r.id === ciChaser.id`.
+- `r.output === "AFTER_IDLE"`.
+- `r.via === "send-keys"`.
+
+**Why it would regress.** If a freshness window were ever added to the
+resolver (e.g. "ignore tasks idle >30s"), this would silently fail
+addressing real long-running agents. Pins the contract that `resolveTask`
+ranks by liveness + running status, not by recency-as-disqualifier.
+
+**Lives in:** `tests/integration/cross-agent-reliability.test.ts`.
+
+---
+
+## S21 — Stress: reliable one-shot delivery (sequential + parallel) ✅ PASS
+
+**Story.** The user reported that "messages sometimes just sit there on
+the prompt, not sent to the agent". Send 20 sequential SendMessages with
+distinct payloads; verify all 20 turn_ends land in events.jsonl with the
+right content. Then 20 in parallel against a different agent — verify all
+20 land via uuid-lock serialization. Zero drops.
+
+**Setup.** Two background agents (`stress` for sequential, `para` for
+parallel), each with `wait_first_turn_ms` so the boot turn completes first.
+
+**Steps.**
+
+1. Spawn `stress`. Loop: 20× `SendMessage({to: "stress", message: "say
+   SEQ_NN"})`. Each call awaited.
+2. Spawn `para`. `Promise.all([20 × SendMessage({to: "para", message:
+   "say PAR_NN"})])`.
+
+**Expected.**
+
+- Sequential: every reply matches its payload; events.jsonl contains
+  every payload exactly once, in order (after dropping the boot reply).
+- Parallel: all 20 results unique (a permutation of the 20 payloads);
+  turnIds are a permutation of `[1..20]` (uuid-lock proof); events.jsonl
+  contains every payload exactly once.
+
+**Why it would regress.** This is the canonical "lost keystrokes" test.
+If `withUuidLock` is replaced with a no-op, parallel send-keys collide
+and the REPL drops keystrokes — duplicates or drops in events.jsonl. If
+the idle-wait gate (`sessionLiveness` poll before `sendLine`) is
+removed, sequential sends collide with mid-flight turns and stack up.
+
+**Lives in:** `tests/integration/cross-agent-reliability.test.ts` as two
+sub-tests: S21a (sequential), S21b (parallel).
+
+---
+
+## S22 — Pane buffer audit: literal sent message is not stuck at the prompt ✅ PASS
+
+**Story.** The user reported messages "sit on the prompt, not sent". This
+is the symptom of `tmux send-keys -l <text>` succeeding but the trailing
+`Enter` somehow being lost. After each SendMessage, capture the pane and
+assert the literal `say <PAYLOAD>` text is NOT the last visible line of
+the buffer (which would mean the input was typed but never submitted).
+
+**Setup.** One background agent.
+
+**Steps.**
+
+1. Spawn `audit`.
+2. Loop 5×: `SendMessage({to: "audit", message: "say HELLO_<i>"})`.
+3. After each call, `capturePane(target)` and inspect the trailing line.
+
+**Expected.**
+
+- For each iteration, the last non-empty pane line is NOT exactly
+  `say HELLO_<i>` (would indicate un-submitted input).
+
+**Why it would regress.** Pure defense — the stub always submits, so
+this is a contract test on `sendLine`. If a future refactor drops the
+trailing Enter, S22 would catch it. The stress test (S21) catches the
+"keystrokes dropped" mode; S22 catches the "Enter dropped" mode.
+
+**Lives in:** `tests/integration/cross-agent-reliability.test.ts`.
+
+---
+
 ## Coverage matrix
 
 | #   | Bug pinned                                    | Source area                  |
@@ -509,3 +641,7 @@ serialization.
 | S16 | non-blocking spawn (9)                        | agent.ts (no awaitReady)     |
 | S17 | concurrent Agent + team_name idempotent       | agent.ts spawn lock          |
 | S18 | name resolver picks live entry                | status.ts findTask           |
+| S19 | worker→worker resolves sibling, no respawn    | send-message.ts findTaskId   |
+| S20 | name resolver after extended idle             | state.ts resolveTask         |
+| S21 | reliable delivery (20 seq + 20 parallel)      | uuid-lock + send-message.ts  |
+| S22 | pane buffer audit: Enter actually fired       | tmux.ts sendLine             |
