@@ -40,18 +40,24 @@ if command -v copilot >/dev/null 2>&1; then
 fi
 
 # Candidate locations for the unpacked bundle, most likely first.
+# Two layouts in the wild:
+#   - new (XDG):   ~/.cache/copilot/pkg/universal/<ver>/app.js  (newer hosts)
+#   - legacy:      ~/.copilot/pkg/universal/<ver>/app.js        (pre-XDG hosts)
+# `copilot` itself probes both, so we need to as well — strace confirms.
 CANDIDATES=()
 [[ -n "$VER" ]] && CANDIDATES+=(
   "${XDG_CACHE_HOME:-$HOME/.cache}/copilot/pkg/universal/$VER/app.js"
   "$HOME/.cache/copilot/pkg/universal/$VER/app.js"
+  "$HOME/.copilot/pkg/universal/$VER/app.js"
 )
-# Glob-fallback: pick the newest app.js anywhere under the copilot pkg root,
+# Glob-fallback: pick any app.js anywhere under any known copilot pkg root,
 # regardless of detected version (handles a box where `copilot --version`
 # is shaped weirdly or cached version dirs from prior installs co-exist).
 shopt -s nullglob
 for d in \
   "${XDG_CACHE_HOME:-$HOME/.cache}/copilot/pkg/universal"/*/app.js \
   "$HOME/.cache/copilot/pkg/universal"/*/app.js \
+  "$HOME/.copilot/pkg/universal"/*/app.js \
   "$HOME/.local/share/copilot/pkg/universal"/*/app.js
 do
   CANDIDATES+=("$d")
