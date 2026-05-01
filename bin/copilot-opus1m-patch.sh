@@ -78,7 +78,7 @@ if [[ -z "$APP" ]]; then
 fi
 
 python3 - "$APP" "$VERBOSE" <<'PY'
-import re, sys, pathlib
+import json, os, pathlib, re, sys
 p = pathlib.Path(sys.argv[1])
 verbose = sys.argv[2] == "1"
 src = p.read_text()
@@ -99,8 +99,38 @@ new = re.sub(r'new Set\(\[([^\]]*)\]\)', fix, src)
 if new != src:
     p.write_text(new)
     if verbose:
-        print(f"[opus1m-patch] patched: {stripped} entries removed from {p}", file=sys.stderr)
-else:
-    if verbose:
-        print(f"[opus1m-patch] no-op: nothing to strip in {p}", file=sys.stderr)
+        print(f"[opus1m-patch] picker: stripped {stripped} entries from {p}", file=sys.stderr)
+elif verbose:
+    print(f"[opus1m-patch] picker: no-op on {p}", file=sys.stderr)
+
+# --- Default model + reasoning effort ---------------------------------------
+# Make `claude-opus-4.7-1m-internal` + effortLevel `xhigh` the default in
+# ~/.copilot/settings.json. This is the "1m context, extra-high reasoning"
+# combo: there's no single model id that bundles both, but Copilot CLI lets
+# you pick the 1m model and set the reasoning effort independently. Override
+# with COPILOT_DEFAULT_MODEL / COPILOT_DEFAULT_EFFORT env vars if needed.
+desired_model = os.environ.get("COPILOT_DEFAULT_MODEL", "claude-opus-4.7-1m-internal")
+desired_effort = os.environ.get("COPILOT_DEFAULT_EFFORT", "xhigh")
+settings_path = pathlib.Path.home() / ".copilot" / "settings.json"
+if settings_path.exists():
+    try:
+        s = json.loads(settings_path.read_text())
+        changes = []
+        if s.get("model") != desired_model:
+            s["model"] = desired_model
+            changes.append(f"model -> {desired_model}")
+        if s.get("effortLevel") != desired_effort:
+            s["effortLevel"] = desired_effort
+            changes.append(f"effortLevel -> {desired_effort}")
+        if changes:
+            settings_path.write_text(json.dumps(s, indent=2) + "\n")
+            if verbose:
+                print(f"[opus1m-patch] settings: {', '.join(changes)}", file=sys.stderr)
+        elif verbose:
+            print(f"[opus1m-patch] settings: already {desired_model} / {desired_effort}", file=sys.stderr)
+    except json.JSONDecodeError as e:
+        if verbose:
+            print(f"[opus1m-patch] settings: skipped (invalid JSON in {settings_path}: {e})", file=sys.stderr)
+elif verbose:
+    print(f"[opus1m-patch] settings: skipped (no {settings_path})", file=sys.stderr)
 PY
