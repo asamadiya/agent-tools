@@ -9,8 +9,6 @@ export interface WorkflowInspection {
 }
 
 const META_START_RE = /export\s+const\s+meta\s*=\s*({)/m;
-// Strips the entire `export const meta = { ... }` declaration (including trailing semicolon)
-const META_FULL_RE = /export\s+const\s+meta\s*=\s*{[\s\S]*?}\s*;?\s*/m;
 
 const findMetaLiteral = (script: string): string | null => {
   const match = META_START_RE.exec(script);
@@ -22,6 +20,26 @@ const findMetaLiteral = (script: string): string | null => {
     else if (script[i] === "}") {
       depth--;
       if (depth === 0) return script.slice(start, i + 1);
+    }
+  }
+  return null;
+};
+
+const findMetaSpan = (script: string): [number, number] | null => {
+  const match = META_START_RE.exec(script);
+  if (!match) return null;
+  const literalStart = match.index + match[0].length - 1; // index of opening {
+  let depth = 0;
+  for (let i = literalStart; i < script.length; i++) {
+    if (script[i] === "{") depth++;
+    else if (script[i] === "}") {
+      depth--;
+      if (depth === 0) {
+        let end = i + 1;
+        if (script.charAt(end) === ";") end++;
+        while (end < script.length && /\s/.test(script.charAt(end))) end++;
+        return [match.index, end];
+      }
     }
   }
   return null;
@@ -55,7 +73,12 @@ export const extractWorkflowMeta = (script: string): WorkflowMeta => {
   return WorkflowMetaSchema.parse(parsed);
 };
 
-export const stripMetaExport = (script: string): string => script.replace(META_FULL_RE, "").trim();
+export const stripMetaExport = (script: string): string => {
+  const span = findMetaSpan(script);
+  if (!span) return script.trim();
+  const [start, end] = span;
+  return `${script.slice(0, start)}${script.slice(end)}`.trim();
+};
 
 export const validateDeterministicScript = (script: string): void => {
   const checks = [

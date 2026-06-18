@@ -24,7 +24,8 @@ describe("workflow script parser", () => {
       description: "Read README and summarize",
       phases: [{ title: "Read", detail: "read files" }],
     });
-    expect(stripMetaExport(VALID)).not.toContain("export const meta");
+    expect(stripMetaExport(VALID).startsWith("phase('Read')")).toBe(true);
+    expect(stripMetaExport(VALID)).not.toContain("],\n}");
   });
 
   it("rejects non-literal meta before runtime", () => {
