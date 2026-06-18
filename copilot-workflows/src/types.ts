@@ -30,7 +30,9 @@ export const WorkflowMetaSchema = z.object({
 });
 export type WorkflowMeta = z.infer<typeof WorkflowMetaSchema>;
 
-export const JsonSchemaSchema: z.ZodType<Record<string, unknown>> = z.record(
+export type JsonSchema = Record<string, unknown>;
+
+export const JsonSchemaSchema: z.ZodType<JsonSchema> = z.record(
   z.string(),
   z.unknown(),
 );
