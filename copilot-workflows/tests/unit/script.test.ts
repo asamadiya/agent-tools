@@ -230,6 +230,54 @@ return null
     expect(agentEntry.contextWindow).toBe(200_000);
   });
 
+  it("parallel re-throws WorkflowExecutionError on budget overflow instead of returning null", async () => {
+    const script = `
+export const meta = { name: 'parallel-budget', description: 'Parallel budget overflow test' }
+return await parallel([
+  () => agent('a', { label: 'a' }),
+  () => agent('b', { label: 'b' }),
+])
+`;
+    await expect(
+      executeWorkflowScript(script, {
+        // First agent costs 3, second costs 5; total 8 > budget 5
+        backend: new StubAgentBackend([
+          { text: "A", tokens: 3, toolCalls: 1 },
+          { text: "B", tokens: 5, toolCalls: 1 },
+        ]),
+        defaultModel: "gpt-5.5",
+        defaultEffort: "xhigh",
+        defaultContextWindow: 1_100_000,
+        maxRetries: 0,
+        budgetTokens: 5,
+      }),
+    ).rejects.toThrow(WorkflowExecutionError);
+  });
+
+  it("pipeline re-throws WorkflowExecutionError on budget overflow instead of returning null", async () => {
+    const script = `
+export const meta = { name: 'pipeline-budget', description: 'Pipeline budget overflow test' }
+return await pipeline(
+  ['x', 'y'],
+  async (item) => agent('stage ' + item, { label: 's:' + item }),
+)
+`;
+    await expect(
+      executeWorkflowScript(script, {
+        // Item 'x' costs 3, item 'y' costs 5; total 8 > budget 5
+        backend: new StubAgentBackend([
+          { text: "X", tokens: 3, toolCalls: 1 },
+          { text: "Y", tokens: 5, toolCalls: 1 },
+        ]),
+        defaultModel: "gpt-5.5",
+        defaultEffort: "xhigh",
+        defaultContextWindow: 1_100_000,
+        maxRetries: 0,
+        budgetTokens: 5,
+      }),
+    ).rejects.toThrow(WorkflowExecutionError);
+  });
+
   it("agent opts override phase model/effort/contextWindow", async () => {
     const script = `
 export const meta = {

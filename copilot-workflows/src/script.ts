@@ -294,7 +294,8 @@ export const executeWorkflowScript = async (
       thunks.map(async (thunk) => {
         try {
           return await thunk();
-        } catch {
+        } catch (err) {
+          if (err instanceof WorkflowExecutionError) throw err;
           return null;
         }
       }),
@@ -315,7 +316,8 @@ export const executeWorkflowScript = async (
           current = await stage(current, item, i);
         }
         results.push(current);
-      } catch {
+      } catch (err) {
+        if (err instanceof WorkflowExecutionError) throw err;
         results.push(null);
       }
     }
