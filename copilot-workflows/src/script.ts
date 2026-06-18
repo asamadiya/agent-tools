@@ -1,5 +1,9 @@
 import vm from "node:vm";
-import { WorkflowMetaSchema, type WorkflowMeta } from "./types.js";
+import type { AgentBackend } from "./agent-runtime.js";
+import { runAgentWithSchemaRetry } from "./agent-runtime.js";
+import { agentCacheKey } from "./cache.js";
+import { newAgentId } from "./ids.js";
+import { WorkflowMetaSchema, type WorkflowMeta, AgentStepOptionsSchema, type WorkflowProgressEntry } from "./types.js";
 
 export interface WorkflowInspection {
   valid: boolean;
@@ -103,4 +107,203 @@ export const inspectWorkflowScript = (script: string): WorkflowInspection => {
     errors.push(err instanceof Error ? err.message : String(err));
   }
   return { valid: errors.length === 0, meta, errors, warnings: [] };
+};
+
+export interface ExecuteWorkflowInput {
+  args?: unknown;
+  backend: AgentBackend;
+  defaultModel: string;
+  defaultEffort: string;
+  defaultContextWindow: number;
+  maxRetries: number;
+  budgetTokens?: number;
+}
+
+export interface ExecuteWorkflowOutput {
+  result: unknown;
+  progress: WorkflowProgressEntry[];
+  totalTokens: number;
+  totalToolCalls: number;
+  agentCount: number;
+}
+
+type PhaseEntry = Extract<WorkflowProgressEntry, { type: "workflow_phase" }>;
+
+export const executeWorkflowScript = async (
+  script: string,
+  input: ExecuteWorkflowInput,
+): Promise<ExecuteWorkflowOutput> => {
+  const meta = extractWorkflowMeta(script);
+  validateDeterministicScript(script);
+  const body = stripMetaExport(script);
+
+  const progress: WorkflowProgressEntry[] = meta.phases.map(
+    (p, i): WorkflowProgressEntry => ({
+      type: "workflow_phase",
+      index: i + 1,
+      title: p.title,
+      ...(p.detail !== undefined ? { detail: p.detail } : {}),
+    }),
+  );
+
+  let currentPhase: string | null = null;
+  let logIndex = 0;
+  let agentIndex = 0;
+  let totalTokens = 0;
+  let totalToolCalls = 0;
+
+  const budgetTotal = input.budgetTokens ?? Number.POSITIVE_INFINITY;
+  const budget = {
+    total: budgetTotal,
+    spent: () => totalTokens,
+    remaining: () => Math.max(0, budgetTotal - totalTokens),
+  };
+
+  const getPhases = (): PhaseEntry[] =>
+    progress.filter((p): p is PhaseEntry => p.type === "workflow_phase");
+
+  const phase = (title: string): void => {
+    currentPhase = title;
+    const phases = getPhases();
+    if (!phases.some((p) => p.title === title)) {
+      progress.push({ type: "workflow_phase", index: phases.length + 1, title });
+    }
+  };
+
+  const log = (message: string): void => {
+    progress.push({
+      type: "workflow_log",
+      index: logIndex++,
+      message,
+      timestamp: new Date().toISOString(),
+    });
+  };
+
+  const agent = async (prompt: string, rawOpts: unknown = {}): Promise<unknown> => {
+    const opts = AgentStepOptionsSchema.parse(rawOpts);
+    const index = ++agentIndex;
+    const agentId = newAgentId();
+    const label = opts.label ?? `agent:${index}`;
+    const phaseTitle = opts.phase ?? currentPhase ?? undefined;
+    const phases = getPhases();
+    const rawPhaseIndex = phaseTitle
+      ? phases.findIndex((p) => p.title === phaseTitle) + 1
+      : 0;
+    const phaseIndex = rawPhaseIndex > 0 ? rawPhaseIndex : undefined;
+    const model = opts.model ?? input.defaultModel;
+    const effort = opts.effort ?? input.defaultEffort;
+    const contextWindow = opts.contextWindow ?? input.defaultContextWindow;
+    const stepId = `step_${index}`;
+    const cacheKey = agentCacheKey(prompt, opts, input.args);
+    const startedAt = Date.now();
+    const entry: WorkflowProgressEntry = {
+      type: "workflow_agent",
+      index,
+      stepId,
+      label,
+      ...(phaseIndex !== undefined ? { phaseIndex } : {}),
+      ...(phaseTitle !== undefined ? { phaseTitle } : {}),
+      agentId,
+      model,
+      effort,
+      contextWindow,
+      state: "running",
+      queuedAt: startedAt,
+      startedAt,
+      updatedAt: startedAt,
+      attempt: 1,
+      tokens: 0,
+      toolCalls: 0,
+      retries: 0,
+      cacheKey,
+    };
+    progress.push(entry);
+    const out = await runAgentWithSchemaRetry(
+      {
+        prompt,
+        stepId,
+        agentId,
+        model,
+        effort,
+        contextWindow,
+        ...(opts.schema ? { schema: opts.schema } : {}),
+        ...(opts.cwd ? { cwd: opts.cwd } : {}),
+        ...(opts.env ? { env: opts.env } : {}),
+      },
+      input.backend,
+      { maxRetries: input.maxRetries },
+    );
+    totalTokens += out.tokens;
+    totalToolCalls += out.toolCalls;
+    if (totalTokens > budgetTotal) {
+      throw new Error(
+        `workflow budget exceeded: spent ${totalTokens}, budget ${budgetTotal}`,
+      );
+    }
+    Object.assign(entry, {
+      state: "done",
+      updatedAt: Date.now(),
+      completedAt: Date.now(),
+      durationMs: Date.now() - startedAt,
+      tokens: out.tokens,
+      toolCalls: out.toolCalls,
+      retries: out.retries,
+      ...(out.lastToolName ? { lastToolName: out.lastToolName } : {}),
+      ...(out.lastToolSummary ? { lastToolSummary: out.lastToolSummary } : {}),
+      resultPreview:
+        typeof out.result === "string"
+          ? out.result.slice(0, 200)
+          : JSON.stringify(out.result).slice(0, 200),
+    });
+    return out.result;
+  };
+
+  const parallel = async (
+    thunks: Array<() => unknown | Promise<unknown>>,
+  ): Promise<unknown[]> =>
+    Promise.all(
+      thunks.map(async (thunk) => {
+        try {
+          return await thunk();
+        } catch {
+          return null;
+        }
+      }),
+    );
+
+  // Sequential: each item runs all stages before the next item starts,
+  // ensuring backend stub calls follow a predictable item-by-item order.
+  const pipeline = async (
+    items: unknown[],
+    ...stages: Array<(prev: unknown, original: unknown, index: number) => unknown | Promise<unknown>>
+  ): Promise<unknown[]> => {
+    const results: unknown[] = [];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      let current: unknown = item;
+      try {
+        for (const stage of stages) {
+          current = await stage(current, item, i);
+        }
+        results.push(current);
+      } catch {
+        results.push(null);
+      }
+    }
+    return results;
+  };
+
+  const runner = new Function(
+    "agent",
+    "parallel",
+    "pipeline",
+    "phase",
+    "log",
+    "args",
+    "budget",
+    `"use strict"; return (async () => {\n${body}\n})()`,
+  );
+
+  const result = await (runner(agent, parallel, pipeline, phase, log, input.args, budget) as Promise<unknown>);
+  return { result, progress, totalTokens, totalToolCalls, agentCount: agentIndex };
 };
