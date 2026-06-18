@@ -2,7 +2,7 @@ import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import type { AgentBackend } from "./agent-runtime.js";
 import { CopilotPrintBackend } from "./agent-runtime.js";
-import { extractWorkflowMeta, executeWorkflowScript } from "./script.js";
+import { extractWorkflowMeta, executeWorkflowScript, WorkflowExecutionError } from "./script.js";
 import {
   appendJournal,
   createInitialRun,
@@ -127,6 +127,12 @@ export class WorkflowRunner {
       run.error = err instanceof Error ? err.message : String(err);
       run.durationMs = Date.now() - start;
       run.completedAt = new Date().toISOString();
+      if (err instanceof WorkflowExecutionError) {
+        run.workflowProgress = err.progress;
+        run.totalTokens = err.totalTokens;
+        run.totalToolCalls = err.totalToolCalls;
+        run.agentCount = err.agentCount;
+      }
       appendJournal(runId, { type: "run_failed", error: run.error }, this.opts);
       saveRun(run, this.opts);
       throw err;

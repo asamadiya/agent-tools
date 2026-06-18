@@ -60,4 +60,33 @@ describe("WorkflowRunner", () => {
     expect(stopped.status).toBe("stopped");
     await expect(runner.runToCompletion(launch.runId)).rejects.toThrow(/stopped/);
   });
+
+  it("failed run with budget overflow preserves partial workflowProgress, tokens, and agentCount", async () => {
+    const runner = new WorkflowRunner({
+      root,
+      backend: new StubAgentBackend([{ text: "README summary", tokens: 7, toolCalls: 1 }]),
+    });
+    const launch = await runner.launch({
+      script,
+      args: { topic: "readme" },
+      confirm: false,
+      budgetTokens: 3,
+    });
+    await expect(runner.runToCompletion(launch.runId)).rejects.toThrow(/budget exceeded/);
+
+    const status = runner.status(launch.runId);
+    expect(status.status).toBe("failed");
+    expect(status.totalTokens).toBe(7);
+    expect(status.agentCount).toBe(1);
+    const failedStep = status.workflowProgress.find(
+      (p) => p.type === "workflow_agent" && p.label === "read:README",
+    );
+    expect(failedStep).toBeDefined();
+    expect((failedStep as Extract<typeof failedStep, { type: "workflow_agent" }>)?.state).toBe("failed");
+
+    const out = runner.output(launch.runId);
+    expect(out.run.status).toBe("failed");
+    expect(out.run.error).toContain("budget exceeded");
+    expect(out.run.totalTokens).toBe(7);
+  });
 });
