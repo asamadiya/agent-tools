@@ -109,6 +109,30 @@ export const inspectWorkflowScript = (script: string): WorkflowInspection => {
   return { valid: errors.length === 0, meta, errors, warnings: [] };
 };
 
+export class WorkflowExecutionError extends Error {
+  readonly progress: WorkflowProgressEntry[];
+  readonly totalTokens: number;
+  readonly totalToolCalls: number;
+  readonly agentCount: number;
+
+  constructor(
+    message: string,
+    state: {
+      progress: WorkflowProgressEntry[];
+      totalTokens: number;
+      totalToolCalls: number;
+      agentCount: number;
+    },
+  ) {
+    super(message);
+    this.name = "WorkflowExecutionError";
+    this.progress = state.progress;
+    this.totalTokens = state.totalTokens;
+    this.totalToolCalls = state.totalToolCalls;
+    this.agentCount = state.agentCount;
+  }
+}
+
 export interface ExecuteWorkflowInput {
   args?: unknown;
   backend: AgentBackend;
@@ -190,11 +214,14 @@ export const executeWorkflowScript = async (
       ? phases.findIndex((p) => p.title === phaseTitle) + 1
       : 0;
     const phaseIndex = rawPhaseIndex > 0 ? rawPhaseIndex : undefined;
-    const model = opts.model ?? input.defaultModel;
-    const effort = opts.effort ?? input.defaultEffort;
-    const contextWindow = opts.contextWindow ?? input.defaultContextWindow;
+    // Fix 3: resolve model/effort/contextWindow via opts → phase defaults → global defaults
+    const phaseConfig = phaseTitle ? meta.phases.find((p) => p.title === phaseTitle) : undefined;
+    const model = opts.model ?? phaseConfig?.model ?? input.defaultModel;
+    const effort = opts.effort ?? phaseConfig?.effort ?? input.defaultEffort;
+    const contextWindow = opts.contextWindow ?? phaseConfig?.contextWindow ?? input.defaultContextWindow;
     const stepId = `step_${index}`;
-    const cacheKey = agentCacheKey(prompt, opts, input.args);
+    // Fix 2: include effective model/effort/contextWindow in cache key
+    const cacheKey = agentCacheKey(prompt, opts, input.args, { model, effort, contextWindow });
     const startedAt = Date.now();
     const entry: WorkflowProgressEntry = {
       type: "workflow_agent",
@@ -235,16 +262,11 @@ export const executeWorkflowScript = async (
     );
     totalTokens += out.tokens;
     totalToolCalls += out.toolCalls;
-    if (totalTokens > budgetTotal) {
-      throw new Error(
-        `workflow budget exceeded: spent ${totalTokens}, budget ${budgetTotal}`,
-      );
-    }
-    Object.assign(entry, {
-      state: "done",
-      updatedAt: Date.now(),
-      completedAt: Date.now(),
-      durationMs: Date.now() - startedAt,
+    const now = Date.now();
+    const completedFields = {
+      updatedAt: now,
+      completedAt: now,
+      durationMs: now - startedAt,
       tokens: out.tokens,
       toolCalls: out.toolCalls,
       retries: out.retries,
@@ -254,7 +276,14 @@ export const executeWorkflowScript = async (
         typeof out.result === "string"
           ? out.result.slice(0, 200)
           : JSON.stringify(out.result).slice(0, 200),
-    });
+    };
+    // Fix 1: update entry to failed state with actual metrics before throwing on budget exceeded
+    if (totalTokens > budgetTotal) {
+      const msg = `workflow budget exceeded: spent ${totalTokens}, budget ${budgetTotal}`;
+      Object.assign(entry, { ...completedFields, state: "failed", error: msg });
+      throw new WorkflowExecutionError(msg, { progress, totalTokens, totalToolCalls, agentCount: agentIndex });
+    }
+    Object.assign(entry, { ...completedFields, state: "done" });
     return out.result;
   };
 

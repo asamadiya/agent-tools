@@ -4,6 +4,7 @@ import {
   inspectWorkflowScript,
   stripMetaExport,
   validateDeterministicScript,
+  WorkflowExecutionError,
 } from "../../src/script.js";
 import { StubAgentBackend } from "../../src/agent-runtime.js";
 import { executeWorkflowScript } from "../../src/script.js";
@@ -145,5 +146,112 @@ return true
         budgetTokens: 100,
       }),
     ).rejects.toThrow(/budget exceeded/i);
+  });
+
+  it("marks agent entry as failed with actual tokens and error when budget is exceeded", async () => {
+    const script = `
+export const meta = { name: 'budget-entry', description: 'Budget entry state test' }
+await agent('too much', { label: 'over' })
+return true
+`;
+    const err = await executeWorkflowScript(script, {
+      backend: new StubAgentBackend([{ text: "big result", tokens: 101, toolCalls: 2 }]),
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+      budgetTokens: 100,
+    }).catch((e: unknown) => e);
+
+    expect(err).toBeInstanceOf(WorkflowExecutionError);
+    const workflowErr = err as WorkflowExecutionError;
+    const agentEntry = workflowErr.progress.find((p) => p.type === "workflow_agent");
+    expect(agentEntry).toBeDefined();
+    if (agentEntry?.type !== "workflow_agent") throw new Error("not an agent entry");
+    expect(agentEntry.state).toBe("failed");
+    expect(agentEntry.error).toMatch(/budget exceeded/i);
+    expect(agentEntry.tokens).toBe(101);
+    expect(agentEntry.toolCalls).toBe(2);
+    expect(agentEntry.retries).toBe(0);
+    expect(agentEntry.resultPreview).toBeDefined();
+  });
+
+  it("cache key changes when workflow defaults change even if agent opts omit model/effort/context", async () => {
+    const script = `
+export const meta = { name: 'cachedefaults', description: 'Cache defaults test' }
+await agent('hello', { label: 'a' })
+return null
+`;
+    const base = {
+      maxRetries: 0,
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+    };
+    const out1 = await executeWorkflowScript(script, {
+      ...base,
+      backend: new StubAgentBackend([{ text: "ok", tokens: 1, toolCalls: 1 }]),
+      defaultModel: "gpt-5.5",
+    });
+    const out2 = await executeWorkflowScript(script, {
+      ...base,
+      backend: new StubAgentBackend([{ text: "ok", tokens: 1, toolCalls: 1 }]),
+      defaultModel: "claude-opus-4.8",
+    });
+    const key1 = out1.progress.find((p) => p.type === "workflow_agent");
+    const key2 = out2.progress.find((p) => p.type === "workflow_agent");
+    if (key1?.type !== "workflow_agent" || key2?.type !== "workflow_agent") throw new Error("not agent entries");
+    expect(key1.cacheKey).toBeDefined();
+    expect(key2.cacheKey).toBeDefined();
+    expect(key1.cacheKey).not.toBe(key2.cacheKey);
+  });
+
+  it("uses phase model/effort/contextWindow when agent opts omit them", async () => {
+    const script = `
+export const meta = {
+  name: 'phasemodel',
+  description: 'Phase model test',
+  phases: [{ title: 'Read', model: 'claude-opus-4.8', effort: 'high', contextWindow: 200000 }]
+}
+phase('Read')
+await agent('hello', { label: 'a' })
+return null
+`;
+    const out = await executeWorkflowScript(script, {
+      backend: new StubAgentBackend([{ text: "ok", tokens: 1, toolCalls: 1 }]),
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    });
+    const agentEntry = out.progress.find((p) => p.type === "workflow_agent");
+    if (agentEntry?.type !== "workflow_agent") throw new Error("not an agent entry");
+    expect(agentEntry.model).toBe("claude-opus-4.8");
+    expect(agentEntry.effort).toBe("high");
+    expect(agentEntry.contextWindow).toBe(200_000);
+  });
+
+  it("agent opts override phase model/effort/contextWindow", async () => {
+    const script = `
+export const meta = {
+  name: 'phaseoverride',
+  description: 'Phase override test',
+  phases: [{ title: 'Read', model: 'claude-opus-4.8', effort: 'high', contextWindow: 200000 }]
+}
+phase('Read')
+await agent('hello', { label: 'a', model: 'gpt-5.5', effort: 'xhigh', contextWindow: 1100000 })
+return null
+`;
+    const out = await executeWorkflowScript(script, {
+      backend: new StubAgentBackend([{ text: "ok", tokens: 1, toolCalls: 1 }]),
+      defaultModel: "claude-opus-4.8",
+      defaultEffort: "high",
+      defaultContextWindow: 200_000,
+      maxRetries: 0,
+    });
+    const agentEntry = out.progress.find((p) => p.type === "workflow_agent");
+    if (agentEntry?.type !== "workflow_agent") throw new Error("not an agent entry");
+    expect(agentEntry.model).toBe("gpt-5.5");
+    expect(agentEntry.effort).toBe("xhigh");
+    expect(agentEntry.contextWindow).toBe(1_100_000);
   });
 });

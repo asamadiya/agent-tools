@@ -17,4 +17,13 @@ describe("workflow cache keys", () => {
     expect(agentCacheKey("p", { label: "l", phase: "A", model: "gpt-5.5", effort: "high" }, { a: 1 })).not.toBe(base);
     expect(agentCacheKey("p", { label: "l", phase: "A", model: "gpt-5.5", effort: "xhigh" }, { a: 2 })).not.toBe(base);
   });
+
+  it("changes when effective model, effort, or contextWindow differs", () => {
+    const base = agentCacheKey("p", { label: "l" }, {}, { model: "gpt-5.5", effort: "xhigh", contextWindow: 1_100_000 });
+    expect(agentCacheKey("p", { label: "l" }, {}, { model: "claude-opus-4.8", effort: "xhigh", contextWindow: 1_100_000 })).not.toBe(base);
+    expect(agentCacheKey("p", { label: "l" }, {}, { model: "gpt-5.5", effort: "high", contextWindow: 1_100_000 })).not.toBe(base);
+    expect(agentCacheKey("p", { label: "l" }, {}, { model: "gpt-5.5", effort: "xhigh", contextWindow: 200_000 })).not.toBe(base);
+    // Same effective values → same key
+    expect(agentCacheKey("p", { label: "l" }, {}, { model: "gpt-5.5", effort: "xhigh", contextWindow: 1_100_000 })).toBe(base);
+  });
 });

@@ -17,7 +17,8 @@ export const agentCacheKey = (
   prompt: string,
   opts: Partial<AgentStepOptions>,
   args: unknown,
+  effective?: { model: string; effort: string; contextWindow: number },
 ): string => {
-  const payload = JSON.stringify(stable({ prompt, opts, args }));
+  const payload = JSON.stringify(stable({ prompt, opts, args, effective }));
   return `v1:${createHash("sha256").update(payload).digest("hex")}`;
 };
