@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import type { AgentBackend, BackendRawOutput } from "../../src/agent-runtime.js";
 import { StubAgentBackend } from "../../src/agent-runtime.js";
 import { WorkflowRunner } from "../../src/runner.js";
+import type { WorkflowProgressEntry } from "../../src/types.js";
 
 let root: string;
 
@@ -157,5 +158,87 @@ return await agent('produce a long answer', { label: 'long' })
     expect(out.run.status).toBe("failed");
     expect(out.run.error).toContain("budget exceeded");
     expect(out.run.totalTokens).toBe(7);
+  });
+
+  it("persists progress, transcripts, and cacheResults when a later agent fails (non-budget)", async () => {
+    const twoStep = `
+export const meta = { name: 'fail-after-success', description: 'second agent fails' }
+const a = await agent('first prompt', { label: 'first' })
+const b = await agent('second prompt', { label: 'second' })
+return { a, b }
+`;
+    const runner = new WorkflowRunner({
+      root,
+      // Only one queued output: the second agent's backend call throws.
+      backend: new StubAgentBackend([{ text: "FIRST OUTPUT", tokens: 4, toolCalls: 2 }]),
+    });
+    const launch = await runner.launch({ script: twoStep, confirm: false });
+    await expect(runner.runToCompletion(launch.runId)).rejects.toThrow();
+
+    const status = runner.status(launch.runId);
+    expect(status.status).toBe("failed");
+    expect(status.agentCount).toBe(2);
+    expect(status.totalTokens).toBe(4);
+    expect(status.totalToolCalls).toBe(2);
+
+    const first = status.workflowProgress.find(
+      (p) => p.type === "workflow_agent" && p.label === "first",
+    ) as Extract<WorkflowProgressEntry, { type: "workflow_agent" }> | undefined;
+    const second = status.workflowProgress.find(
+      (p) => p.type === "workflow_agent" && p.label === "second",
+    ) as Extract<WorkflowProgressEntry, { type: "workflow_agent" }> | undefined;
+    expect(first?.state).toBe("done");
+    expect(second?.state).toBe("failed");
+
+    // The first (completed) agent's cache result persists for resume.
+    expect(status.cacheResults.length).toBe(1);
+
+    const out = runner.output(launch.runId);
+    const firstTranscript = out.transcripts.find((t) => t.content.includes("FIRST OUTPUT"));
+    expect(firstTranscript).toBeDefined();
+  });
+
+  it("preserves stopped status but persists cacheResults from a completed execution race", async () => {
+    let releaseBackend!: (out: BackendRawOutput) => void;
+    let signalCalled!: () => void;
+    const calledPromise = new Promise<void>((resolve) => {
+      signalCalled = resolve;
+    });
+    const deferred = new Promise<BackendRawOutput>((resolve) => {
+      releaseBackend = resolve;
+    });
+    const backend: AgentBackend = {
+      run() {
+        signalCalled();
+        return deferred;
+      },
+    };
+    const runner = new WorkflowRunner({ root, backend });
+    const launch = await runner.launch({ script, confirm: false });
+
+    const running = runner.runToCompletion(launch.runId);
+    await calledPromise;
+    const stopped = await runner.stop(launch.runId);
+    expect(stopped.status).toBe("stopped");
+
+    releaseBackend({ text: "late result", tokens: 3, toolCalls: 1 });
+    const final = await running;
+    expect(final.status).toBe("stopped");
+
+    const persisted = runner.status(launch.runId);
+    expect(persisted.status).toBe("stopped");
+    expect(persisted.cacheResults.length).toBe(1);
+
+    // Resume from the stopped run should fully reuse the cached agent.
+    const resume = new WorkflowRunner({ root, backend: new StubAgentBackend([]) });
+    const resumeLaunch = await resume.launch({
+      script,
+      confirm: false,
+      resumeFromRunId: launch.runId,
+    });
+    const completed = await resume.runToCompletion(resumeLaunch.runId);
+    expect(completed.status).toBe("completed");
+    expect(completed.result).toEqual({ summary: "late result" });
+    expect(completed.totalTokens).toBe(0);
   });
 });

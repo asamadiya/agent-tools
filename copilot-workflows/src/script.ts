@@ -1,6 +1,6 @@
 import vm from "node:vm";
 import type { AgentBackend } from "./agent-runtime.js";
-import { runAgentWithSchemaRetry } from "./agent-runtime.js";
+import { runAgentWithSchemaRetry, SchemaRetryError } from "./agent-runtime.js";
 import { agentCacheKey } from "./cache.js";
 import { newAgentId } from "./ids.js";
 import { WorkflowMetaSchema, type WorkflowMeta, AgentStepOptionsSchema, type WorkflowProgressEntry } from "./types.js";
@@ -147,6 +147,7 @@ export class WorkflowExecutionError extends Error {
   readonly totalToolCalls: number;
   readonly agentCount: number;
   readonly transcripts: Array<{ agentId: string; transcript: unknown[] }>;
+  readonly cacheResults: Array<{ cacheKey: string; result: unknown; progress: WorkflowProgressEntry }>;
 
   constructor(
     message: string,
@@ -156,6 +157,7 @@ export class WorkflowExecutionError extends Error {
       totalToolCalls: number;
       agentCount: number;
       transcripts: Array<{ agentId: string; transcript: unknown[] }>;
+      cacheResults: Array<{ cacheKey: string; result: unknown; progress: WorkflowProgressEntry }>;
     },
   ) {
     super(message);
@@ -165,6 +167,7 @@ export class WorkflowExecutionError extends Error {
     this.totalToolCalls = state.totalToolCalls;
     this.agentCount = state.agentCount;
     this.transcripts = state.transcripts;
+    this.cacheResults = state.cacheResults;
   }
 }
 
@@ -345,6 +348,11 @@ export const executeWorkflowScript = async (
         state: "failed",
         error: backendErr instanceof Error ? backendErr.message : String(backendErr),
       });
+      // Capture the failed agent's attempted transcript (schema failures carry the
+      // malformed attempts) so it persists alongside prior completed agents.
+      if (backendErr instanceof SchemaRetryError && backendErr.transcript.length > 0) {
+        transcripts.push({ agentId, transcript: backendErr.transcript });
+      }
       throw backendErr;
     }
     totalTokens += out.tokens;
@@ -371,7 +379,14 @@ export const executeWorkflowScript = async (
     if (totalTokens > budgetTotal) {
       const msg = `workflow budget exceeded: spent ${totalTokens}, budget ${budgetTotal}`;
       Object.assign(entry, { ...completedFields, state: "failed", error: msg });
-      throw new WorkflowExecutionError(msg, { progress, totalTokens, totalToolCalls, agentCount: agentIndex, transcripts });
+      throw new WorkflowExecutionError(msg, {
+        progress,
+        totalTokens,
+        totalToolCalls,
+        agentCount: agentIndex,
+        transcripts,
+        cacheResults,
+      });
     }
     Object.assign(entry, { ...completedFields, state: "done" });
     cacheResults.push({ cacheKey, result: out.result, progress: entry });
@@ -425,8 +440,25 @@ export const executeWorkflowScript = async (
     budget,
   });
   const wrapped = `"use strict";\n(async () => {\n${body}\n})()`;
-  const result = await (vm.runInContext(wrapped, runnerContext, {
-    filename: "workflow-body.js",
-  }) as Promise<unknown>);
+  let result: unknown;
+  try {
+    result = await (vm.runInContext(wrapped, runnerContext, {
+      filename: "workflow-body.js",
+    }) as Promise<unknown>);
+  } catch (err) {
+    // Wrap any agent() failure (backend error, schema-retry exhaustion, etc.) that
+    // propagates out of the workflow body into a workflow-level error carrying the
+    // current progress, totals, agent count, transcripts, and cache results so the
+    // runner can persist them and resume can reuse prior completed agents.
+    if (err instanceof WorkflowExecutionError) throw err;
+    throw new WorkflowExecutionError(err instanceof Error ? err.message : String(err), {
+      progress,
+      totalTokens,
+      totalToolCalls,
+      agentCount: agentIndex,
+      transcripts,
+      cacheResults,
+    });
+  }
   return { result, progress, totalTokens, totalToolCalls, agentCount: agentIndex, cacheResults, transcripts };
 };

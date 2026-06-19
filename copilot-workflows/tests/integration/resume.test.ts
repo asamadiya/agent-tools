@@ -105,6 +105,7 @@ return { a, b }
   });
 
   it("reruns from the first edited step onward", async () => {
+
     const first = new WorkflowRunner({
       root,
       backend: new StubAgentBackend([
@@ -124,5 +125,39 @@ return { a, b }
     expect(completed.result).toEqual({ a: "A", b: "B2" });
     const agents = completed.workflowProgress.filter((p) => p.type === "workflow_agent");
     expect(agents.map((p) => p.state)).toEqual(["cached", "done"]);
+  });
+
+  it("resume after a failed run reuses cached completed agents", async () => {
+    const twoStep = `
+export const meta = { name: 'resume-after-fail', description: 'resume after failure' }
+const a = await agent('first prompt', { label: 'first', model: 'gpt-5.5', effort: 'xhigh' })
+const b = await agent('second prompt', { label: 'second', model: 'gpt-5.5', effort: 'xhigh' })
+return { a, b }
+`;
+    const first = new WorkflowRunner({
+      root,
+      // Only one queued output: the second agent's backend call throws and fails the run.
+      backend: new StubAgentBackend([{ text: "A", tokens: 10, toolCalls: 1 }]),
+    });
+    const launch = await first.launch({ script: twoStep, confirm: false });
+    await expect(first.runToCompletion(launch.runId)).rejects.toThrow();
+    expect(first.status(launch.runId).status).toBe("failed");
+
+    const resume = new WorkflowRunner({
+      root,
+      // Only the second agent should run on resume; the first is cached.
+      backend: new StubAgentBackend([{ text: "B", tokens: 5, toolCalls: 1 }]),
+    });
+    const resumeLaunch = await resume.launch({
+      script: twoStep,
+      confirm: false,
+      resumeFromRunId: launch.runId,
+    });
+    const completed = await resume.runToCompletion(resumeLaunch.runId);
+    expect(completed.status).toBe("completed");
+    expect(completed.result).toEqual({ a: "A", b: "B" });
+    const agents = completed.workflowProgress.filter((p) => p.type === "workflow_agent");
+    expect(agents.map((p) => p.state)).toEqual(["cached", "done"]);
+    expect(completed.totalTokens).toBe(5);
   });
 });

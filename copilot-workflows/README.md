@@ -16,6 +16,15 @@ Use this when a prompt says `workflow: <goal>` or when a task benefits from mult
 
 Default agent config is GPT-5.5, xhigh effort, 1.1M context. Override globally, per workflow, per phase, or per agent.
 
+### Agent `permissions`
+
+An `agent()` step's `permissions` option maps to the copilot CLI `--mode` flag, which only supports `interactive|plan|autopilot`:
+
+- `default` → omits `--mode` (copilot's interactive default)
+- `auto` → `autopilot`
+- `plan` → `plan`
+- `dontAsk` / `bypassPermissions` → unsupported; the run fails fast instead of forwarding an invalid flag.
+
 ## Test
 
 ```sh

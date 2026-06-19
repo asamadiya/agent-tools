@@ -134,7 +134,18 @@ export class WorkflowRunner {
           for (const { agentId, transcript } of out.transcripts) {
             writeAgentTranscript(runId, agentId, transcript, this.opts);
           }
-          if (run.status === "stopped") return run;
+          if (run.status === "stopped") {
+            // Stop won the race, but execution finished and produced output. Keep the
+            // stopped status while persisting progress/cacheResults/totals so a resume
+            // can reuse the agents that completed before the stop took effect.
+            run.workflowProgress = out.progress;
+            run.cacheResults = out.cacheResults;
+            run.agentCount = out.agentCount;
+            run.totalTokens = out.totalTokens;
+            run.totalToolCalls = out.totalToolCalls;
+            saveRun(run, this.opts);
+            return run;
+          }
           run.status = "completed";
           run.result = out.result;
           run.workflowProgress = out.progress;
@@ -165,6 +176,7 @@ export class WorkflowRunner {
             run.totalTokens = err.totalTokens;
             run.totalToolCalls = err.totalToolCalls;
             run.agentCount = err.agentCount;
+            run.cacheResults = err.cacheResults;
           }
           // A concurrent stop() takes precedence over a late failure write.
           if (run.status !== "stopped") {

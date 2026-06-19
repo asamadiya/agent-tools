@@ -125,4 +125,30 @@ describe("CopilotPrintBackend option handling", () => {
     expect(args).toContain("-p");
     expect(args[args.indexOf("-p") + 1]).toBe("do it");
   });
+
+  it("maps permissions to copilot-supported --mode values", () => {
+    const backend = new CopilotPrintBackend();
+    const autoArgs = backend.buildArgs({ ...baseInput, permissions: "auto" });
+    expect(autoArgs).toContain("--mode");
+    expect(autoArgs[autoArgs.indexOf("--mode") + 1]).toBe("autopilot");
+
+    const planArgs = backend.buildArgs({ ...baseInput, permissions: "plan" });
+    expect(planArgs[planArgs.indexOf("--mode") + 1]).toBe("plan");
+  });
+
+  it("omits --mode for 'default' permissions and when unset", () => {
+    const backend = new CopilotPrintBackend();
+    expect(backend.buildArgs({ ...baseInput, permissions: "default" })).not.toContain("--mode");
+    expect(backend.buildArgs(baseInput)).not.toContain("--mode");
+  });
+
+  it("hard-fails unsupported permission modes instead of forwarding invalid --mode", () => {
+    const backend = new CopilotPrintBackend();
+    expect(() => backend.buildArgs({ ...baseInput, permissions: "dontAsk" })).toThrow(
+      /dontAsk/,
+    );
+    expect(() => backend.buildArgs({ ...baseInput, permissions: "bypassPermissions" })).toThrow(
+      /bypassPermissions/,
+    );
+  });
 });

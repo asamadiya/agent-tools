@@ -41,6 +41,18 @@ export interface AgentBackend {
   run(input: AgentRunInput): Promise<BackendRawOutput>;
 }
 
+// Thrown when structured-output schema validation fails after all retries.
+// Carries the malformed attempts so the failed agent's transcript can persist.
+export class SchemaRetryError extends Error {
+  readonly transcript: unknown[];
+
+  constructor(message: string, transcript: unknown[]) {
+    super(message);
+    this.name = "SchemaRetryError";
+    this.transcript = transcript;
+  }
+}
+
 export class StubAgentBackend implements AgentBackend {
   private index = 0;
 
@@ -95,6 +107,7 @@ export const runAgentWithSchemaRetry = async (
   opts: { maxRetries: number },
 ): Promise<AgentRunOutput> => {
   let lastError: Error | null = null;
+  const attempts: unknown[] = [];
   for (let attempt = 0; attempt <= opts.maxRetries; attempt++) {
     const raw = await backend.run(input);
     if (!input.schema) {
@@ -109,6 +122,7 @@ export const runAgentWithSchemaRetry = async (
         transcript: [{ role: "assistant", content: raw.text }],
       };
     }
+    attempts.push({ role: "assistant", content: raw.text, attempt: attempt + 1 });
     try {
       const parsed = JSON.parse(raw.text) as unknown;
       const result = validateJsonSchemaResult(parsed, input.schema);
@@ -126,9 +140,33 @@ export const runAgentWithSchemaRetry = async (
       lastError = err instanceof Error ? err : new Error(String(err));
     }
   }
-  throw new Error(
+  throw new SchemaRetryError(
     `schema validation failed after ${opts.maxRetries + 1} attempt(s): ${lastError?.message ?? "unknown error"}`,
+    attempts,
   );
+};
+
+// Maps the workflow `permissions` option to a copilot CLI `--mode` value.
+// The copilot CLI only supports interactive|plan|autopilot, so values that have
+// no safe equivalent hard-fail instead of forwarding an invalid flag. Returns
+// undefined to mean "omit --mode" (copilot defaults to interactive).
+export const mapPermissionsToMode = (
+  permissions: AgentStepOptions["permissions"] | undefined,
+): string | undefined => {
+  switch (permissions) {
+    case undefined:
+    case "default":
+      return undefined;
+    case "auto":
+      return "autopilot";
+    case "plan":
+      return "plan";
+    default:
+      throw new Error(
+        `CopilotPrintBackend does not support permissions:'${permissions}'; ` +
+          `copilot --mode only supports interactive|plan|autopilot (use default, auto, or plan)`,
+      );
+  }
 };
 
 export class CopilotPrintBackend implements AgentBackend {
@@ -142,7 +180,8 @@ export class CopilotPrintBackend implements AgentBackend {
       throw new Error("CopilotPrintBackend does not support isolation:'worktree' yet");
     }
     const args = ["--model", input.model, "--effort", input.effort];
-    if (input.permissions) args.push("--mode", input.permissions);
+    const mode = mapPermissionsToMode(input.permissions);
+    if (mode) args.push("--mode", mode);
     for (const tool of input.allowedTools ?? []) args.push(`--allow-tool=${tool}`);
     for (const tool of input.deniedTools ?? []) args.push(`--deny-tool=${tool}`);
     args.push("-p", input.prompt, "-s");
