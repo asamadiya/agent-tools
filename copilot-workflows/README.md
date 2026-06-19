@@ -30,6 +30,8 @@ copilot-workflow ui
 
 Use ↑/↓ to select a workflow, Enter to open the detail table, Esc to return to the list, `r` to refresh, and `q` to quit. Use `copilot-workflow ui --once` for a non-interactive snapshot.
 
+Inside Copilot CLI, the project extension registers `/workflows`. When the host supports canvases it opens a native canvas; in tmux-based CLI sessions it falls back to a tmux popup over the current Copilot pane.
+
 Default agent config is GPT-5.5, xhigh effort, 1.1M context. Override globally, per workflow, per phase, or per agent.
 
 ### Agent `permissions`
