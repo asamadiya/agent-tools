@@ -14,39 +14,62 @@ export interface WorkflowInspection {
 
 const META_START_RE = /export\s+const\s+meta\s*=\s*({)/m;
 
+// Advance past a quoted string (single or double quote), returning the index after the closing quote.
+const skipQuotedString = (script: string, i: number): number => {
+  const q = script[i];
+  i++;
+  while (i < script.length) {
+    if (script[i] === "\\") { i += 2; continue; }
+    if (script[i] === q) return i + 1;
+    i++;
+  }
+  return i;
+};
+
+// Walk a brace-delimited object literal starting at `start` (the opening `{`),
+// correctly skipping over string literals so inner braces inside strings don't
+// confuse the depth counter.
+const walkBracedLiteral = (
+  script: string,
+  start: number,
+): number | null => {
+  let depth = 0;
+  let i = start;
+  while (i < script.length) {
+    const ch = script[i];
+    if (ch === '"' || ch === "'") {
+      i = skipQuotedString(script, i);
+      continue;
+    }
+    if (ch === "{") depth++;
+    else if (ch === "}") {
+      depth--;
+      if (depth === 0) return i;
+    }
+    i++;
+  }
+  return null;
+};
+
 const findMetaLiteral = (script: string): string | null => {
   const match = META_START_RE.exec(script);
   if (!match) return null;
   const start = match.index + match[0].length - 1; // index of opening {
-  let depth = 0;
-  for (let i = start; i < script.length; i++) {
-    if (script[i] === "{") depth++;
-    else if (script[i] === "}") {
-      depth--;
-      if (depth === 0) return script.slice(start, i + 1);
-    }
-  }
-  return null;
+  const end = walkBracedLiteral(script, start);
+  if (end === null) return null;
+  return script.slice(start, end + 1);
 };
 
 const findMetaSpan = (script: string): [number, number] | null => {
   const match = META_START_RE.exec(script);
   if (!match) return null;
   const literalStart = match.index + match[0].length - 1; // index of opening {
-  let depth = 0;
-  for (let i = literalStart; i < script.length; i++) {
-    if (script[i] === "{") depth++;
-    else if (script[i] === "}") {
-      depth--;
-      if (depth === 0) {
-        let end = i + 1;
-        if (script.charAt(end) === ";") end++;
-        while (end < script.length && /\s/.test(script.charAt(end))) end++;
-        return [match.index, end];
-      }
-    }
-  }
-  return null;
+  const closingBrace = walkBracedLiteral(script, literalStart);
+  if (closingBrace === null) return null;
+  let end = closingBrace + 1;
+  if (script.charAt(end) === ";") end++;
+  while (end < script.length && /\s/.test(script.charAt(end))) end++;
+  return [match.index, end];
 };
 
 const rejectNonLiteralMeta = (literal: string): void => {
@@ -92,6 +115,8 @@ export const stripMetaExport = (script: string): string => {
 };
 
 export const validateDeterministicScript = (script: string): void => {
+  // Strip string literals so prompt text containing API names doesn't false-positive.
+  const stripped = script.replace(/(['"])(?:\\.|(?!\1).)*\1/gs, '""');
   const checks = [
     { re: /\bDate\.now\s*\(/, name: "Date.now" },
     { re: /\bMath\.random\s*\(/, name: "Math.random" },
@@ -100,7 +125,7 @@ export const validateDeterministicScript = (script: string): void => {
     { re: /\bimport\s*\(/, name: "dynamic import()" },
   ];
   for (const check of checks) {
-    if (check.re.test(script)) throw new Error(`workflow script uses nondeterministic or unavailable API: ${check.name}`);
+    if (check.re.test(stripped)) throw new Error(`workflow script uses nondeterministic or unavailable API: ${check.name}`);
   }
 };
 
@@ -282,21 +307,34 @@ export const executeWorkflowScript = async (
       cacheKey,
     };
     progress.push(entry);
-    const out = await runAgentWithSchemaRetry(
-      {
-        prompt,
-        stepId,
-        agentId,
-        model,
-        effort,
-        contextWindow,
-        ...(opts.schema ? { schema: opts.schema } : {}),
-        ...(opts.cwd ? { cwd: opts.cwd } : {}),
-        ...(opts.env ? { env: opts.env } : {}),
-      },
-      input.backend,
-      { maxRetries: input.maxRetries },
-    );
+    let out: Awaited<ReturnType<typeof runAgentWithSchemaRetry>>;
+    try {
+      out = await runAgentWithSchemaRetry(
+        {
+          prompt,
+          stepId,
+          agentId,
+          model,
+          effort,
+          contextWindow,
+          ...(opts.schema ? { schema: opts.schema } : {}),
+          ...(opts.cwd ? { cwd: opts.cwd } : {}),
+          ...(opts.env ? { env: opts.env } : {}),
+        },
+        input.backend,
+        { maxRetries: input.maxRetries },
+      );
+    } catch (backendErr) {
+      const now = Date.now();
+      Object.assign(entry, {
+        updatedAt: now,
+        completedAt: now,
+        durationMs: now - startedAt,
+        state: "failed",
+        error: backendErr instanceof Error ? backendErr.message : String(backendErr),
+      });
+      throw backendErr;
+    }
     totalTokens += out.tokens;
     totalToolCalls += out.toolCalls;
     const now = Date.now();
