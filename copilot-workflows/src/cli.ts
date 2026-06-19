@@ -18,9 +18,20 @@ if (cmd === "inspect") {
   if (!path) throw new Error("usage: copilot-workflow inspect <script.js>");
   print(inspectWorkflowScript(readFileSync(path, "utf8")));
 } else if (cmd === "run") {
-  const path = args[0];
-  if (!path) throw new Error("usage: copilot-workflow run <script.js>");
-  const launch = await runner.launch({ script: readFileSync(path, "utf8"), confirm: false });
+  const resumeIdx = args.indexOf("--resume-from");
+  const resumeFromRunId = resumeIdx !== -1 ? args[resumeIdx + 1] : undefined;
+  const pathArgs = resumeIdx !== -1
+    ? args.filter((_, i) => i !== resumeIdx && i !== resumeIdx + 1)
+    : args;
+  const path = pathArgs[0];
+  if (!path) throw new Error("usage: copilot-workflow run <script.js> [--resume-from <run-id>]");
+  const launch = await runner.launch({ script: readFileSync(path, "utf8"), confirm: false, ...(resumeFromRunId ? { resumeFromRunId } : {}) });
+  print(launch);
+} else if (cmd === "resume") {
+  const runId = args[0];
+  const path = args[1];
+  if (!runId || !path) throw new Error("usage: copilot-workflow resume <run-id> <script.js>");
+  const launch = await runner.launch({ script: readFileSync(path, "utf8"), confirm: false, resumeFromRunId: runId });
   print(launch);
 } else if (cmd === "status") {
   const runId = args[0];
@@ -36,6 +47,6 @@ if (cmd === "inspect") {
   if (!runId) throw new Error("usage: copilot-workflow stop <run-id>");
   print(runner.stop(runId));
 } else {
-  process.stderr.write("usage: copilot-workflow <inspect|run|status|output|stop> ...\n");
+  process.stderr.write("usage: copilot-workflow <inspect|run|resume|status|output|stop> ...\n");
   process.exit(2);
 }
