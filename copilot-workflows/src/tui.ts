@@ -115,6 +115,7 @@ export const renderWorkflowUi = (runs: WorkflowRun[], state: WorkflowUiState): s
       workflowId: workflowIdForRun(selected, runs),
       selectedPhase: phase?.title,
       selectedAgent: agent?.label ?? agent?.stepId,
+      mode: state.view,
     });
     if (state.view === "tasks") {
       return [

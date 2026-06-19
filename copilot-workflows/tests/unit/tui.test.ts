@@ -18,7 +18,7 @@ describe("workflow TUI state", () => {
     state = handleWorkflowUiKey(state, sampleRuns(), "enter");
     expect(state.view).toBe("workflow");
     expect(renderWorkflowUi(sampleRuns(), state)).toContain("WF2 second");
-    expect(renderWorkflowUi(sampleRuns(), state)).toContain("Prompt: prompt second");
+    expect(renderWorkflowUi(sampleRuns(), state)).toContain("Phase outcome");
 
     state = handleWorkflowUiKey(state, sampleRuns(), "escape");
     expect(state.view).toBe("list");
@@ -39,6 +39,9 @@ describe("workflow TUI state", () => {
 
     state = handleWorkflowUiKey(state, runs, "down");
     expect(state.selectedPhaseIndex).toBe(1);
+    expect(renderWorkflowUi(runs, state)).toContain("Phase outcome");
+    expect(renderWorkflowUi(runs, state)).toContain("outcome second-a");
+    expect(renderWorkflowUi(runs, state)).toContain("outcome second-b");
 
     state = handleWorkflowUiKey(state, runs, "right");
     expect(state.view).toBe("tasks");

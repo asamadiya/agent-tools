@@ -20,6 +20,7 @@ export interface WorkflowRenderOptions {
   workflowId?: string;
   selectedPhase?: string;
   selectedAgent?: string;
+  mode?: "workflow" | "tasks" | "agent";
 }
 
 const stateIcon = (state: WorkflowRun["status"] | AgentStepState): string => {
@@ -163,6 +164,21 @@ const detailBlock = (agent: AgentEntry | undefined): string[] => {
   ];
 };
 
+const phaseSummaryBlock = (phaseTitle: string, phaseAgents: AgentEntry[]): string[] => {
+  if (phaseAgents.length === 0) {
+    return [`Phase outcome: ${phaseTitle} has no tasks yet`, "Activity: none", "Outcome: none"];
+  }
+  const outcomes = phaseAgents.map((agent) => {
+    const outcome = truncate(agent.error ?? agent.resultPreview ?? agent.lastToolSummary ?? agent.state, 100);
+    return `${stateIcon(agent.state)} ${agent.label}: ${outcome || agent.state}`;
+  });
+  return [
+    `Phase outcome: ${phaseTitle} completed ${phaseAgents.filter(isAgentDone).length}/${phaseAgents.length} tasks`,
+    "Activity:",
+    ...outcomes,
+  ];
+};
+
 export const renderWorkflowDetail = (run: WorkflowRun, opts: WorkflowRenderOptions = {}): string => {
   const phaseEntries = phases(run);
   const activePhase =
@@ -188,7 +204,7 @@ export const renderWorkflowDetail = (run: WorkflowRun, opts: WorkflowRenderOptio
     lines.push(`│ ${(left[i] ?? "").padEnd(widthLeft)} │ ${(right[i + 1] ?? "").padEnd(widthRight)} │`);
   }
   lines.push(`╰${"─".repeat(widthLeft + 2)}┴${"─".repeat(widthRight + 2)}╯`);
-  lines.push(...detailBlock(selectedAgent));
+  lines.push(...(opts.mode === "workflow" ? phaseSummaryBlock(activePhase, selectedAgents) : detailBlock(selectedAgent)));
   lines.push("↑↓ select workflow/phase · Enter details · WorkflowOutput { runId } for transcripts");
   return lines.join("\n");
 };

@@ -133,6 +133,13 @@ function renderHtml(root) {
       }).join('') : '<div class="muted">No workflows yet</div>';
     }
     function phaseAgents(run, phase) { return agents(run).filter(a => (a.phaseTitle || 'Tasks') === phase.title); }
+    function phaseSummary(phase, ags) {
+      if (!ags.length) return ['<b>Phase outcome</b><pre>' + phase.title + ' has no tasks yet</pre>'];
+      return [
+        '<b>Phase outcome</b><pre>' + phase.title + ' completed ' + ags.filter(a => ['done','cached'].includes(a.state)).length + '/' + ags.length + ' tasks</pre>',
+        '<b>Task outcomes</b><pre>' + ags.map(a => icon(a.state) + ' ' + a.label + ': ' + trunc(a.error || a.resultPreview || a.lastToolSummary || a.state, 160)).join('\\n') + '</pre>',
+      ];
+    }
     function renderDetail() {
       const run = runs[runIndex];
       if (!run) { document.getElementById('detail').innerHTML = '<div class="muted">No workflow selected</div>'; return; }
@@ -154,7 +161,8 @@ function renderHtml(root) {
         '<b>Activity</b><pre>' + trunc((selected?.lastToolName || selected?.state || 'none') + (selected?.lastToolSummary ? ' — ' + selected.lastToolSummary : ''), 1200) + '</pre>',
         '<b>Outcome</b><pre>' + trunc(selected?.error || selected?.resultPreview || 'none', 2000) + '</pre>',
       ];
-      const visibleDetails = view === 'agent' ? details.slice(detailScroll) : details;
+      const phaseDetails = phaseSummary(phase, ags);
+      const visibleDetails = view === 'workflow' ? phaseDetails : view === 'agent' ? details.slice(detailScroll) : details;
       document.getElementById('detail').innerHTML =
         '<h2>' + run.workflowId + ' ' + run.workflowName + '</h2>' +
         '<div class="meta">' + run.status + ' · ' + doneAgents(run) + '/' + agents(run).length + ' agents · ' + fmtDuration(run.durationMs || 0) + ' · ' + fmtTokens(run.totalTokens || 0) + ' tok</div>' +
@@ -165,6 +173,8 @@ function renderHtml(root) {
     }
     function render(){ renderRuns(); renderDetail(); }
     document.addEventListener('keydown', (e) => {
+      const handled = ['r','Escape','Enter','ArrowRight','ArrowLeft','ArrowDown','ArrowUp','j','k'].includes(e.key);
+      if (handled) { e.preventDefault(); e.stopPropagation(); }
       if (e.key === 'r') { refresh(); return; }
       if (e.key === 'Escape') { view = 'list'; render(); return; }
       if (e.key === 'Enter' || e.key === 'ArrowRight') {
