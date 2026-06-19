@@ -1,0 +1,54 @@
+#!/usr/bin/env node
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
+const childProcess = require("child_process");
+const { patchSource, unpatchSource } = require("../lib/workflow-ui-patch");
+
+const args = new Set(process.argv.slice(2));
+const dryRun = args.has("--dry-run");
+const revert = args.has("--revert");
+
+function copilotVersion() {
+  const out = childProcess.execFileSync("copilot", ["--version"], { encoding: "utf8" });
+  const m = out.match(/(\d+\.\d+\.\d+)/);
+  if (!m) throw new Error(`Unable to parse copilot version from: ${out}`);
+  return m[1];
+}
+
+function candidateAppJs(version) {
+  const cache = process.env.XDG_CACHE_HOME || path.join(process.env.HOME || "", ".cache");
+  const roots = [
+    path.join(cache, "copilot", "pkg"),
+    path.join(process.env.HOME || "", ".copilot", "pkg"),
+  ];
+  const platforms = ["linux-x64", "linux-arm64", "linuxmusl-x64", "darwin-arm64", "darwin-x64", "win32-x64", "universal"];
+  const out = [];
+  for (const root of roots) {
+    for (const platform of platforms) out.push(path.join(root, platform, version, "app.js"));
+  }
+  return out;
+}
+
+const version = copilotVersion();
+const appPath = candidateAppJs(version).find((p) => fs.existsSync(p));
+if (!appPath) throw new Error(`Unable to find app.js for Copilot ${version}`);
+
+const before = fs.readFileSync(appPath, "utf8");
+const after = revert ? unpatchSource(before) : patchSource(before);
+if (before === after) {
+  console.error(`[workflow-ui-patch] ${revert ? "already reverted" : "already patched"}: ${appPath}`);
+  process.exit(0);
+}
+
+if (dryRun) {
+  console.log(`[workflow-ui-patch] would ${revert ? "revert" : "patch"} ${appPath}`);
+  process.exit(0);
+}
+
+const backup = `${appPath}.workflow-ui-patch.bak`;
+if (!fs.existsSync(backup)) fs.writeFileSync(backup, before);
+fs.writeFileSync(appPath, after);
+childProcess.execFileSync(process.execPath, ["--check", appPath], { stdio: "inherit" });
+console.log(`[workflow-ui-patch] ${revert ? "reverted" : "patched"} ${appPath}`);

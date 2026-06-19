@@ -32,6 +32,14 @@ Use ↑/↓ to select a workflow, Enter to open the detail table, Esc to return 
 
 Inside Copilot CLI, the project extension registers `/workflows`. When the host supports canvases it opens a native canvas; in tmux-based CLI sessions it falls back to a tmux popup over the current Copilot pane.
 
+For Copilot CLI builds that do not advertise canvas support by default, run the local bundle patch and restart/resume Copilot:
+
+```sh
+bin/copilot-workflow-ui-patch
+```
+
+The patch is idempotent, validates `app.js` with `node --check`, and can be reverted with `bin/copilot-workflow-ui-patch --revert`.
+
 Default agent config is GPT-5.5, xhigh effort, 1.1M context. Override globally, per workflow, per phase, or per agent.
 
 ### Agent `permissions`
