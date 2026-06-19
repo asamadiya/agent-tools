@@ -3,6 +3,7 @@ import { readFileSync } from "node:fs";
 import { WorkflowRunner } from "./runner.js";
 import { inspectWorkflowScript } from "./script.js";
 import { renderProgressTree } from "./visibility.js";
+import { runWorkflowTui } from "./tui.js";
 
 const root = process.env.COPILOT_WORKFLOWS_ROOT;
 const [cmd, ...args] = process.argv.slice(2);
@@ -48,7 +49,9 @@ if (cmd === "inspect") {
   const runId = args[0];
   if (!runId) throw new Error("usage: copilot-workflow stop <run-id>");
   print(await runner.stop(runId));
+} else if (cmd === "ui") {
+  await runWorkflowTui({ ...(root ? { root } : {}), once: args.includes("--once") });
 } else {
-  process.stderr.write("usage: copilot-workflow <inspect|run|resume|status|output|stop> ...\n");
+  process.stderr.write("usage: copilot-workflow <inspect|run|resume|status|output|stop|ui> ...\n");
   process.exit(2);
 }

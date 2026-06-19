@@ -85,4 +85,25 @@ describe("copilot-workflow CLI", () => {
     const persisted = JSON.parse(readFileSync(runFile, "utf8")) as { resumeFromRunId?: string };
     expect(persisted.resumeFromRunId).toBe(priorLaunch.runId);
   });
+
+  it("ui --once prints the interactive workflow list snapshot", async () => {
+    await execa("npm", ["run", "build"], { cwd: process.cwd() });
+
+    const prior = await execa("node", ["dist/cli.js", "run", scriptPath], {
+      cwd: process.cwd(),
+      env: { ...process.env, COPILOT_WORKFLOWS_ROOT: root },
+      reject: false,
+    });
+    expect(prior.exitCode).toBe(0);
+
+    const r = await execa("node", ["dist/cli.js", "ui", "--once"], {
+      cwd: process.cwd(),
+      env: { ...process.env, COPILOT_WORKFLOWS_ROOT: root },
+      reject: false,
+    });
+    expect(r.exitCode).toBe(0);
+    expect(r.stdout).toContain("Workflows");
+    expect(r.stdout).toContain("WF1");
+    expect(r.stdout).toContain("cli-demo");
+  });
 });

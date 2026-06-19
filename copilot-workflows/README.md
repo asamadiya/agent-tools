@@ -22,6 +22,14 @@ Workflow responses include Claude Code-style terminal views:
 - `detailView` shows a split view: phases on the left, agent/task rows on the right, plus the selected task's prompt, current activity, and outcome.
 - `WorkflowStatus` accepts optional `selectedPhase` and `selectedAgent` fields to render a focused detail view for a specific phase or task.
 
+For an actual interactive terminal view, run:
+
+```sh
+copilot-workflow ui
+```
+
+Use ↑/↓ to select a workflow, Enter to open the detail table, Esc to return to the list, `r` to refresh, and `q` to quit. Use `copilot-workflow ui --once` for a non-interactive snapshot.
+
 Default agent config is GPT-5.5, xhigh effort, 1.1M context. Override globally, per workflow, per phase, or per agent.
 
 ### Agent `permissions`
