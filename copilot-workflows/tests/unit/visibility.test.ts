@@ -95,6 +95,18 @@ describe("workflow visibility", () => {
     expect(detail).toContain("Activity: StructuredOutput — reading README");
     expect(detail).toContain("Outcome: README summary");
   });
+
+  it("aligns split table borders with body columns", () => {
+    const lines = renderWorkflowDetail(sampleRun(), { workflowId: "WF1" }).split("\n");
+    const top = lines.find((line) => line.startsWith("╭ "))!;
+    const body = lines.find((line) => line.startsWith("│ "))!;
+    const bottom = lines.find((line) => line.startsWith("╰"))!;
+
+    expect(top.indexOf("┬")).toBe(body.indexOf("│", 1));
+    expect(bottom.indexOf("┴")).toBe(body.indexOf("│", 1));
+    expect(top.indexOf("╮")).toBe(body.lastIndexOf("│"));
+    expect(bottom.indexOf("╯")).toBe(body.lastIndexOf("│"));
+  });
 });
 
 const sampleRun = (overrides: Partial<WorkflowRun> = {}): WorkflowRun => ({

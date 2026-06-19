@@ -182,7 +182,7 @@ export const renderWorkflowDetail = (run: WorkflowRun, opts: WorkflowRenderOptio
   const lines = [
     `${opts.workflowId ?? "WF?"} ${run.workflowName}`,
     `${run.status} · ${agents(run).filter(isAgentDone).length}/${agents(run).length} agents · ${formatDuration(run.durationMs)} · ${formatTokens(run.totalTokens)}`,
-    `╭ ${"Phases".padEnd(widthLeft - 2, "─")}┬ ${right[0]!.padEnd(widthRight - 2, "─")}╮`,
+    `╭ ${"Phases".padEnd(widthLeft + 1, "─")}┬ ${right[0]!.padEnd(widthRight + 1, "─")}╮`,
   ];
   for (let i = 0; i < rows; i++) {
     lines.push(`│ ${(left[i] ?? "").padEnd(widthLeft)} │ ${(right[i + 1] ?? "").padEnd(widthRight)} │`);
