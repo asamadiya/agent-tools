@@ -44,6 +44,36 @@ describe("workflow resume cache", () => {
     expect(completed.workflowProgress.filter((p) => p.type === "workflow_agent").every((p) => p.state === "cached")).toBe(true);
   });
 
+  it("chained resume stays fully cached with empty backend", async () => {
+    const first = new WorkflowRunner({
+      root,
+      backend: new StubAgentBackend([
+        { text: "A", tokens: 10, toolCalls: 1 },
+        { text: "B", tokens: 5, toolCalls: 1 },
+      ]),
+    });
+    const launch = await first.launch({ script, confirm: false });
+    await first.runToCompletion(launch.runId);
+
+    // First replay — fully cached; its cacheResults must be populated
+    const replay1 = new WorkflowRunner({ root, backend: new StubAgentBackend([]) });
+    const replayLaunch1 = await replay1.launch({ script, confirm: false, resumeFromRunId: launch.runId });
+    const replay1Completed = await replay1.runToCompletion(replayLaunch1.runId);
+    expect(replay1Completed.totalTokens).toBe(0);
+
+    // Second replay from the first replay — must still be 100% cached with empty backend
+    const replay2 = new WorkflowRunner({ root, backend: new StubAgentBackend([]) });
+    const replayLaunch2 = await replay2.launch({ script, confirm: false, resumeFromRunId: replayLaunch1.runId });
+    const replay2Completed = await replay2.runToCompletion(replayLaunch2.runId);
+    expect(replay2Completed.result).toEqual({ a: "A", b: "B" });
+    expect(replay2Completed.totalTokens).toBe(0);
+    expect(
+      replay2Completed.workflowProgress
+        .filter((p) => p.type === "workflow_agent")
+        .every((p) => p.state === "cached"),
+    ).toBe(true);
+  });
+
   it("reruns from the first edited step onward", async () => {
     const first = new WorkflowRunner({
       root,

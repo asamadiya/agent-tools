@@ -229,19 +229,26 @@ export const executeWorkflowScript = async (
 
     const cached = input.previousCache?.get(cacheKey);
     if (cached) {
+      const now = Date.now();
       const cachedEntry: WorkflowProgressEntry = {
         ...(cached.progress as Extract<WorkflowProgressEntry, { type: "workflow_agent" }>),
         index,
         stepId,
         label,
         agentId,
+        // Use current call's phase context, not stale metadata from the prior run
+        phaseIndex,
+        phaseTitle,
         state: "cached" as const,
         tokens: 0,
         toolCalls: 0,
-        updatedAt: Date.now(),
-        completedAt: Date.now(),
+        durationMs: 0,
+        updatedAt: now,
+        completedAt: now,
       };
       progress.push(cachedEntry);
+      // Carry cached entries forward so chained resumes can also replay from this run
+      cacheResults.push({ cacheKey, result: cached.result, progress: cachedEntry });
       return cached.result;
     }
 
