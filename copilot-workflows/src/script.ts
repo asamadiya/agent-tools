@@ -141,6 +141,7 @@ export interface ExecuteWorkflowInput {
   defaultContextWindow: number;
   maxRetries: number;
   budgetTokens?: number;
+  previousCache?: Map<string, { result: unknown; progress: WorkflowProgressEntry }>;
 }
 
 export interface ExecuteWorkflowOutput {
@@ -149,6 +150,7 @@ export interface ExecuteWorkflowOutput {
   totalTokens: number;
   totalToolCalls: number;
   agentCount: number;
+  cacheResults: Array<{ cacheKey: string; result: unknown; progress: WorkflowProgressEntry }>;
 }
 
 type PhaseEntry = Extract<WorkflowProgressEntry, { type: "workflow_phase" }>;
@@ -169,6 +171,8 @@ export const executeWorkflowScript = async (
       ...(p.detail !== undefined ? { detail: p.detail } : {}),
     }),
   );
+
+  const cacheResults: Array<{ cacheKey: string; result: unknown; progress: WorkflowProgressEntry }> = [];
 
   let currentPhase: string | null = null;
   let logIndex = 0;
@@ -222,6 +226,25 @@ export const executeWorkflowScript = async (
     const stepId = `step_${index}`;
     // Fix 2: include effective model/effort/contextWindow in cache key
     const cacheKey = agentCacheKey(prompt, opts, input.args, { model, effort, contextWindow });
+
+    const cached = input.previousCache?.get(cacheKey);
+    if (cached) {
+      const cachedEntry: WorkflowProgressEntry = {
+        ...(cached.progress as Extract<WorkflowProgressEntry, { type: "workflow_agent" }>),
+        index,
+        stepId,
+        label,
+        agentId,
+        state: "cached" as const,
+        tokens: 0,
+        toolCalls: 0,
+        updatedAt: Date.now(),
+        completedAt: Date.now(),
+      };
+      progress.push(cachedEntry);
+      return cached.result;
+    }
+
     const startedAt = Date.now();
     const entry: WorkflowProgressEntry = {
       type: "workflow_agent",
@@ -284,6 +307,7 @@ export const executeWorkflowScript = async (
       throw new WorkflowExecutionError(msg, { progress, totalTokens, totalToolCalls, agentCount: agentIndex });
     }
     Object.assign(entry, { ...completedFields, state: "done" });
+    cacheResults.push({ cacheKey, result: out.result, progress: entry });
     return out.result;
   };
 
@@ -336,5 +360,5 @@ export const executeWorkflowScript = async (
   );
 
   const result = await (runner(agent, parallel, pipeline, phase, log, input.args, budget) as Promise<unknown>);
-  return { result, progress, totalTokens, totalToolCalls, agentCount: agentIndex };
+  return { result, progress, totalTokens, totalToolCalls, agentCount: agentIndex, cacheResults };
 };

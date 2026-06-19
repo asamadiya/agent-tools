@@ -12,7 +12,7 @@ import {
   writeAgentTranscript,
   type StateOptions,
 } from "./state.js";
-import type { ProgressReporter, WorkflowRun } from "./types.js";
+import type { ProgressReporter, WorkflowProgressEntry, WorkflowRun } from "./types.js";
 import { noopProgress } from "./types.js";
 
 export interface WorkflowRunnerOptions extends StateOptions {
@@ -46,6 +46,14 @@ export interface WorkflowOutput {
   journal: string;
   transcripts: Array<{ agentId: string; path: string; content: string }>;
 }
+
+const buildPreviousCache = (prior: WorkflowRun | null): Map<string, { result: unknown; progress: WorkflowProgressEntry }> => {
+  const map = new Map<string, { result: unknown; progress: WorkflowProgressEntry }>();
+  for (const cached of prior?.cacheResults ?? []) {
+    map.set(cached.cacheKey, { result: cached.result, progress: cached.progress });
+  }
+  return map;
+};
 
 export class WorkflowRunner {
   private readonly backend: AgentBackend;
@@ -94,6 +102,7 @@ export class WorkflowRunner {
     saveRun(run, this.opts);
     await this.progress(1, undefined, `workflow ${run.workflowName} started`);
     try {
+      const prior = run.resumeFromRunId ? loadRun(run.resumeFromRunId, this.opts) : null;
       const out = await executeWorkflowScript(run.script, {
         args: run.args,
         backend: this.backend,
@@ -102,6 +111,7 @@ export class WorkflowRunner {
         defaultContextWindow: run.defaultContextWindow,
         maxRetries: 1,
         budgetTokens: run.budgetTokens,
+        previousCache: buildPreviousCache(prior),
       });
       run = loadRun(runId, this.opts);
       run.status = "completed";
@@ -110,6 +120,7 @@ export class WorkflowRunner {
       run.agentCount = out.agentCount;
       run.totalTokens = out.totalTokens;
       run.totalToolCalls = out.totalToolCalls;
+      run.cacheResults = out.cacheResults;
       run.durationMs = Date.now() - start;
       run.completedAt = new Date().toISOString();
       appendJournal(runId, { type: "run_completed", result: out.result }, this.opts);
