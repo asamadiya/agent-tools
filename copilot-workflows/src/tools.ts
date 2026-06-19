@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { inspectWorkflowScript } from "./script.js";
 import { WorkflowRunner, type WorkflowRunnerOptions } from "./runner.js";
+import { generateWorkflowScriptFromGoal } from "./planner.js";
 import { listRuns } from "./state.js";
 import { renderProgressTree } from "./visibility.js";
 
@@ -27,10 +28,11 @@ export const WorkflowSaveInputSchema = z.object({
 
 export const handleWorkflow = async (raw: unknown, deps: WorkflowRunnerOptions) => {
   const input = WorkflowInputSchema.parse(raw);
-  if (!input.script) throw new Error("Workflow requires script");
+  const script = input.script ?? (input.goal ? generateWorkflowScriptFromGoal(input.goal) : undefined);
+  if (!script) throw new Error("Workflow requires script or goal");
   const runner = new WorkflowRunner(deps);
   const launch = await runner.launch({
-    script: input.script,
+    script,
     args: input.args,
     confirm: input.confirm,
     ...(input.resumeFromRunId ? { resumeFromRunId: input.resumeFromRunId } : {}),

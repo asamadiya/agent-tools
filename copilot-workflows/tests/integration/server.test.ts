@@ -89,4 +89,16 @@ describe("workflow MCP server", () => {
     expect(listParsed.runs).toHaveLength(1);
     expect(listParsed.runs[0].workflowName).toBe("server-demo");
   });
+
+  it("accepts a workflow goal and generates a script", async () => {
+    const { client } = await link();
+    const r = await client.callTool({
+      name: "Workflow",
+      arguments: { goal: "workflow: compare README and package metadata", confirm: false, wait: false },
+    });
+    expect(r.isError).toBeFalsy();
+    const parsed = JSON.parse((r.content as Array<{ text: string }>)[0]!.text);
+    expect(parsed.workflowName).toBe("compare-readme-and-package-metadata");
+    expect(parsed.scriptPath).toContain("compare-readme-and-package-metadata");
+  });
 });
