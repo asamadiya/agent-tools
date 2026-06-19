@@ -46,10 +46,49 @@ describe("workflow script parser", () => {
     ).toThrow(/pure literal/i);
   });
 
+  it("handles braces inside string values in meta (regression: Bug B)", () => {
+    const script = `
+export const meta = { name: 'brace-test', description: 'fix the } bug' }
+return null
+`;
+    expect(extractWorkflowMeta(script)).toEqual({ name: "brace-test", description: "fix the } bug", phases: [] });
+    expect(stripMetaExport(script).trim()).toBe("return null");
+  });
+
   it("rejects deterministic hazards", () => {
     expect(() => validateDeterministicScript(`${VALID}\nDate.now()`)).toThrow(/Date\.now/);
     expect(() => validateDeterministicScript(`${VALID}\nMath.random()`)).toThrow(/Math\.random/);
     expect(() => validateDeterministicScript(`${VALID}\nnew Date()`)).toThrow(/new Date/);
+  });
+
+  it("does not flag Math.random()/new Date() inside string literals (regression: Bug C)", () => {
+    expect(() =>
+      validateDeterministicScript(
+        `${VALID}\nawait agent('compute the Math.random() distribution', {})`,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateDeterministicScript(
+        `${VALID}\nawait agent('compare new Date() output', {})`,
+      ),
+    ).not.toThrow();
+    expect(() =>
+      validateDeterministicScript(
+        `${VALID}\nawait agent("use Date.now() for timing", {})`,
+      ),
+    ).not.toThrow();
+  });
+
+  it("still rejects actual Math.random()/new Date() API calls outside strings (regression: Bug C complement)", () => {
+    expect(() =>
+      validateDeterministicScript(`${VALID}\nconst x = Math.random()`),
+    ).toThrow(/Math\.random/);
+    expect(() =>
+      validateDeterministicScript(`${VALID}\nconst d = new Date()`),
+    ).toThrow(/new Date/);
+    expect(() =>
+      validateDeterministicScript(`${VALID}\nconst t = Date.now()`),
+    ).toThrow(/Date\.now/);
   });
 
   it("returns inspection errors without throwing", () => {
@@ -276,6 +315,54 @@ return await pipeline(
         budgetTokens: 5,
       }),
     ).rejects.toThrow(WorkflowExecutionError);
+  });
+
+  it("marks agent entry as failed (not running) when backend throws inside parallel (regression: Bug A)", async () => {
+    const script = `
+export const meta = { name: 'backend-err-parallel', description: 'Backend error in parallel test' }
+return await parallel([
+  () => agent('a', { label: 'good' }),
+  () => agent('b', { label: 'bad' }),
+])
+`;
+    // Supply only one output — the second backend call throws "no output queued"
+    const out = await executeWorkflowScript(script, {
+      backend: new StubAgentBackend([{ text: "A", tokens: 1, toolCalls: 1 }]),
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    });
+    expect(out.result).toEqual(["A", null]);
+    const badEntry = out.progress.find((p) => p.type === "workflow_agent" && (p as Extract<typeof p, { type: "workflow_agent" }>).label === "bad");
+    expect(badEntry).toBeDefined();
+    if (badEntry?.type !== "workflow_agent") throw new Error("not an agent entry");
+    expect(badEntry.state).toBe("failed");
+    expect(badEntry.error).toBeDefined();
+  });
+
+  it("marks agent entry as failed (not running) when backend throws inside pipeline (regression: Bug A)", async () => {
+    const script = `
+export const meta = { name: 'backend-err-pipeline', description: 'Backend error in pipeline test' }
+return await pipeline(
+  ['a', 'b'],
+  async (item) => agent('stage ' + item, { label: 's:' + item }),
+)
+`;
+    // Supply only one output — the second backend call throws "no output queued"
+    const out = await executeWorkflowScript(script, {
+      backend: new StubAgentBackend([{ text: "A", tokens: 1, toolCalls: 1 }]),
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    });
+    expect(out.result).toEqual(["A", null]);
+    const badEntry = out.progress.find((p) => p.type === "workflow_agent" && (p as Extract<typeof p, { type: "workflow_agent" }>).label === "s:b");
+    expect(badEntry).toBeDefined();
+    if (badEntry?.type !== "workflow_agent") throw new Error("not an agent entry");
+    expect(badEntry.state).toBe("failed");
+    expect(badEntry.error).toBeDefined();
   });
 
   it("agent opts override phase model/effort/contextWindow", async () => {
