@@ -60,7 +60,7 @@ export const buildServer = (deps: { root?: string; backend?: AgentBackend } = {}
     };
 
   server.registerTool("Workflow", {
-    description: "Run a dynamic workflow from a persisted JS script. Use this when the user says workflow:<goal>; generate the JS script first, then pass it here.",
+    description: "Run a dynamic workflow. Pass goal (e.g. 'workflow: <goal>') to auto-generate a script, or provide an explicit JS script.",
     inputSchema: WorkflowInputSchema.shape,
   }, wrap("Workflow", (raw, extra) => handleWorkflow(raw, { ...deps, progress: extra.progress })));
 

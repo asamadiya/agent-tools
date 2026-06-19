@@ -50,15 +50,22 @@ const findMetaSpan = (script: string): [number, number] | null => {
 };
 
 const rejectNonLiteralMeta = (literal: string): void => {
+  // Strip quoted string values before checking for forbidden structural patterns,
+  // so goal text embedded in name/description (via JSON.stringify) doesn't
+  // false-positive on word(, backticks, or ... that appear inside string values.
+  const withoutStrings = literal
+    .replace(/(['"])(?:\\.|(?!\1).)*\1\s*:/g, '"":')  // string object keys → keep the :
+    .replace(/(['"])(?:\\.|(?!\1).)*\1/g, '""');        // string values → ""
+
   const forbidden = [
     { re: /\.\.\./, name: "spread" },
     { re: /`/, name: "template string" },
     { re: /\b[a-zA-Z_$][\w$]*\s*\(/, name: "function call" },
   ];
   for (const f of forbidden) {
-    if (f.re.test(literal)) throw new Error(`meta must be a pure literal; found ${f.name}`);
+    if (f.re.test(withoutStrings)) throw new Error(`meta must be a pure literal; found ${f.name}`);
   }
-  const withoutKeysAndStrings = literal
+  const withoutKeysAndStrings = withoutStrings
     .replace(/(['"])(?:\\.|(?!\1).)*\1\s*:/g, "")
     .replace(/[a-zA-Z_$][\w$]*\s*:/g, "")
     .replace(/(['"])(?:\\.|(?!\1).)*\1/g, "")
