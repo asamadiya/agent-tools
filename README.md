@@ -2,6 +2,10 @@
 
 Miscellaneous tooling for working with AI coding agents.
 
+## copilot-workflows
+
+Dynamic workflow runner for GitHub Copilot CLI agents. It provides a Claude Code ultracode-style workflow surface: the assistant can respond to `workflow: <goal>` by generating a deterministic JS workflow, launching isolated agents, and exposing phase/step progress, transcripts, output, stop, and resume.
+
 ## copilot-fork
 
 Fork a [GitHub Copilot CLI](https://docs.github.com/copilot/how-tos/copilot-cli) session so the copy can be resumed in a different tmux pane while the original session keeps running. The fork diverges at the moment of the snapshot; the source is left untouched.
