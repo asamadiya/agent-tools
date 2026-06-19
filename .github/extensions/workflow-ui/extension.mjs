@@ -1,5 +1,6 @@
 import { createServer } from "node:http";
 import { spawn } from "node:child_process";
+import { execFile } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -291,7 +292,7 @@ async function openWorkflowsInTmux(root = DEFAULT_ROOT) {
     await session.log("This Copilot host does not report canvas support and this session is not inside tmux; run `copilot-workflow ui` in a terminal.", { level: "warning" });
     return { ok: false, reason: "no_canvas_or_tmux" };
   }
-  const target = process.env.TMUX_PANE;
+  const target = await resolveCopilotPane();
   const args = [
     "display-popup",
     ...(target ? ["-t", target] : []),
@@ -312,6 +313,37 @@ async function openWorkflowsInTmux(root = DEFAULT_ROOT) {
   });
   await session.log("Opened workflow UI in a tmux popup. Press q to close it.", { ephemeral: true });
   return { ok: true, surface: "tmux-popup" };
+}
+
+async function execFileText(file, args) {
+  return new Promise((resolvePromise) => {
+    execFile(file, args, { encoding: "utf8" }, (_err, stdout) => resolvePromise(stdout ?? ""));
+  });
+}
+
+async function resolveCopilotPane() {
+  const loaderPid = process.env.COPILOT_LOADER_PID;
+  const sessionId = process.env.SESSION_ID;
+  if (loaderPid && sessionId) {
+    const panes = await execFileText("tmux", [
+      "list-panes",
+      "-a",
+      "-F",
+      "#{pane_id}\t#{pane_pid}\t#{pane_current_command}",
+    ]);
+    for (const line of panes.split("\n")) {
+      const [paneId, panePid, command] = line.split("\t");
+      if (!paneId || !panePid || command !== "copilot") continue;
+      const env = await execFileText("bash", [
+        "-lc",
+        `tr '\\0' '\\n' < /proc/${Number(panePid)}/environ 2>/dev/null || true`,
+      ]);
+      if (env.includes(`COPILOT_LOADER_PID=${loaderPid}`) || env.includes(`COPILOT_AGENT_SESSION_ID=${sessionId}`)) {
+        return paneId;
+      }
+    }
+  }
+  return process.env.TMUX_PANE;
 }
 
 session = await joinSession({

@@ -17,4 +17,14 @@ describe("workflow extension browser UI", () => {
     expect(src).toContain("Phase outcome");
     expect(src).toContain("phaseSummary");
   });
+
+  it("targets the pane for the current Copilot session instead of a stale global TMUX_PANE", () => {
+    const src = extensionSource();
+    expect(src).toContain("resolveCopilotPane");
+    expect(src).toContain("COPILOT_LOADER_PID");
+    expect(src).toContain("SESSION_ID");
+    expect(src).toContain("execFileText(\"tmux\"");
+    expect(src).toContain("\"list-panes\"");
+    expect(src).toContain("\"-a\"");
+  });
 });
