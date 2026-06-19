@@ -365,6 +365,71 @@ return await pipeline(
     expect(badEntry.error).toBeDefined();
   });
 
+  it("does not expose Node globals (process/require/Buffer) to the workflow body", async () => {
+    const script = `
+export const meta = { name: 'sandbox', description: 'Sandbox test' }
+return {
+  process: typeof process,
+  require: typeof require,
+  buffer: typeof Buffer,
+  json: typeof JSON,
+  promise: typeof Promise,
+}
+`;
+    const out = await executeWorkflowScript(script, {
+      backend: new StubAgentBackend([]),
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    });
+    expect(out.result).toEqual({
+      process: "undefined",
+      require: "undefined",
+      buffer: "undefined",
+      json: "object",
+      promise: "function",
+    });
+  });
+
+  it("forwards systemPrompt/permissions/allowed/denied tools and isolation to the backend", async () => {
+    class CapturingBackend {
+      readonly inputs: Array<Record<string, unknown>> = [];
+      constructor(private readonly outputs: Array<{ text: string; tokens: number; toolCalls: number }>) {}
+      async run(input: Record<string, unknown>) {
+        this.inputs.push(input);
+        const out = this.outputs[this.inputs.length - 1];
+        if (!out) throw new Error("no output queued");
+        return out;
+      }
+    }
+    const backend = new CapturingBackend([{ text: "ok", tokens: 1, toolCalls: 1 }]);
+    const script = `
+export const meta = { name: 'forward', description: 'Forward options' }
+return await agent('do it', {
+  label: 'x',
+  systemPrompt: 'be terse',
+  permissions: 'plan',
+  allowedTools: ['read', 'grep'],
+  deniedTools: ['write'],
+})
+`;
+    await executeWorkflowScript(script, {
+      backend: backend as unknown as StubAgentBackend,
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    });
+    expect(backend.inputs).toHaveLength(1);
+    const captured = backend.inputs[0]!;
+    expect(captured.systemPrompt).toBe("be terse");
+    expect(captured.permissions).toBe("plan");
+    expect(captured.allowedTools).toEqual(["read", "grep"]);
+    expect(captured.deniedTools).toEqual(["write"]);
+    expect(captured.isolation).toBe("none");
+  });
+
   it("agent opts override phase model/effort/contextWindow", async () => {
     const script = `
 export const meta = {

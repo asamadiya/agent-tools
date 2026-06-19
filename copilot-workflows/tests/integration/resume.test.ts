@@ -74,6 +74,36 @@ describe("workflow resume cache", () => {
     ).toBe(true);
   });
 
+  it("keeps two identical agent() calls distinct in cache on resume", async () => {
+    const dupScript = `
+export const meta = { name: 'dup-demo', description: 'Duplicate prompts' }
+const a = await agent('same prompt', { label: 'dup' })
+const b = await agent('same prompt', { label: 'dup' })
+return { a, b }
+`;
+    const first = new WorkflowRunner({
+      root,
+      backend: new StubAgentBackend([
+        { text: "FIRST", tokens: 4, toolCalls: 1 },
+        { text: "SECOND", tokens: 4, toolCalls: 1 },
+      ]),
+    });
+    const launch = await first.launch({ script: dupScript, confirm: false });
+    const completed = await first.runToCompletion(launch.runId);
+    expect(completed.result).toEqual({ a: "FIRST", b: "SECOND" });
+
+    const replay = new WorkflowRunner({ root, backend: new StubAgentBackend([]) });
+    const replayLaunch = await replay.launch({ script: dupScript, confirm: false, resumeFromRunId: launch.runId });
+    const replayed = await replay.runToCompletion(replayLaunch.runId);
+    expect(replayed.totalTokens).toBe(0);
+    expect(replayed.result).toEqual({ a: "FIRST", b: "SECOND" });
+    expect(
+      replayed.workflowProgress
+        .filter((p) => p.type === "workflow_agent")
+        .every((p) => p.state === "cached"),
+    ).toBe(true);
+  });
+
   it("reruns from the first edited step onward", async () => {
     const first = new WorkflowRunner({
       root,

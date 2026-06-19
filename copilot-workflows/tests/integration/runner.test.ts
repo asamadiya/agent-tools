@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import type { AgentBackend, BackendRawOutput } from "../../src/agent-runtime.js";
 import { StubAgentBackend } from "../../src/agent-runtime.js";
 import { WorkflowRunner } from "../../src/runner.js";
 
@@ -50,15 +51,83 @@ describe("WorkflowRunner", () => {
     expect(output.transcripts.length).toBe(1);
   });
 
+  it("persists full per-agent transcripts (not truncated previews)", async () => {
+    const longScript = `
+export const meta = { name: 'long-demo', description: 'Long output' }
+return await agent('produce a long answer', { label: 'long' })
+`;
+    const big = "A".repeat(500);
+    const runner = new WorkflowRunner({
+      root,
+      backend: new StubAgentBackend([{ text: big, tokens: 5, toolCalls: 1 }]),
+    });
+    const launch = await runner.launch({ script: longScript, confirm: false });
+    await runner.runToCompletion(launch.runId);
+
+    const output = runner.output(launch.runId);
+    expect(output.transcripts.length).toBe(1);
+    expect(output.transcripts[0]!.content.length).toBeGreaterThan(200);
+    expect(output.transcripts[0]!.content).toContain(big);
+  });
+
+  it("persists the transcript even when a run fails on budget overflow", async () => {
+    const longScript = `
+export const meta = { name: 'budget-transcript', description: 'Budget overflow transcript' }
+return await agent('produce a long answer', { label: 'long' })
+`;
+    const big = "B".repeat(500);
+    const runner = new WorkflowRunner({
+      root,
+      backend: new StubAgentBackend([{ text: big, tokens: 10, toolCalls: 1 }]),
+    });
+    const launch = await runner.launch({ script: longScript, confirm: false, budgetTokens: 1 });
+    await expect(runner.runToCompletion(launch.runId)).rejects.toThrow(/budget/i);
+
+    const output = runner.output(launch.runId);
+    expect(output.run.status).toBe("failed");
+    expect(output.transcripts.length).toBe(1);
+    expect(output.transcripts[0]!.content).toContain(big);
+  });
+
   it("marks a queued run stopped before execution", async () => {
     const runner = new WorkflowRunner({
       root,
       backend: new StubAgentBackend([{ text: "unused", tokens: 1, toolCalls: 1 }]),
     });
     const launch = await runner.launch({ script, confirm: false });
-    const stopped = runner.stop(launch.runId);
+    const stopped = await runner.stop(launch.runId);
     expect(stopped.status).toBe("stopped");
     await expect(runner.runToCompletion(launch.runId)).rejects.toThrow(/stopped/);
+  });
+
+  it("preserves a stopped state when stop wins the race during execution", async () => {
+    let releaseBackend!: (out: BackendRawOutput) => void;
+    let signalCalled!: () => void;
+    const calledPromise = new Promise<void>((resolve) => {
+      signalCalled = resolve;
+    });
+    const deferred = new Promise<BackendRawOutput>((resolve) => {
+      releaseBackend = resolve;
+    });
+    const backend: AgentBackend = {
+      run() {
+        signalCalled();
+        return deferred;
+      },
+    };
+    const runner = new WorkflowRunner({ root, backend });
+    const launch = await runner.launch({ script, confirm: false });
+
+    const running = runner.runToCompletion(launch.runId);
+    await calledPromise; // agent is mid-flight, runner holds no lock
+
+    const stopped = await runner.stop(launch.runId);
+    expect(stopped.status).toBe("stopped");
+
+    releaseBackend({ text: "late result", tokens: 1, toolCalls: 1 });
+    const final = await running;
+    expect(final.status).toBe("stopped");
+    expect(runner.status(launch.runId).status).toBe("stopped");
   });
 
   it("failed run with budget overflow preserves partial workflowProgress, tokens, and agentCount", async () => {

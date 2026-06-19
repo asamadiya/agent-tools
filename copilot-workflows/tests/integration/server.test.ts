@@ -22,6 +22,23 @@ export const meta = { name: 'server-demo', description: 'Server demo' }
 return await agent('hello', { label: 'hello' })
 `;
 
+const parse = (res: { content: unknown }) =>
+  JSON.parse((res.content as Array<{ text: string }>)[0]!.text);
+
+const pollStatus = async (
+  client: Client,
+  runId: string,
+  predicate: (status: { run: { status: string } }) => boolean,
+): Promise<{ run: { status: string } }> => {
+  for (let i = 0; i < 100; i++) {
+    const res = await client.callTool({ name: "WorkflowStatus", arguments: { runId } });
+    const status = parse(res) as { run: { status: string } };
+    if (predicate(status)) return status;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error(`workflow ${runId} did not reach the expected status in time`);
+};
+
 const link = async () => {
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const server = buildServer({
@@ -90,6 +107,21 @@ describe("workflow MCP server", () => {
     expect(listParsed.runs[0].workflowName).toBe("server-demo");
   });
 
+  it("schedules background execution for default wait:false and completes without a second run call", async () => {
+    const { client } = await link();
+    const launched = await client.callTool({ name: "Workflow", arguments: { script, confirm: false } });
+    expect(launched.isError).toBeFalsy();
+    const parsed = parse(launched);
+    expect(parsed.status).toBe("async_launched");
+
+    const status = await pollStatus(client, parsed.runId, (s) => s.run.status === "completed");
+    expect(status.run.status).toBe("completed");
+
+    const output = await client.callTool({ name: "WorkflowOutput", arguments: { runId: parsed.runId } });
+    expect(output.isError).toBeFalsy();
+    expect((output.content as Array<{ text: string }>)[0]!.text).toContain("\"ok\"");
+  });
+
   it("accepts a workflow goal and generates a script", async () => {
     const { client } = await link();
     const r = await client.callTool({
@@ -97,8 +129,12 @@ describe("workflow MCP server", () => {
       arguments: { goal: "workflow: compare README and package metadata", confirm: false, wait: false },
     });
     expect(r.isError).toBeFalsy();
-    const parsed = JSON.parse((r.content as Array<{ text: string }>)[0]!.text);
+    const parsed = parse(r);
     expect(parsed.workflowName).toBe("compare-readme-and-package-metadata");
     expect(parsed.scriptPath).toContain("compare-readme-and-package-metadata");
+    // Let the background run settle to a terminal state before teardown.
+    await pollStatus(client, parsed.runId, (s) =>
+      ["completed", "failed", "stopped"].includes(s.run.status),
+    );
   });
 });

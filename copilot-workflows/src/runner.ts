@@ -8,6 +8,7 @@ import {
   createInitialRun,
   loadRun,
   saveRun,
+  withRunLock,
   workflowPaths,
   writeAgentTranscript,
   type StateOptions,
@@ -93,59 +94,90 @@ export class WorkflowRunner {
   }
 
   async runToCompletion(runId: string): Promise<WorkflowRun> {
-    let run = loadRun(runId, this.opts);
-    if (run.status === "stopped") throw new Error(`workflow ${runId} is stopped`);
     const start = Date.now();
-    run.status = "running";
-    run.startedAt = new Date(start).toISOString();
-    appendJournal(runId, { type: "run_started", runId }, this.opts);
-    saveRun(run, this.opts);
-    await this.progress(1, undefined, `workflow ${run.workflowName} started`);
+    // Lock only the start transition; the lock is released before the (potentially
+    // long-running) agent execution so that stop() can interleave.
+    const workflowName = await withRunLock(
+      runId,
+      () => {
+        const run = loadRun(runId, this.opts);
+        if (run.status === "stopped") throw new Error(`workflow ${runId} is stopped`);
+        run.status = "running";
+        run.startedAt = new Date(start).toISOString();
+        appendJournal(runId, { type: "run_started", runId }, this.opts);
+        saveRun(run, this.opts);
+        return run.workflowName;
+      },
+      this.opts,
+    );
+    await this.progress(1, undefined, `workflow ${workflowName} started`);
+
+    const current = loadRun(runId, this.opts);
     try {
-      const prior = run.resumeFromRunId ? loadRun(run.resumeFromRunId, this.opts) : null;
-      const out = await executeWorkflowScript(run.script, {
-        args: run.args,
+      const prior = current.resumeFromRunId ? loadRun(current.resumeFromRunId, this.opts) : null;
+      const out = await executeWorkflowScript(current.script, {
+        args: current.args,
         backend: this.backend,
-        defaultModel: run.defaultModel,
-        defaultEffort: run.defaultEffort,
-        defaultContextWindow: run.defaultContextWindow,
+        defaultModel: current.defaultModel,
+        defaultEffort: current.defaultEffort,
+        defaultContextWindow: current.defaultContextWindow,
         maxRetries: 1,
-        budgetTokens: run.budgetTokens,
+        budgetTokens: current.budgetTokens,
         previousCache: buildPreviousCache(prior),
       });
-      run = loadRun(runId, this.opts);
-      run.status = "completed";
-      run.result = out.result;
-      run.workflowProgress = out.progress;
-      run.agentCount = out.agentCount;
-      run.totalTokens = out.totalTokens;
-      run.totalToolCalls = out.totalToolCalls;
-      run.cacheResults = out.cacheResults;
-      run.durationMs = Date.now() - start;
-      run.completedAt = new Date().toISOString();
-      appendJournal(runId, { type: "run_completed", result: out.result }, this.opts);
-      for (const entry of out.progress) {
-        if (entry.type === "workflow_agent") {
-          writeAgentTranscript(runId, entry.agentId, [{ role: "assistant", content: entry.resultPreview ?? "" }], this.opts);
-        }
-      }
-      saveRun(run, this.opts);
-      await this.progress(2, undefined, `workflow ${run.workflowName} completed`);
-      return run;
+      // Lock the completion write. If a concurrent stop() marked the run stopped
+      // while execution was in flight, preserve the stopped state.
+      const finished = await withRunLock(
+        runId,
+        () => {
+          const run = loadRun(runId, this.opts);
+          for (const { agentId, transcript } of out.transcripts) {
+            writeAgentTranscript(runId, agentId, transcript, this.opts);
+          }
+          if (run.status === "stopped") return run;
+          run.status = "completed";
+          run.result = out.result;
+          run.workflowProgress = out.progress;
+          run.agentCount = out.agentCount;
+          run.totalTokens = out.totalTokens;
+          run.totalToolCalls = out.totalToolCalls;
+          run.cacheResults = out.cacheResults;
+          run.durationMs = Date.now() - start;
+          run.completedAt = new Date().toISOString();
+          appendJournal(runId, { type: "run_completed", result: out.result }, this.opts);
+          saveRun(run, this.opts);
+          return run;
+        },
+        this.opts,
+      );
+      await this.progress(2, undefined, `workflow ${finished.workflowName} ${finished.status}`);
+      return finished;
     } catch (err) {
-      run = loadRun(runId, this.opts);
-      run.status = "failed";
-      run.error = err instanceof Error ? err.message : String(err);
-      run.durationMs = Date.now() - start;
-      run.completedAt = new Date().toISOString();
-      if (err instanceof WorkflowExecutionError) {
-        run.workflowProgress = err.progress;
-        run.totalTokens = err.totalTokens;
-        run.totalToolCalls = err.totalToolCalls;
-        run.agentCount = err.agentCount;
-      }
-      appendJournal(runId, { type: "run_failed", error: run.error }, this.opts);
-      saveRun(run, this.opts);
+      await withRunLock(
+        runId,
+        () => {
+          const run = loadRun(runId, this.opts);
+          if (err instanceof WorkflowExecutionError) {
+            for (const { agentId, transcript } of err.transcripts) {
+              writeAgentTranscript(runId, agentId, transcript, this.opts);
+            }
+            run.workflowProgress = err.progress;
+            run.totalTokens = err.totalTokens;
+            run.totalToolCalls = err.totalToolCalls;
+            run.agentCount = err.agentCount;
+          }
+          // A concurrent stop() takes precedence over a late failure write.
+          if (run.status !== "stopped") {
+            run.status = "failed";
+            run.error = err instanceof Error ? err.message : String(err);
+            run.durationMs = Date.now() - start;
+            run.completedAt = new Date().toISOString();
+            appendJournal(runId, { type: "run_failed", error: run.error }, this.opts);
+          }
+          saveRun(run, this.opts);
+        },
+        this.opts,
+      );
       throw err;
     }
   }
@@ -169,13 +201,21 @@ export class WorkflowRunner {
     return { run, result: run.result, journal, transcripts };
   }
 
-  stop(runId: string): WorkflowRun {
-    const run = loadRun(runId, this.opts);
-    if (run.status === "completed" || run.status === "failed") return run;
-    run.status = "stopped";
-    run.completedAt = new Date().toISOString();
-    appendJournal(runId, { type: "run_stopped", runId }, this.opts);
-    saveRun(run, this.opts);
-    return loadRun(runId, this.opts);
+  async stop(runId: string): Promise<WorkflowRun> {
+    return withRunLock(
+      runId,
+      () => {
+        const run = loadRun(runId, this.opts);
+        if (run.status === "completed" || run.status === "failed" || run.status === "stopped") {
+          return run;
+        }
+        run.status = "stopped";
+        run.completedAt = new Date().toISOString();
+        appendJournal(runId, { type: "run_stopped", runId }, this.opts);
+        saveRun(run, this.opts);
+        return loadRun(runId, this.opts);
+      },
+      this.opts,
+    );
   }
 }

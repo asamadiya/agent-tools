@@ -29,7 +29,7 @@ describe("copilot-workflow CLI", () => {
     expect(r.stdout).toContain("cli-demo");
   });
 
-  it("resume command launches a queued run with resumeFromRunId set", async () => {
+  it("resume command runs to completion with resumeFromRunId set", async () => {
     await execa("npm", ["run", "build"], { cwd: process.cwd() });
 
     // First: launch a prior run to get a run ID
@@ -40,7 +40,7 @@ describe("copilot-workflow CLI", () => {
     });
     expect(prior.exitCode).toBe(0);
     const priorLaunch = JSON.parse(prior.stdout) as { runId: string; status: string };
-    expect(priorLaunch.status).toBe("queued");
+    expect(priorLaunch.status).toBe("completed");
 
     // Then: resume from that run ID
     const r = await execa("node", ["dist/cli.js", "resume", priorLaunch.runId, scriptPath], {
@@ -50,7 +50,7 @@ describe("copilot-workflow CLI", () => {
     });
     expect(r.exitCode).toBe(0);
     const launch = JSON.parse(r.stdout) as { runId: string; status: string };
-    expect(launch.status).toBe("queued");
+    expect(launch.status).toBe("completed");
 
     // Inspect persisted state: resumeFromRunId must equal the prior run ID
     const runFile = join(root, "runs", `${launch.runId}.json`);
@@ -58,7 +58,7 @@ describe("copilot-workflow CLI", () => {
     expect(persisted.resumeFromRunId).toBe(priorLaunch.runId);
   });
 
-  it("run --resume-from launches a queued run with resumeFromRunId set", async () => {
+  it("run --resume-from runs to completion with resumeFromRunId set", async () => {
     await execa("npm", ["run", "build"], { cwd: process.cwd() });
 
     // First: launch a prior run to get a run ID
@@ -78,7 +78,7 @@ describe("copilot-workflow CLI", () => {
     });
     expect(r.exitCode).toBe(0);
     const launch = JSON.parse(r.stdout) as { runId: string; status: string };
-    expect(launch.status).toBe("queued");
+    expect(launch.status).toBe("completed");
 
     // Inspect persisted state: resumeFromRunId must equal the prior run ID
     const runFile = join(root, "runs", `${launch.runId}.json`);

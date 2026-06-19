@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { logger } from "./logger.js";
 import { inspectWorkflowScript } from "./script.js";
 import { WorkflowRunner, type WorkflowRunnerOptions } from "./runner.js";
 import { generateWorkflowScriptFromGoal } from "./planner.js";
@@ -37,7 +38,17 @@ export const handleWorkflow = async (raw: unknown, deps: WorkflowRunnerOptions) 
     confirm: input.confirm,
     ...(input.resumeFromRunId ? { resumeFromRunId: input.resumeFromRunId } : {}),
   });
-  if (!input.wait) return { ...launch, status: "async_launched" as const };
+  if (!input.wait) {
+    // Schedule the run in-process and return immediately. Errors are captured
+    // and persisted via runToCompletion's failure path; log them here too.
+    void runner.runToCompletion(launch.runId).catch((err) => {
+      logger.error(
+        { err: err instanceof Error ? err.message : String(err), runId: launch.runId },
+        "background workflow run failed",
+      );
+    });
+    return { ...launch, status: "async_launched" as const };
+  }
   const done = await runner.runToCompletion(launch.runId);
   return { ...launch, status: done.status, result: done.result, workflowProgress: done.workflowProgress };
 };
@@ -54,7 +65,7 @@ export const handleWorkflowOutput = (raw: unknown, deps: WorkflowRunnerOptions) 
   return new WorkflowRunner(deps).output(runId);
 };
 
-export const handleWorkflowStop = (raw: unknown, deps: WorkflowRunnerOptions) => {
+export const handleWorkflowStop = async (raw: unknown, deps: WorkflowRunnerOptions) => {
   const { runId } = WorkflowRunIdSchema.parse(raw);
   return new WorkflowRunner(deps).stop(runId);
 };

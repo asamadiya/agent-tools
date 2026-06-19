@@ -1,5 +1,5 @@
 import { execa } from "execa";
-import type { JsonSchema } from "./types.js";
+import type { AgentStepOptions, JsonSchema } from "./types.js";
 
 export interface AgentRunInput {
   prompt: string;
@@ -11,6 +11,11 @@ export interface AgentRunInput {
   schema?: JsonSchema;
   cwd?: string;
   env?: Record<string, string>;
+  systemPrompt?: string;
+  permissions?: AgentStepOptions["permissions"];
+  allowedTools?: string[];
+  deniedTools?: string[];
+  isolation?: AgentStepOptions["isolation"];
 }
 
 export interface AgentRunOutput {
@@ -129,17 +134,28 @@ export const runAgentWithSchemaRetry = async (
 export class CopilotPrintBackend implements AgentBackend {
   constructor(private readonly binary = "copilot") {}
 
+  buildArgs(input: AgentRunInput): string[] {
+    if (input.systemPrompt) {
+      throw new Error("CopilotPrintBackend does not support systemPrompt yet");
+    }
+    if (input.isolation === "worktree") {
+      throw new Error("CopilotPrintBackend does not support isolation:'worktree' yet");
+    }
+    const args = ["--model", input.model, "--effort", input.effort];
+    if (input.permissions) args.push("--mode", input.permissions);
+    for (const tool of input.allowedTools ?? []) args.push(`--allow-tool=${tool}`);
+    for (const tool of input.deniedTools ?? []) args.push(`--deny-tool=${tool}`);
+    args.push("-p", input.prompt, "-s");
+    return args;
+  }
+
   async run(input: AgentRunInput): Promise<BackendRawOutput> {
-    const result = await execa(
-      this.binary,
-      ["--model", input.model, "--effort", input.effort, "-p", input.prompt, "-s"],
-      {
-        cwd: input.cwd,
-        env: input.env ? { ...process.env, ...input.env } : process.env,
-        reject: false,
-        stripFinalNewline: false,
-      },
-    );
+    const result = await execa(this.binary, this.buildArgs(input), {
+      cwd: input.cwd,
+      env: input.env ? { ...process.env, ...input.env } : process.env,
+      reject: false,
+      stripFinalNewline: false,
+    });
     if ((result.exitCode ?? 1) !== 0) {
       throw new Error(`copilot agent failed: ${result.stderr || result.stdout}`);
     }

@@ -29,15 +29,21 @@ const makeProgressReporter = (extra: Extra): ProgressReporter => {
   const send = extra?.sendNotification;
   if (token === undefined || typeof send !== "function") return noopProgress;
   return async (progress, total, message) => {
-    await send({
-      method: "notifications/progress",
-      params: {
-        progressToken: token,
-        progress,
-        ...(typeof total === "number" ? { total } : {}),
-        ...(message ? { message } : {}),
-      },
-    });
+    try {
+      await send({
+        method: "notifications/progress",
+        params: {
+          progressToken: token,
+          progress,
+          ...(typeof total === "number" ? { total } : {}),
+          ...(message ? { message } : {}),
+        },
+      });
+    } catch (err) {
+      // A failed progress notification (e.g. after the request settled for a
+      // backgrounded run) must never fail or corrupt the workflow run itself.
+      logger.warn({ err: err instanceof Error ? err.message : String(err) }, "progress notification failed");
+    }
   };
 };
 

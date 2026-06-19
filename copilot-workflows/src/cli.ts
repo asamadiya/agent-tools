@@ -26,13 +26,15 @@ if (cmd === "inspect") {
   const path = pathArgs[0];
   if (!path) throw new Error("usage: copilot-workflow run <script.js> [--resume-from <run-id>]");
   const launch = await runner.launch({ script: readFileSync(path, "utf8"), confirm: false, ...(resumeFromRunId ? { resumeFromRunId } : {}) });
-  print(launch);
+  const done = await runner.runToCompletion(launch.runId);
+  print({ ...launch, status: done.status, result: done.result });
 } else if (cmd === "resume") {
   const runId = args[0];
   const path = args[1];
   if (!runId || !path) throw new Error("usage: copilot-workflow resume <run-id> <script.js>");
   const launch = await runner.launch({ script: readFileSync(path, "utf8"), confirm: false, resumeFromRunId: runId });
-  print(launch);
+  const done = await runner.runToCompletion(launch.runId);
+  print({ ...launch, status: done.status, result: done.result });
 } else if (cmd === "status") {
   const runId = args[0];
   if (!runId) throw new Error("usage: copilot-workflow status <run-id>");
@@ -45,7 +47,7 @@ if (cmd === "inspect") {
 } else if (cmd === "stop") {
   const runId = args[0];
   if (!runId) throw new Error("usage: copilot-workflow stop <run-id>");
-  print(runner.stop(runId));
+  print(await runner.stop(runId));
 } else {
   process.stderr.write("usage: copilot-workflow <inspect|run|resume|status|output|stop> ...\n");
   process.exit(2);

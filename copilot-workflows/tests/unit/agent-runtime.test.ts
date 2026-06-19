@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  CopilotPrintBackend,
   StubAgentBackend,
   runAgentWithSchemaRetry,
   validateJsonSchemaResult,
@@ -81,5 +82,47 @@ describe("agent runtime", () => {
         { maxRetries: 1 },
       ),
     ).rejects.toThrow(/schema validation failed/i);
+  });
+});
+
+describe("CopilotPrintBackend option handling", () => {
+  const baseInput = {
+    prompt: "do it",
+    stepId: "step_1",
+    agentId: "agent-a",
+    model: "gpt-5.5",
+    effort: "xhigh",
+    contextWindow: 1_100_000,
+  };
+
+  it("hard-fails systemPrompt instead of silently dropping it", async () => {
+    const backend = new CopilotPrintBackend();
+    await expect(
+      backend.run({ ...baseInput, systemPrompt: "be terse" }),
+    ).rejects.toThrow(/systemPrompt/i);
+  });
+
+  it("hard-fails isolation:'worktree' instead of silently dropping it", async () => {
+    const backend = new CopilotPrintBackend();
+    await expect(
+      backend.run({ ...baseInput, isolation: "worktree" }),
+    ).rejects.toThrow(/worktree|isolation/i);
+  });
+
+  it("builds CLI args forwarding permissions and allowed/denied tools", () => {
+    const backend = new CopilotPrintBackend();
+    const args = backend.buildArgs({
+      ...baseInput,
+      permissions: "plan",
+      allowedTools: ["read", "grep"],
+      deniedTools: ["write"],
+    });
+    expect(args).toContain("--mode");
+    expect(args[args.indexOf("--mode") + 1]).toBe("plan");
+    expect(args).toContain("--allow-tool=read");
+    expect(args).toContain("--allow-tool=grep");
+    expect(args).toContain("--deny-tool=write");
+    expect(args).toContain("-p");
+    expect(args[args.indexOf("-p") + 1]).toBe("do it");
   });
 });

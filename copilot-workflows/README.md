@@ -6,7 +6,7 @@ Use this when a prompt says `workflow: <goal>` or when a task benefits from mult
 
 ## Tools
 
-- `Workflow` runs a generated or persisted workflow JS file.
+- `Workflow` runs a generated or persisted workflow JS file. By default (`wait:false`) it launches the run in the background and returns immediately with `runId`/`scriptPath`/`transcriptDir`; poll `WorkflowStatus` for completion or pass `wait:true` to run synchronously. Requires `confirm:false` to launch.
 - `WorkflowStatus` shows live phase and agent progress.
 - `WorkflowOutput` returns the final result, journal, and per-agent transcripts.
 - `WorkflowStop` cancels a run.
