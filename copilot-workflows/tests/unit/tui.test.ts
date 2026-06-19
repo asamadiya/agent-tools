@@ -16,7 +16,7 @@ describe("workflow TUI state", () => {
     expect(renderWorkflowUi(sampleRuns(), state)).toContain("❯ WF2");
 
     state = handleWorkflowUiKey(state, sampleRuns(), "enter");
-    expect(state.view).toBe("detail");
+    expect(state.view).toBe("workflow");
     expect(renderWorkflowUi(sampleRuns(), state)).toContain("WF2 second");
     expect(renderWorkflowUi(sampleRuns(), state)).toContain("Prompt: prompt second");
 
@@ -25,6 +25,27 @@ describe("workflow TUI state", () => {
 
     state = handleWorkflowUiKey(state, sampleRuns(), "q");
     expect(state.quit).toBe(true);
+  });
+
+  it("drills in with right arrow, backs out with left arrow, and scrolls agent text with vim keys", () => {
+    let state = createWorkflowUiState(sampleRuns());
+
+    state = handleWorkflowUiKey(state, sampleRuns(), "right");
+    expect(state.view).toBe("workflow");
+
+    state = handleWorkflowUiKey(state, sampleRuns(), "right");
+    expect(state.view).toBe("agent");
+    expect(renderWorkflowUi(sampleRuns(), state)).toContain("Agent details");
+
+    state = handleWorkflowUiKey(state, sampleRuns(), "j");
+    expect(state.detailScroll).toBe(1);
+    state = handleWorkflowUiKey(state, sampleRuns(), "k");
+    expect(state.detailScroll).toBe(0);
+
+    state = handleWorkflowUiKey(state, sampleRuns(), "left");
+    expect(state.view).toBe("workflow");
+    state = handleWorkflowUiKey(state, sampleRuns(), "left");
+    expect(state.view).toBe("list");
   });
 });
 

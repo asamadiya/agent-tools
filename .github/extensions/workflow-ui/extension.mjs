@@ -100,7 +100,7 @@ function renderHtml(root) {
 <body>
   <header>
     <div><b>Copilot Workflows</b> <span id="count" class="muted"></span></div>
-    <div class="help">↑/↓ workflow · Enter detail · Esc list · j/k agent · r refresh</div>
+    <div class="help">↑/↓ select · → drill in · ← back · j/k scroll text · r refresh</div>
   </header>
   <main>
     <section class="list" id="runs"></section>
@@ -108,7 +108,7 @@ function renderHtml(root) {
   </main>
   <script>
     const cfg = ${initial};
-    let runs = [], runIndex = 0, phaseIndex = 0, agentIndex = 0, view = 'list';
+    let runs = [], runIndex = 0, phaseIndex = 0, agentIndex = 0, detailScroll = 0, view = 'list';
     const icon = ${stateIcon.toString()};
     const doneAgents = ${doneAgents.toString()};
     const agents = ${agents.toString()};
@@ -149,26 +149,46 @@ function renderHtml(root) {
         '<div class="title">' + icon(a.state) + ' ' + a.label + '</div>' +
         '<div class="meta">' + a.model + '/' + a.effort + ' · ' + fmtTokens(a.tokens) + ' tok · ' + a.toolCalls + ' tools · ' + (a.durationMs === undefined ? a.state : fmtDuration(a.durationMs)) + '</div>' +
       '</div>').join('') || '<div class="muted">No agents in this phase</div>';
+      const details = [
+        '<b>Prompt</b><pre>' + trunc(selected?.promptPreview, 1200) + '</pre>',
+        '<b>Activity</b><pre>' + trunc((selected?.lastToolName || selected?.state || 'none') + (selected?.lastToolSummary ? ' — ' + selected.lastToolSummary : ''), 1200) + '</pre>',
+        '<b>Outcome</b><pre>' + trunc(selected?.error || selected?.resultPreview || 'none', 2000) + '</pre>',
+      ];
+      const visibleDetails = view === 'agent' ? details.slice(detailScroll) : details;
       document.getElementById('detail').innerHTML =
         '<h2>' + run.workflowId + ' ' + run.workflowName + '</h2>' +
         '<div class="meta">' + run.status + ' · ' + doneAgents(run) + '/' + agents(run).length + ' agents · ' + fmtDuration(run.durationMs || 0) + ' · ' + fmtTokens(run.totalTokens || 0) + ' tok</div>' +
         '<div class="grid"><div class="box"><b>Phases</b>' + phaseHtml + '</div><div class="box"><b>' + phase.title + ' · ' + ags.length + ' agent' + (ags.length === 1 ? '' : 's') + '</b><div class="agents">' + agentHtml + '</div></div></div>' +
-        '<div class="box" style="margin-top:10px"><b>Prompt</b><pre>' + trunc(selected?.promptPreview, 1200) + '</pre><b>Activity</b><pre>' + trunc((selected?.lastToolName || selected?.state || 'none') + (selected?.lastToolSummary ? ' — ' + selected.lastToolSummary : ''), 1200) + '</pre><b>Outcome</b><pre>' + trunc(selected?.error || selected?.resultPreview || 'none', 2000) + '</pre></div>';
+        '<div class="box" style="margin-top:10px"><div class="meta">' + (view === 'agent' ? 'Agent details · j/k scroll · ← back' : 'Workflow detail · → agent details') + '</div>' + visibleDetails.join('') + '</div>';
     }
     function render(){ renderRuns(); renderDetail(); }
     document.addEventListener('keydown', (e) => {
       if (e.key === 'r') { refresh(); return; }
       if (e.key === 'Escape') { view = 'list'; render(); return; }
-      if (e.key === 'Enter') { view = 'detail'; render(); return; }
+      if (e.key === 'Enter' || e.key === 'ArrowRight') {
+        if (view === 'list') view = 'workflow';
+        else if (view === 'workflow') view = 'agent';
+        detailScroll = 0;
+        render();
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        if (view === 'agent') view = 'workflow';
+        else if (view === 'workflow') view = 'list';
+        detailScroll = 0;
+        render();
+        return;
+      }
       if (view === 'list') {
         if (e.key === 'ArrowDown') runIndex++;
         if (e.key === 'ArrowUp') runIndex--;
         phaseIndex = 0; agentIndex = 0;
+      } else if (view === 'agent') {
+        if (e.key === 'j' || e.key === 'ArrowDown') detailScroll++;
+        if (e.key === 'k' || e.key === 'ArrowUp') detailScroll = Math.max(0, detailScroll - 1);
       } else {
         if (e.key === 'ArrowDown') phaseIndex++;
         if (e.key === 'ArrowUp') phaseIndex--;
-        if (e.key === 'j') agentIndex++;
-        if (e.key === 'k') agentIndex--;
       }
       render();
     });

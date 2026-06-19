@@ -7,16 +7,18 @@ import {
 } from "./visibility.js";
 
 export interface WorkflowUiState {
-  view: "list" | "detail";
+  view: "list" | "workflow" | "agent";
   selectedRunIndex: number;
+  detailScroll: number;
   quit: boolean;
 }
 
-export type WorkflowUiKey = "up" | "down" | "enter" | "escape" | "q" | "refresh";
+export type WorkflowUiKey = "up" | "down" | "left" | "right" | "enter" | "escape" | "j" | "k" | "q" | "refresh";
 
 export const createWorkflowUiState = (runs: WorkflowRun[]): WorkflowUiState => ({
   view: "list",
   selectedRunIndex: runs.length > 0 ? 0 : -1,
+  detailScroll: 0,
   quit: false,
 });
 
@@ -33,7 +35,19 @@ export const handleWorkflowUiKey = (
   if (key === "q") return { ...state, quit: true };
   if (key === "refresh") return { ...state, selectedRunIndex: clampRunIndex(state.selectedRunIndex, runs) };
   if (key === "escape") return { ...state, view: "list" };
-  if (key === "enter" && state.selectedRunIndex >= 0) return { ...state, view: "detail" };
+  if ((key === "enter" || key === "right") && state.selectedRunIndex >= 0) {
+    if (state.view === "list") return { ...state, view: "workflow", detailScroll: 0 };
+    if (state.view === "workflow") return { ...state, view: "agent", detailScroll: 0 };
+  }
+  if (key === "left") {
+    if (state.view === "agent") return { ...state, view: "workflow", detailScroll: 0 };
+    if (state.view === "workflow") return { ...state, view: "list", detailScroll: 0 };
+  }
+  if (state.view === "agent") {
+    if (key === "j" || key === "down") return { ...state, detailScroll: state.detailScroll + 1 };
+    if (key === "k" || key === "up") return { ...state, detailScroll: Math.max(0, state.detailScroll - 1) };
+    return state;
+  }
   if (key === "up") return { ...state, selectedRunIndex: clampRunIndex(state.selectedRunIndex - 1, runs) };
   if (key === "down") return { ...state, selectedRunIndex: clampRunIndex(state.selectedRunIndex + 1, runs) };
   return state;
@@ -41,8 +55,15 @@ export const handleWorkflowUiKey = (
 
 export const renderWorkflowUi = (runs: WorkflowRun[], state: WorkflowUiState): string => {
   const selected = runs[state.selectedRunIndex];
-  if (state.view === "detail" && selected) {
-    return renderWorkflowDetail(selected, { workflowId: workflowIdForRun(selected, runs) });
+  if ((state.view === "workflow" || state.view === "agent") && selected) {
+    const detail = renderWorkflowDetail(selected, { workflowId: workflowIdForRun(selected, runs) });
+    if (state.view === "workflow") return detail;
+    const lines = detail.split("\n");
+    const scroll = Math.min(state.detailScroll, Math.max(0, lines.length - 1));
+    return [
+      "Agent details (j/k or ↑/↓ scroll · ← back)",
+      ...lines.slice(scroll),
+    ].join("\n");
   }
   return renderWorkflowList(runs, selected?.runId);
 };
@@ -54,6 +75,10 @@ const keyFromBuffer = (buf: Buffer): WorkflowUiKey | null => {
   if (s === "\u001b") return "escape";
   if (s === "\u001b[A") return "up";
   if (s === "\u001b[B") return "down";
+  if (s === "\u001b[C") return "right";
+  if (s === "\u001b[D") return "left";
+  if (s === "j") return "j";
+  if (s === "k") return "k";
   if (s === "r") return "refresh";
   return null;
 };
