@@ -63,12 +63,13 @@ describe("workflow shared types", () => {
         state: "running",
         startedAt: 1000,
         updatedAt: 1001,
+        promptPreview: "Read README.md",
         attempt: 1,
         tokens: 0,
         toolCalls: 0,
         retries: 0,
       }),
-    ).toMatchObject({ label: "read:README", state: "running" });
+    ).toMatchObject({ label: "read:README", state: "running", promptPreview: "Read README.md" });
   });
 });
 

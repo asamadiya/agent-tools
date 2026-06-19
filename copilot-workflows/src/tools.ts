@@ -4,7 +4,13 @@ import { inspectWorkflowScript } from "./script.js";
 import { WorkflowRunner, type WorkflowRunnerOptions } from "./runner.js";
 import { generateWorkflowScriptFromGoal } from "./planner.js";
 import { listRuns } from "./state.js";
-import { renderProgressTree } from "./visibility.js";
+import {
+  renderProgressTree,
+  renderWorkflowDetail,
+  renderWorkflowList,
+  workflowIdForRun,
+  workflowListItems,
+} from "./visibility.js";
 
 export const WorkflowInputSchema = z.object({
   script: z.string().optional(),
@@ -16,7 +22,11 @@ export const WorkflowInputSchema = z.object({
   resumeFromRunId: z.string().optional(),
 });
 
-export const WorkflowRunIdSchema = z.object({ runId: z.string().min(1) });
+export const WorkflowRunIdSchema = z.object({
+  runId: z.string().min(1),
+  selectedPhase: z.string().optional(),
+  selectedAgent: z.string().optional(),
+});
 export const WorkflowInspectInputSchema = z.object({ script: z.string() });
 export const WorkflowListInputSchema = z.object({
   status: z.enum(["preview", "queued", "running", "completed", "failed", "stopped"]).optional(),
@@ -38,6 +48,15 @@ export const handleWorkflow = async (raw: unknown, deps: WorkflowRunnerOptions) 
     confirm: input.confirm,
     ...(input.resumeFromRunId ? { resumeFromRunId: input.resumeFromRunId } : {}),
   });
+  const launchedRun = runner.status(launch.runId);
+  const launchRuns = listRuns({ root: deps.root });
+  const launchWorkflowId = workflowIdForRun(launchedRun, launchRuns);
+  const launchUx = {
+    workflowId: launchWorkflowId,
+    workflowList: workflowListItems(launchRuns),
+    workflowListText: renderWorkflowList(launchRuns, launch.runId),
+    detailView: renderWorkflowDetail(launchedRun, { workflowId: launchWorkflowId }),
+  };
   if (!input.wait) {
     // Schedule the run in-process and return immediately. Errors are captured
     // and persisted via runToCompletion's failure path; log them here too.
@@ -47,22 +66,49 @@ export const handleWorkflow = async (raw: unknown, deps: WorkflowRunnerOptions) 
         "background workflow run failed",
       );
     });
-    return { ...launch, status: "async_launched" as const };
+    return { ...launch, ...launchUx, status: "async_launched" as const };
   }
   const done = await runner.runToCompletion(launch.runId);
-  return { ...launch, status: done.status, result: done.result, workflowProgress: done.workflowProgress };
+  const doneRuns = listRuns({ root: deps.root });
+  const doneWorkflowId = workflowIdForRun(done, doneRuns);
+  return {
+    ...launch,
+    workflowId: doneWorkflowId,
+    workflowList: workflowListItems(doneRuns),
+    workflowListText: renderWorkflowList(doneRuns, done.runId),
+    detailView: renderWorkflowDetail(done, { workflowId: doneWorkflowId }),
+    status: done.status,
+    result: done.result,
+    workflowProgress: done.workflowProgress,
+  };
 };
 
 export const handleWorkflowStatus = (raw: unknown, deps: WorkflowRunnerOptions) => {
-  const { runId } = WorkflowRunIdSchema.parse(raw);
+  const { runId, selectedPhase, selectedAgent } = WorkflowRunIdSchema.parse(raw);
   const runner = new WorkflowRunner(deps);
   const run = runner.status(runId);
-  return { run, progressTree: renderProgressTree(run) };
+  const runs = listRuns({ root: deps.root });
+  const workflowId = workflowIdForRun(run, runs);
+  return {
+    run,
+    workflowId,
+    workflowList: workflowListItems(runs),
+    workflowListText: renderWorkflowList(runs, runId),
+    progressTree: renderProgressTree(run),
+    detailView: renderWorkflowDetail(run, { workflowId, selectedPhase, selectedAgent }),
+  };
 };
 
 export const handleWorkflowOutput = (raw: unknown, deps: WorkflowRunnerOptions) => {
   const { runId } = WorkflowRunIdSchema.parse(raw);
-  return new WorkflowRunner(deps).output(runId);
+  const output = new WorkflowRunner(deps).output(runId);
+  const runs = listRuns({ root: deps.root });
+  const workflowId = workflowIdForRun(output.run, runs);
+  return {
+    ...output,
+    workflowId,
+    detailView: renderWorkflowDetail(output.run, { workflowId }),
+  };
 };
 
 export const handleWorkflowStop = async (raw: unknown, deps: WorkflowRunnerOptions) => {
@@ -82,7 +128,7 @@ export const handleWorkflowList = (raw: unknown, deps: WorkflowRunnerOptions) =>
     if (input.workflowName && run.workflowName !== input.workflowName) return false;
     return true;
   });
-  return { runs };
+  return { runs, workflowList: workflowListItems(runs), workflowListText: renderWorkflowList(runs) };
 };
 
 export const handleWorkflowSave = async (raw: unknown, deps: WorkflowRunnerOptions) => {

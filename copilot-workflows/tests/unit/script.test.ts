@@ -120,6 +120,9 @@ return { one, remaining: budget.remaining() }
     expect(out.progress.some((p) => p.type === "workflow_phase")).toBe(true);
     expect(out.progress.some((p) => p.type === "workflow_log")).toBe(true);
     expect(out.progress.some((p) => p.type === "workflow_agent")).toBe(true);
+    const agentEntry = out.progress.find((p) => p.type === "workflow_agent");
+    if (agentEntry?.type !== "workflow_agent") throw new Error("not an agent entry");
+    expect(agentEntry.promptPreview).toBe("hello world");
   });
 
   it("parallel preserves order and converts thrown thunks to null", async () => {

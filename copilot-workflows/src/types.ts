@@ -110,6 +110,7 @@ export const WorkflowProgressEntrySchema = z.discriminatedUnion("type", [
     tokens: z.number().int().nonnegative(),
     toolCalls: z.number().int().nonnegative(),
     retries: z.number().int().nonnegative(),
+    promptPreview: z.string().optional(),
     lastToolName: z.string().optional(),
     lastToolSummary: z.string().optional(),
     resultPreview: z.string().optional(),

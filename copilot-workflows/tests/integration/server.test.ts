@@ -75,10 +75,13 @@ describe("workflow MCP server", () => {
     const status = await client.callTool({ name: "WorkflowStatus", arguments: { runId: parsed.runId } });
     expect(status.isError).toBeFalsy();
     expect((status.content as Array<{ text: string }>)[0]!.text).toContain("server-demo");
+    expect((status.content as Array<{ text: string }>)[0]!.text).toContain("detailView");
+    expect((status.content as Array<{ text: string }>)[0]!.text).toContain("Prompt:");
 
     const output = await client.callTool({ name: "WorkflowOutput", arguments: { runId: parsed.runId } });
     expect(output.isError).toBeFalsy();
     expect((output.content as Array<{ text: string }>)[0]!.text).toContain("\"ok\"");
+    expect((output.content as Array<{ text: string }>)[0]!.text).toContain("detailView");
   });
 
   it("emits progress notifications", async () => {
@@ -105,6 +108,8 @@ describe("workflow MCP server", () => {
     const listParsed = JSON.parse((listed.content as Array<{ text: string }>)[0]!.text);
     expect(listParsed.runs).toHaveLength(1);
     expect(listParsed.runs[0].workflowName).toBe("server-demo");
+    expect(listParsed.workflowList[0].workflowId).toBe("WF1");
+    expect(listParsed.workflowListText).toContain("WF1");
   });
 
   it("schedules background execution for default wait:false and completes without a second run call", async () => {
@@ -113,6 +118,9 @@ describe("workflow MCP server", () => {
     expect(launched.isError).toBeFalsy();
     const parsed = parse(launched);
     expect(parsed.status).toBe("async_launched");
+    expect(parsed.workflowId).toBe("WF1");
+    expect(parsed.workflowListText).toContain("WF1");
+    expect(parsed.detailView).toContain("╭ Phases");
 
     const status = await pollStatus(client, parsed.runId, (s) => s.run.status === "completed");
     expect(status.run.status).toBe("completed");

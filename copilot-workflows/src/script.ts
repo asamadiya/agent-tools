@@ -314,6 +314,7 @@ export const executeWorkflowScript = async (
       tokens: 0,
       toolCalls: 0,
       retries: 0,
+      promptPreview: prompt.slice(0, 500),
       cacheKey,
     };
     progress.push(entry);

@@ -14,6 +14,14 @@ Use this when a prompt says `workflow: <goal>` or when a task benefits from mult
 - `WorkflowList` lists runs, optionally filtered by status or workflow name.
 - `WorkflowSave` validates and persists a script as a queued run without executing it.
 
+## Workflow UX
+
+Workflow responses include Claude Code-style terminal views:
+
+- `workflowListText` shows numbered workflow rows (`WF1`, `WF2`, ...) so multiple runs can be distinguished.
+- `detailView` shows a split view: phases on the left, agent/task rows on the right, plus the selected task's prompt, current activity, and outcome.
+- `WorkflowStatus` accepts optional `selectedPhase` and `selectedAgent` fields to render a focused detail view for a specific phase or task.
+
 Default agent config is GPT-5.5, xhigh effort, 1.1M context. Override globally, per workflow, per phase, or per agent.
 
 ### Agent `permissions`
