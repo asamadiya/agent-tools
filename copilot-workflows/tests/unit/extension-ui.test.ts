@@ -27,4 +27,11 @@ describe("workflow extension browser UI", () => {
     expect(src).toContain("\"list-panes\"");
     expect(src).toContain("\"-a\"");
   });
+
+  it("requests Copilot native canvas rendering before falling back to tmux", () => {
+    const src = extensionSource();
+    expect(src).toContain("requestCanvasRenderer: true");
+    expect(src).toContain("session.capabilities.ui?.canvases");
+    expect(src.slice(src.indexOf("session = await joinSession({"))).toContain("requestCanvasRenderer: true");
+  });
 });

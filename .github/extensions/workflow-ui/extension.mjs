@@ -348,6 +348,7 @@ async function resolveCopilotPane() {
 
 session = await joinSession({
   canvases: [canvas],
+  requestCanvasRenderer: true,
   extensionInfo: { source: "project", name: "workflow-ui" },
   commands: [
     {
