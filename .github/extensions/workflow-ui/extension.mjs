@@ -159,7 +159,9 @@ function renderHtml(root) {
         '<h2>' + run.workflowId + ' ' + run.workflowName + '</h2>' +
         '<div class="meta">' + run.status + ' · ' + doneAgents(run) + '/' + agents(run).length + ' agents · ' + fmtDuration(run.durationMs || 0) + ' · ' + fmtTokens(run.totalTokens || 0) + ' tok</div>' +
         '<div class="grid"><div class="box"><b>Phases</b>' + phaseHtml + '</div><div class="box"><b>' + phase.title + ' · ' + ags.length + ' agent' + (ags.length === 1 ? '' : 's') + '</b><div class="agents">' + agentHtml + '</div></div></div>' +
-        '<div class="box" style="margin-top:10px"><div class="meta">' + (view === 'agent' ? 'Agent details · j/k scroll · ← back' : 'Workflow detail · → agent details') + '</div>' + visibleDetails.join('') + '</div>';
+        '<div class="box" style="margin-top:10px"><div class="meta">' +
+          (view === 'agent' ? 'Agent details · j/k scroll text · ← tasks' : view === 'tasks' ? 'Tasks · ↑/↓ select task · → details · ← phases' : 'Phases · ↑/↓ select phase · → tasks') +
+          '</div>' + visibleDetails.join('') + '</div>';
     }
     function render(){ renderRuns(); renderDetail(); }
     document.addEventListener('keydown', (e) => {
@@ -167,13 +169,15 @@ function renderHtml(root) {
       if (e.key === 'Escape') { view = 'list'; render(); return; }
       if (e.key === 'Enter' || e.key === 'ArrowRight') {
         if (view === 'list') view = 'workflow';
-        else if (view === 'workflow') view = 'agent';
+        else if (view === 'workflow') view = 'tasks';
+        else if (view === 'tasks') view = 'agent';
         detailScroll = 0;
         render();
         return;
       }
       if (e.key === 'ArrowLeft') {
-        if (view === 'agent') view = 'workflow';
+        if (view === 'agent') view = 'tasks';
+        else if (view === 'tasks') view = 'workflow';
         else if (view === 'workflow') view = 'list';
         detailScroll = 0;
         render();
@@ -186,6 +190,13 @@ function renderHtml(root) {
       } else if (view === 'agent') {
         if (e.key === 'j' || e.key === 'ArrowDown') detailScroll++;
         if (e.key === 'k' || e.key === 'ArrowUp') detailScroll = Math.max(0, detailScroll - 1);
+      } else if (view === 'tasks') {
+        const run = runs[runIndex];
+        const ps = phases(run);
+        const phase = ps[Math.max(0, Math.min(phaseIndex, ps.length - 1))];
+        const ags = phase ? phaseAgents(run, phase) : [];
+        if (e.key === 'ArrowDown') agentIndex = Math.min(Math.max(ags.length - 1, 0), agentIndex + 1);
+        if (e.key === 'ArrowUp') agentIndex = Math.max(0, agentIndex - 1);
       } else {
         if (e.key === 'ArrowDown') phaseIndex++;
         if (e.key === 'ArrowUp') phaseIndex--;
