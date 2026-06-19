@@ -48,6 +48,7 @@ describe("workflow TUI state", () => {
 
     state = handleWorkflowUiKey(state, runs, "down");
     expect(state.selectedAgentIndex).toBe(1);
+    expect(renderWorkflowUi(runs, state)).toContain("❯ ✔ read:second-b");
 
     state = handleWorkflowUiKey(state, runs, "right");
     expect(state.view).toBe("agent");

@@ -137,9 +137,9 @@ const phaseLine = (phase: PhaseEntry, phaseAgents: AgentEntry[], selected: boole
   return `${selected ? "❯" : " "} ${stateIcon(phaseStatus(phaseAgents))} ${phase.title} ${done}/${phaseAgents.length}`;
 };
 
-const agentLine = (agent: AgentEntry): string => {
+const agentLine = (agent: AgentEntry, selected: boolean): string => {
   const bits = [
-    `${stateIcon(agent.state)} ${agent.label}`,
+    `${selected ? "❯ " : "  "}${stateIcon(agent.state)} ${agent.label}`,
     `${agent.model}/${agent.effort}`,
     formatTokens(agent.tokens),
     `${agent.toolCalls} tools`,
@@ -191,7 +191,10 @@ export const renderWorkflowDetail = (run: WorkflowRun, opts: WorkflowRenderOptio
     selectedAgents[0];
 
   const left = phaseEntries.map((phase) => phaseLine(phase, agentsForPhase(run, phase.title), phase.title === activePhase));
-  const right = [phaseHeader({ type: "workflow_phase", index: 1, title: activePhase }, selectedAgents), ...selectedAgents.map(agentLine)];
+  const right = [
+    phaseHeader({ type: "workflow_phase", index: 1, title: activePhase }, selectedAgents),
+    ...selectedAgents.map((agent) => agentLine(agent, agent === selectedAgent)),
+  ];
   const widthLeft = Math.max(18, ...left.map((l) => l.length));
   const widthRight = Math.max(48, ...right.map((r) => r.length));
   const rows = Math.max(left.length, right.length);

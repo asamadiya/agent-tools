@@ -153,7 +153,7 @@ function renderHtml(root) {
         return '<div class="phase ' + (i === phaseIndex ? 'selected' : '') + '">' + (i === phaseIndex ? '❯ ' : '  ') + icon(pa.some(a => a.state === 'failed') ? 'failed' : pa.every(a => ['done','cached'].includes(a.state)) ? 'done' : pa.some(a => a.state === 'running') ? 'running' : 'queued') + ' ' + p.title + ' ' + done + '/' + pa.length + '</div>';
       }).join('');
       const agentHtml = ags.map((a, i) => '<div class="agent ' + (i === agentIndex ? 'selected' : '') + '">' +
-        '<div class="title">' + icon(a.state) + ' ' + a.label + '</div>' +
+        '<div class="title">' + (i === agentIndex ? '❯ ' : '  ') + icon(a.state) + ' ' + a.label + '</div>' +
         '<div class="meta">' + a.model + '/' + a.effort + ' · ' + fmtTokens(a.tokens) + ' tok · ' + a.toolCalls + ' tools · ' + (a.durationMs === undefined ? a.state : fmtDuration(a.durationMs)) + '</div>' +
       '</div>').join('') || '<div class="muted">No agents in this phase</div>';
       const details = [
