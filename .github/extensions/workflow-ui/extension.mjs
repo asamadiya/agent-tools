@@ -1,15 +1,10 @@
 import { createServer } from "node:http";
-import { spawn } from "node:child_process";
-import { execFile } from "node:child_process";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join } from "node:path";
 import { joinSession, createCanvas } from "@github/copilot-sdk/extension";
 
 const DEFAULT_ROOT = join(homedir(), ".copilot", "workflows");
-const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
-const WORKFLOW_BIN = join(REPO_ROOT, "bin", "copilot-workflow");
 const INSTANCE_ID = "copilot-workflows";
 const servers = new Map();
 
@@ -158,6 +153,8 @@ function renderHtml(root) {
         '<div class="meta">' + a.model + '/' + a.effort + ' · ' + fmtTokens(a.tokens) + ' tok · ' + a.toolCalls + ' tools · ' + (a.durationMs === undefined ? a.state : fmtDuration(a.durationMs)) + '</div>' +
       '</div>').join('') || '<div class="muted">No agents in this phase</div>';
       const details = [
+        ...(selected?.dagTaskId ? ['<b>Task id</b><pre>' + selected.dagTaskId + '</pre>'] : []),
+        ...(selected?.dependsOn?.length ? ['<b>Depends on</b><pre>' + selected.dependsOn.join(', ') + '</pre>'] : []),
         '<b>Prompt</b><pre>' + trunc(selected?.promptPreview, 1200) + '</pre>',
         '<b>Activity</b><pre>' + trunc((selected?.lastToolName || selected?.state || 'none') + (selected?.lastToolSummary ? ' — ' + selected.lastToolSummary : ''), 1200) + '</pre>',
         '<b>Outcome</b><pre>' + trunc(selected?.error || selected?.resultPreview || 'none', 2000) + '</pre>',
@@ -278,72 +275,14 @@ const canvas = createCanvas({
 
 async function openWorkflows(root = DEFAULT_ROOT) {
   if (!session.capabilities.ui?.canvases) {
-    return openWorkflowsInTmux(root);
+    await session.log("Workflow UI is rendered inline below the prompt for this Copilot session. Press ↓ from the prompt to focus it.", { ephemeral: true });
+    return { ok: true, surface: "inline-footer", root };
   }
   return session.rpc.canvas.open({
     canvasId: "workflow-ui",
     instanceId: INSTANCE_ID,
     input: { root },
   });
-}
-
-async function openWorkflowsInTmux(root = DEFAULT_ROOT) {
-  if (!process.env.TMUX) {
-    await session.log("This Copilot host does not report canvas support and this session is not inside tmux; run `copilot-workflow ui` in a terminal.", { level: "warning" });
-    return { ok: false, reason: "no_canvas_or_tmux" };
-  }
-  const target = await resolveCopilotPane();
-  const args = [
-    "display-popup",
-    ...(target ? ["-t", target] : []),
-    "-E",
-    "-w",
-    "92%",
-    "-h",
-    "86%",
-    "-d",
-    REPO_ROOT,
-    `${WORKFLOW_BIN} ui`,
-  ];
-  await new Promise((resolvePromise, rejectPromise) => {
-    const child = spawn("tmux", args, { stdio: "ignore", detached: true });
-    child.once("error", rejectPromise);
-    child.once("spawn", resolvePromise);
-    child.unref();
-  });
-  await session.log("Opened workflow UI in a tmux popup. Press q to close it.", { ephemeral: true });
-  return { ok: true, surface: "tmux-popup" };
-}
-
-async function execFileText(file, args) {
-  return new Promise((resolvePromise) => {
-    execFile(file, args, { encoding: "utf8" }, (_err, stdout) => resolvePromise(stdout ?? ""));
-  });
-}
-
-async function resolveCopilotPane() {
-  const loaderPid = process.env.COPILOT_LOADER_PID;
-  const sessionId = process.env.SESSION_ID;
-  if (loaderPid && sessionId) {
-    const panes = await execFileText("tmux", [
-      "list-panes",
-      "-a",
-      "-F",
-      "#{pane_id}\t#{pane_pid}\t#{pane_current_command}",
-    ]);
-    for (const line of panes.split("\n")) {
-      const [paneId, panePid, command] = line.split("\t");
-      if (!paneId || !panePid || command !== "copilot") continue;
-      const env = await execFileText("bash", [
-        "-lc",
-        `tr '\\0' '\\n' < /proc/${Number(panePid)}/environ 2>/dev/null || true`,
-      ]);
-      if (env.includes(`COPILOT_LOADER_PID=${loaderPid}`) || env.includes(`COPILOT_AGENT_SESSION_ID=${sessionId}`)) {
-        return paneId;
-      }
-    }
-  }
-  return process.env.TMUX_PANE;
 }
 
 session = await joinSession({

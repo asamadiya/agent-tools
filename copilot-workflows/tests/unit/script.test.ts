@@ -20,6 +20,14 @@ phase('Read')
 return await agent('read README', { label: 'read:README' })
 `;
 
+const waitFor = async (predicate: () => boolean): Promise<void> => {
+  for (let i = 0; i < 40; i++) {
+    if (predicate()) return;
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  throw new Error("condition was not met");
+};
+
 describe("workflow script parser", () => {
   it("extracts pure literal meta and strips the export", () => {
     expect(extractWorkflowMeta(VALID)).toEqual({
@@ -170,6 +178,188 @@ return await pipeline(
       maxRetries: 0,
     });
     expect(out.result).toEqual(["A2", null, "B2"]);
+  });
+
+  it("dag executes dependency levels in topological order with parallel siblings", async () => {
+    const script = `
+export const meta = { name: 'dag', description: 'DAG test' }
+return await dag([
+  { id: 'root', prompt: 'root' },
+  { id: 'left', dependsOn: ['root'], run: ({ root }) => agent('left after ' + root, { label: 'left' }) },
+  { id: 'right', dependsOn: ['root'], run: ({ root }) => agent('right after ' + root, { label: 'right' }) },
+  { id: 'join', dependsOn: ['left', 'right'], run: ({ left, right }) => agent('join ' + left + ' ' + right, { label: 'join' }) },
+])
+`;
+    const started: string[] = [];
+    const pending = new Map<string, (value: { text: string; tokens: number; toolCalls: number }) => void>();
+    const backend = {
+      run(input: { prompt: string }) {
+        started.push(input.prompt);
+        return new Promise<{ text: string; tokens: number; toolCalls: number }>((resolve) => {
+          pending.set(input.prompt, resolve);
+        });
+      },
+    };
+
+    const execution = executeWorkflowScript(script, {
+      backend,
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    });
+
+    await waitFor(() => started.includes("root"));
+    expect(started).toEqual(["root"]);
+    pending.get("root")!({ text: "ROOT", tokens: 1, toolCalls: 1 });
+
+    await waitFor(() => started.includes("left after ROOT") && started.includes("right after ROOT"));
+    expect(started).toContain("left after ROOT");
+    expect(started).toContain("right after ROOT");
+    expect(started).not.toContain("join LEFT RIGHT");
+    pending.get("left after ROOT")!({ text: "LEFT", tokens: 1, toolCalls: 1 });
+    pending.get("right after ROOT")!({ text: "RIGHT", tokens: 1, toolCalls: 1 });
+
+    await waitFor(() => started.includes("join LEFT RIGHT"));
+    pending.get("join LEFT RIGHT")!({ text: "JOIN", tokens: 1, toolCalls: 1 });
+
+    const out = await execution;
+    expect(out.result).toEqual({ root: "ROOT", left: "LEFT", right: "RIGHT", join: "JOIN" });
+    const joinEntry = out.progress.find((p) => p.type === "workflow_agent" && p.label === "join");
+    if (joinEntry?.type !== "workflow_agent") throw new Error("not an agent entry");
+    expect(joinEntry.dependsOn).toEqual(["left", "right"]);
+  });
+
+  it("dag rejects missing dependencies before running any tasks", async () => {
+    const script = `
+export const meta = { name: 'dag-missing', description: 'DAG missing dep test' }
+return await dag([
+  { id: 'build', dependsOn: ['missing'], prompt: 'build' },
+])
+`;
+    const backend = new StubAgentBackend([{ text: "never", tokens: 1, toolCalls: 1 }]);
+    await expect(executeWorkflowScript(script, {
+      backend,
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    })).rejects.toThrow(/unknown dependency/i);
+  });
+
+  it("dag rejects cycles before running any tasks", async () => {
+    const script = `
+export const meta = { name: 'dag-cycle', description: 'DAG cycle test' }
+return await dag([
+  { id: 'a', dependsOn: ['b'], prompt: 'a' },
+  { id: 'b', dependsOn: ['a'], prompt: 'b' },
+])
+`;
+    const backend = new StubAgentBackend([{ text: "never", tokens: 1, toolCalls: 1 }]);
+    await expect(executeWorkflowScript(script, {
+      backend,
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    })).rejects.toThrow(/cycle/i);
+  });
+
+  it("dag rejects partial cycles before running independent tasks", async () => {
+    const script = `
+export const meta = { name: 'dag-partial-cycle', description: 'DAG partial cycle test' }
+return await dag([
+  { id: 'free', prompt: 'free' },
+  { id: 'a', dependsOn: ['b'], prompt: 'a' },
+  { id: 'b', dependsOn: ['a'], prompt: 'b' },
+])
+`;
+    const ran: string[] = [];
+    const backend = {
+      async run(input: { prompt: string }) {
+        ran.push(input.prompt);
+        return { text: input.prompt.toUpperCase(), tokens: 1, toolCalls: 1 };
+      },
+    };
+
+    await expect(executeWorkflowScript(script, {
+      backend,
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    })).rejects.toThrow(/cycle/i);
+    expect(ran).toEqual([]);
+  });
+
+  it("dag run-task options are defaults for nested agent calls", async () => {
+    const script = `
+export const meta = { name: 'dag-run-options', description: 'DAG run task options test' }
+return await dag([
+  {
+    id: 'typed',
+    model: 'claude-opus-4.8',
+    effort: 'high',
+    contextWindow: 200000,
+    systemPrompt: 'return json',
+    isolation: 'worktree',
+    schema: { type: 'object', required: ['ok'], properties: { ok: { type: 'string' } } },
+    run: () => agent('typed prompt'),
+  },
+])
+`;
+    const inputs: Array<Record<string, unknown>> = [];
+    const backend = {
+      async run(input: Record<string, unknown>) {
+        inputs.push(input);
+        return { text: '{"ok":"yes"}', tokens: 1, toolCalls: 1 };
+      },
+    };
+
+    const out = await executeWorkflowScript(script, {
+      backend,
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    });
+
+    expect(out.result).toEqual({ typed: { ok: "yes" } });
+    expect(inputs[0]).toMatchObject({
+      model: "claude-opus-4.8",
+      effort: "high",
+      contextWindow: 200_000,
+      systemPrompt: "return json",
+      isolation: "worktree",
+    });
+    const typedEntry = out.progress.find((p) => p.type === "workflow_agent" && p.label === "typed");
+    if (typedEntry?.type !== "workflow_agent") throw new Error("not an agent entry");
+    expect(typedEntry.dagTaskId).toBe("typed");
+  });
+
+  it("nested dag tasks do not inherit outer task dependencies", async () => {
+    const script = `
+export const meta = { name: 'nested-dag', description: 'Nested DAG dependency isolation test' }
+return await dag([
+  { id: 'root', prompt: 'root' },
+  { id: 'outer', dependsOn: ['root'], run: () => dag([{ id: 'inner', prompt: 'inner' }]) },
+])
+`;
+    const out = await executeWorkflowScript(script, {
+      backend: new StubAgentBackend([
+        { text: "ROOT", tokens: 1, toolCalls: 1 },
+        { text: "INNER", tokens: 1, toolCalls: 1 },
+      ]),
+      defaultModel: "gpt-5.5",
+      defaultEffort: "xhigh",
+      defaultContextWindow: 1_100_000,
+      maxRetries: 0,
+    });
+    expect(out.result).toEqual({ root: "ROOT", outer: { inner: "INNER" } });
+    const innerEntry = out.progress.find((p) => p.type === "workflow_agent" && p.label === "inner");
+    if (innerEntry?.type !== "workflow_agent") throw new Error("not an agent entry");
+    expect(innerEntry.dependsOn).toBeUndefined();
+    expect(innerEntry.dagTaskId).toBe("inner");
   });
 
   it("throws when budget is exceeded", async () => {

@@ -55,10 +55,33 @@ const formatDuration = (ms: number): string => {
   return rem === 0 ? `${m}m` : `${m}m${rem}s`;
 };
 
+const formatLongDuration = (ms: number): string => {
+  if (!Number.isFinite(ms) || ms <= 0) return "0s";
+  let s = Math.floor(ms / 1000);
+  const h = Math.floor(s / 3600);
+  s -= h * 3600;
+  const m = Math.floor(s / 60);
+  s -= m * 60;
+  return [
+    h > 0 ? `${h}h` : "",
+    m > 0 ? `${m}m` : "",
+    `${s}s`,
+  ].filter(Boolean).join(" ");
+};
+
 const formatTokens = (n: number): string => {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M tok`;
   if (n >= 1_000) return `${Number.isInteger(n / 1000) ? n / 1000 : (n / 1000).toFixed(1)}k tok`;
   return `${n} tok`;
+};
+
+const formatContext = (n: number): string => {
+  if (n >= 1_000_000) {
+    const m = n / 1_000_000;
+    return `${Number.isInteger(m) ? m : m.toFixed(1)}M context`;
+  }
+  if (n >= 1000) return `${Math.round(n / 1000)}k context`;
+  return `${n} context`;
 };
 
 const truncate = (s: string | undefined, max = 96): string => {
@@ -157,10 +180,44 @@ const detailBlock = (agent: AgentEntry | undefined): string[] => {
     ? `${agent.lastToolName}${agent.lastToolSummary ? ` — ${truncate(agent.lastToolSummary)}` : ""}`
     : agent.state;
   const outcome = agent.error ?? agent.resultPreview ?? "(no outcome yet)";
+  const stateLabel = agent.state === "done" || agent.state === "cached"
+    ? "Completed"
+    : agent.state.charAt(0).toUpperCase() + agent.state.slice(1);
+  const statusIcon = agent.state === "running" ? "●" : stateIcon(agent.state);
+  const elapsed = agent.state === "running" && agent.updatedAt
+    ? `idle ${formatLongDuration(Date.now() - agent.updatedAt)}`
+    : agent.durationMs !== undefined
+      ? formatLongDuration(agent.durationMs)
+      : agent.state;
+  const promptLines = (agent.promptPreview ?? "").split(/\r?\n/);
+  const hasMultilinePrompt = promptLines.length > 1;
+  const promptBlock = hasMultilinePrompt
+    ? [
+        `Prompt · ${plural(promptLines.length, "line")} · expand`,
+        ...promptLines.slice(0, 2).map((line) => `  ${truncate(line, 180)}`),
+        ...(promptLines.length > 2 ? [`  … ${promptLines.length - 2} more lines`] : []),
+      ]
+    : [`Prompt: ${truncate(agent.promptPreview, 140) || "(prompt unavailable)"}`];
+  const recentToolCalls = agent.recentToolCalls ?? [];
+  const activityBlock = recentToolCalls.length > 0
+    ? [
+        `Activity · last ${Math.min(3, recentToolCalls.length)} of ${plural(agent.toolCalls, "tool call")}`,
+        ...recentToolCalls.slice(-3).map((tool) => `  ${tool.name}${tool.summary ? `(${truncate(tool.summary, 160)})` : ""}`),
+      ]
+    : [`Activity: ${activity}`];
+  const outcomeText = agent.state === "running" ? "Still running…" : outcome;
+  const outcomeLines = outcomeText.split(/\r?\n/);
+  const outcomeBlock = outcomeLines.length > 1
+    ? ["Outcome", ...outcomeLines.map((line) => (line ? `  ${line}` : ""))]
+    : [`Outcome: ${truncate(outcomeText, 160)}`];
   return [
-    `Prompt: ${truncate(agent.promptPreview, 140) || "(prompt unavailable)"}`,
-    `Activity: ${activity}`,
-    `Outcome: ${truncate(outcome, 160)}`,
+    `${statusIcon} ${stateLabel} · ${agent.model} (${formatContext(agent.contextWindow)})`,
+    `${formatTokens(agent.tokens)} · ${plural(agent.toolCalls, "tool call")} · ${elapsed}`,
+    ...(agent.dagTaskId ? [`Task id: ${agent.dagTaskId}`] : []),
+    ...(agent.dependsOn?.length ? [`Depends on: ${agent.dependsOn.join(", ")}`] : []),
+    ...promptBlock,
+    ...activityBlock,
+    ...outcomeBlock,
   ];
 };
 

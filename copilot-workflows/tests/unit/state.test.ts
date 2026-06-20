@@ -19,11 +19,15 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  delete process.env.COPILOT_AGENT_SESSION_ID;
+  delete process.env.TMUX_PANE;
   rmSync(root, { recursive: true, force: true });
 });
 
 describe("workflow state", () => {
   it("creates a run with script, run record, transcript dir, and defaults", async () => {
+    process.env.COPILOT_AGENT_SESSION_ID = "session-state-test";
+    process.env.TMUX_PANE = "%state-test";
     const run = await createInitialRun({
       root,
       workflowName: "demo-flow",
@@ -36,6 +40,10 @@ describe("workflow state", () => {
     expect(run.defaultModel).toBe("gpt-5.5");
     expect(run.defaultEffort).toBe("xhigh");
     expect(run.defaultContextWindow).toBe(1_100_000);
+    expect(run.owner).toMatchObject({
+      sessionId: "session-state-test",
+      tmuxPane: "%state-test",
+    });
     expect(run.scriptPath).toBe(paths.scriptPath);
     expect(run.transcriptDir).toBe(paths.transcriptDir);
     expect(readFileSync(paths.scriptPath, "utf8")).toContain("export const meta");

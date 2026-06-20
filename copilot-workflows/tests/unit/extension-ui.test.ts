@@ -18,20 +18,26 @@ describe("workflow extension browser UI", () => {
     expect(src).toContain("phaseSummary");
   });
 
-  it("targets the pane for the current Copilot session instead of a stale global TMUX_PANE", () => {
+  it("renders task dependency metadata in details", () => {
     const src = extensionSource();
-    expect(src).toContain("resolveCopilotPane");
-    expect(src).toContain("COPILOT_LOADER_PID");
-    expect(src).toContain("SESSION_ID");
-    expect(src).toContain("execFileText(\"tmux\"");
-    expect(src).toContain("\"list-panes\"");
-    expect(src).toContain("\"-a\"");
+    expect(src).toContain("Task id");
+    expect(src).toContain("selected?.dagTaskId");
+    expect(src).toContain("Depends on");
+    expect(src).toContain("selected?.dependsOn");
   });
 
-  it("requests Copilot native canvas rendering before falling back to tmux", () => {
+  it("does not use tmux fallback surfaces that can leak into another pane", () => {
+    const src = extensionSource();
+    expect(src).not.toContain("display-popup");
+    expect(src).not.toContain("resolveCopilotPane");
+    expect(src).not.toContain("TMUX_PANE");
+  });
+
+  it("requests Copilot native canvas rendering without falling back to a global tmux popup", () => {
     const src = extensionSource();
     expect(src).toContain("requestCanvasRenderer: true");
     expect(src).toContain("session.capabilities.ui?.canvases");
     expect(src.slice(src.indexOf("session = await joinSession({"))).toContain("requestCanvasRenderer: true");
+    expect(src).not.toContain("display-popup");
   });
 });

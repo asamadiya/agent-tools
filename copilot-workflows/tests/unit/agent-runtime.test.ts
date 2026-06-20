@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CopilotPrintBackend,
+  parseCopilotJsonOutput,
   StubAgentBackend,
   runAgentWithSchemaRetry,
   validateJsonSchemaResult,
@@ -122,8 +123,11 @@ describe("CopilotPrintBackend option handling", () => {
     expect(args).toContain("--allow-tool=read");
     expect(args).toContain("--allow-tool=grep");
     expect(args).toContain("--deny-tool=write");
+    expect(args).toContain("--output-format");
+    expect(args[args.indexOf("--output-format") + 1]).toBe("json");
     expect(args).toContain("-p");
     expect(args[args.indexOf("-p") + 1]).toBe("do it");
+    expect(args).not.toContain("-s");
   });
 
   it("maps permissions to copilot-supported --mode values", () => {
@@ -150,5 +154,93 @@ describe("CopilotPrintBackend option handling", () => {
     expect(() => backend.buildArgs({ ...baseInput, permissions: "bypassPermissions" })).toThrow(
       /bypassPermissions/,
     );
+  });
+});
+
+describe("Copilot JSONL output parsing", () => {
+  it("extracts final text, tokens, tool call count, and recent tool activity", () => {
+    const jsonl = [
+      {
+        type: "assistant.message",
+        data: {
+          content: "",
+          outputTokens: 19,
+          toolRequests: [
+            {
+              toolCallId: "call_1",
+              name: "bash",
+              arguments: { command: "pwd", description: "Print working directory" },
+              intentionSummary: "Print working directory",
+            },
+          ],
+        },
+      },
+      {
+        type: "tool.execution_start",
+        data: { toolCallId: "call_1", toolName: "bash", arguments: { command: "pwd" } },
+      },
+      {
+        type: "assistant.message",
+        data: { content: "done", outputTokens: 7, toolRequests: [] },
+      },
+      { type: "result", exitCode: 0, usage: { sessionDurationMs: 1000 } },
+    ]
+      .map((event) => JSON.stringify(event))
+      .join("\n");
+
+    expect(parseCopilotJsonOutput(jsonl)).toEqual({
+      text: "done",
+      tokens: 26,
+      toolCalls: 1,
+      lastToolName: "bash",
+      lastToolSummary: "pwd",
+      recentToolCalls: [{ name: "bash", summary: "pwd" }],
+    });
+  });
+
+  it("falls back to assembled message deltas when no completed assistant message is present", () => {
+    const jsonl = [
+      { type: "assistant.message_delta", data: { messageId: "m1", deltaContent: "hel" } },
+      { type: "assistant.message_delta", data: { messageId: "m1", deltaContent: "lo" } },
+      { type: "assistant.message", data: { content: "", outputTokens: 3, toolRequests: [] } },
+      { type: "result", exitCode: 0 },
+    ]
+      .map((event) => JSON.stringify(event))
+      .join("\n");
+
+    expect(parseCopilotJsonOutput(jsonl).text).toBe("hello");
+  });
+
+  it("ignores non-JSON diagnostics once a valid JSONL event is present", () => {
+    const jsonl = [
+      "warning: noisy extension wrote to stdout",
+      JSON.stringify({ type: "assistant.message", data: { content: "ok", outputTokens: 5 } }),
+      JSON.stringify({ type: "result", exitCode: 0 }),
+    ].join("\n");
+
+    expect(parseCopilotJsonOutput(jsonl)).toMatchObject({ text: "ok", tokens: 5 });
+  });
+
+  it("does not count report_intent as user-visible tool activity", () => {
+    const jsonl = [
+      JSON.stringify({
+        type: "tool.execution_start",
+        data: {
+          toolCallId: "meta_1",
+          toolName: "report_intent",
+          arguments: { intent: "Running command" },
+        },
+      }),
+      JSON.stringify({
+        type: "tool.execution_start",
+        data: { toolCallId: "call_1", toolName: "bash", arguments: { command: "pwd" } },
+      }),
+      JSON.stringify({ type: "assistant.message", data: { content: "ok", outputTokens: 5 } }),
+    ].join("\n");
+
+    expect(parseCopilotJsonOutput(jsonl)).toMatchObject({
+      toolCalls: 1,
+      recentToolCalls: [{ name: "bash", summary: "pwd" }],
+    });
   });
 });

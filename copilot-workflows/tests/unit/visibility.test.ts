@@ -96,6 +96,74 @@ describe("workflow visibility", () => {
     expect(detail).toContain("Outcome: README summary");
   });
 
+  it("renders Claude-like live agent details for running tasks", () => {
+    const run = sampleRun({ status: "running" });
+    const agent = run.workflowProgress.find((p) => p.type === "workflow_agent");
+    if (agent?.type !== "workflow_agent") throw new Error("not an agent entry");
+    agent.state = "running";
+    agent.model = "claude-opus-4.8";
+    agent.contextWindow = 1_000_000;
+    agent.tokens = 175_500;
+    agent.toolCalls = 83;
+    agent.updatedAt = Date.now() - 116_000;
+    agent.promptPreview = ["line 1", "line 2", "line 3", "line 4"].join("\n");
+    agent.recentToolCalls = [
+      { name: "Read", summary: "README.md" },
+      { name: "Bash", summary: "npm test" },
+      { name: "StructuredOutput", summary: "agent result" },
+    ];
+
+    const detail = renderWorkflowDetail(run, { workflowId: "WF1" });
+
+    expect(detail).toContain("● Running · claude-opus-4.8 (1M context)");
+    expect(detail).toContain("175.5k tok · 83 tool calls · idle 1m 56s");
+    expect(detail).toContain("Prompt · 4 lines · expand");
+    expect(detail).toContain("line 1");
+    expect(detail).toContain("… 2 more lines");
+    expect(detail).toContain("Activity · last 3 of 83 tool calls");
+    expect(detail).toContain("Bash(npm test)");
+    expect(detail).toContain("Outcome");
+    expect(detail).toContain("Still running…");
+  });
+
+  it("renders Claude-like finished agent details with task id and dependencies", () => {
+    const run = sampleRun({ status: "completed" });
+    const agent = run.workflowProgress.find((p) => p.type === "workflow_agent");
+    if (agent?.type !== "workflow_agent") throw new Error("not an agent entry");
+    agent.dagTaskId = "summary";
+    agent.dependsOn = ["read", "analyze"];
+    agent.recentToolCalls = [
+      { name: "Write", summary: "/tmp/report.md" },
+      { name: "Bash", summary: "ls -la /tmp" },
+      { name: "StructuredOutput", summary: "summary" },
+    ];
+    agent.resultPreview = "Finished the requested workflow.\n\n## Summary\nDetailed outcome.";
+
+    const detail = renderWorkflowDetail(run, { workflowId: "WF1" });
+
+    expect(detail).toContain("✔ Completed · gpt-5.5 (1.1M context)");
+    expect(detail).toContain("Task id: summary");
+    expect(detail).toContain("Depends on: read, analyze");
+    expect(detail).toContain("Activity · last 3 of 1 tool call");
+    expect(detail).toContain("Write(/tmp/report.md)");
+    expect(detail).toContain("Outcome");
+    expect(detail).toContain("Finished the requested workflow.");
+    expect(detail).toContain("## Summary");
+  });
+
+  it("renders DAG dependency metadata in task details", () => {
+    const run = sampleRun();
+    const agent = run.workflowProgress.find((p) => p.type === "workflow_agent");
+    if (agent?.type !== "workflow_agent") throw new Error("not an agent entry");
+    agent.dagTaskId = "summarize";
+    agent.dependsOn = ["plan", "build"];
+
+    const detail = renderWorkflowDetail(run, { workflowId: "WF1" });
+
+    expect(detail).toContain("Task id: summarize");
+    expect(detail).toContain("Depends on: plan, build");
+  });
+
   it("aligns split table borders with body columns", () => {
     const lines = renderWorkflowDetail(sampleRun(), { workflowId: "WF1" }).split("\n");
     const top = lines.find((line) => line.startsWith("╭ "))!;

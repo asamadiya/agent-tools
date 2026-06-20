@@ -30,17 +30,43 @@ copilot-workflow ui
 
 Use ↑/↓ to select a workflow, Enter to open the detail table, Esc to return to the list, `r` to refresh, and `q` to quit. Use `copilot-workflow ui --once` for a non-interactive snapshot.
 
-Inside Copilot CLI, the project extension registers `/workflows`. When the host supports canvases it opens a native canvas; in tmux-based CLI sessions it falls back to a tmux popup over the current Copilot pane.
+Inside Copilot CLI, the project extension registers `/workflows`. With the local bundle patch below, workflows render inline under the normal footer/status area in the current Copilot session and pane. Press ↓ from the prompt to focus the workflow list, Enter or → to drill into phases/tasks/task details, ← to back out, and ↑/↓ to scroll task detail text. The extension no longer opens tmux popups, so workflow UI does not leak into other panes. Inline filtering uses run owner metadata (`sessionId`, `COPILOT_AGENT_SESSION_ID`, `TMUX_PANE`, or loader pid), so runs created before owner metadata existed may not appear in the inline footer.
 
-For Copilot CLI builds that do not advertise canvas support by default, run the local bundle patch and restart/resume Copilot:
+Apply the local bundle patch and restart/resume Copilot:
 
 ```sh
 bin/copilot-workflow-ui-patch
 ```
 
-The patch is idempotent, validates `app.js` with `node --check`, and can be reverted with `bin/copilot-workflow-ui-patch --revert`.
+The patch is idempotent, validates `app.js` with `node --check`, and can be reverted with `bin/copilot-workflow-ui-patch --revert`. The black-box inline footer UAT is:
+
+```sh
+node ../tests/copilot-workflow-inline-footer-uat.test.js
+```
 
 Default agent config is GPT-5.5, xhigh effort, 1.1M context. Override globally, per workflow, per phase, or per agent.
+
+## DAG workflows
+
+Workflow scripts can use `dag([...])` for first-class dependency-aware task graphs. Each task has a unique `id`, optional `dependsOn`, and either a `prompt` (auto-runs `agent(prompt, options)`) or a custom `run(results)` function. The runtime validates missing dependencies and cycles before running any work, then executes ready tasks in topological levels with siblings in the same level running in parallel. The return value is an object keyed by task id, and task details include `Task id:` / `Depends on:` metadata in the UI.
+
+`prompt` tasks use dependencies for ordering only. Use `run(results)` when a task needs upstream outputs. DAG task-level agent options (`model`, `effort`, `schema`, `permissions`, `isolation`, etc.) become defaults for nested `agent()` calls inside that task; nested agent options can still override them. If a task fails, the DAG fails instead of silently continuing dependents.
+
+```js
+export const meta = {
+  name: "dag-demo",
+  description: "Dependency-aware workflow",
+  phases: [{ title: "Build" }],
+}
+
+phase("Build")
+return await dag([
+  { id: "plan", prompt: "Create an implementation plan", label: "plan" },
+  { id: "api", dependsOn: ["plan"], run: ({ plan }) => agent(`Build API from ${plan}`, { label: "api" }) },
+  { id: "ui", dependsOn: ["plan"], run: ({ plan }) => agent(`Build UI from ${plan}`, { label: "ui" }) },
+  { id: "review", dependsOn: ["api", "ui"], run: ({ api, ui }) => agent(`Review ${api} and ${ui}`, { label: "review" }) },
+])
+```
 
 ### Agent `permissions`
 

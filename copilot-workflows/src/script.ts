@@ -1,9 +1,16 @@
 import vm from "node:vm";
+import { AsyncLocalStorage } from "node:async_hooks";
 import type { AgentBackend } from "./agent-runtime.js";
 import { runAgentWithSchemaRetry, SchemaRetryError } from "./agent-runtime.js";
 import { agentCacheKey } from "./cache.js";
 import { newAgentId } from "./ids.js";
-import { WorkflowMetaSchema, type WorkflowMeta, AgentStepOptionsSchema, type WorkflowProgressEntry } from "./types.js";
+import {
+  WorkflowMetaSchema,
+  type WorkflowMeta,
+  AgentStepOptionsSchema,
+  type AgentStepOptions,
+  type WorkflowProgressEntry,
+} from "./types.js";
 
 export interface WorkflowInspection {
   valid: boolean;
@@ -194,6 +201,88 @@ export interface ExecuteWorkflowOutput {
 
 type PhaseEntry = Extract<WorkflowProgressEntry, { type: "workflow_phase" }>;
 
+type DagTask = {
+  id: string;
+  dependsOn: string[];
+  prompt?: string;
+  run?: (results: Record<string, unknown>) => unknown | Promise<unknown>;
+  agentOptions: AgentStepOptions;
+};
+
+type DagAgentContext = {
+  taskId: string;
+  dependsOn: string[];
+  agentDefaults: AgentStepOptions;
+};
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  !!value && typeof value === "object" && !Array.isArray(value);
+
+const normalizeDagTasks = (rawTasks: unknown): DagTask[] => {
+  if (!Array.isArray(rawTasks)) throw new Error("dag tasks must be an array");
+  const ids = new Set<string>();
+  const tasks = rawTasks.map((raw, index): DagTask => {
+    if (!isRecord(raw)) throw new Error(`dag task at index ${index} must be an object`);
+    const id = raw.id;
+    if (typeof id !== "string" || id.trim() === "") {
+      throw new Error(`dag task at index ${index} must have a non-empty string id`);
+    }
+    if (ids.has(id)) throw new Error(`dag task id "${id}" is duplicated`);
+    ids.add(id);
+    const dependsOnRaw = raw.dependsOn ?? [];
+    if (!Array.isArray(dependsOnRaw) || dependsOnRaw.some((dep) => typeof dep !== "string" || dep.trim() === "")) {
+      throw new Error(`dag task "${id}" dependsOn must be an array of non-empty strings`);
+    }
+    const prompt = raw.prompt;
+    const run = raw.run;
+    if (prompt !== undefined && typeof prompt !== "string") {
+      throw new Error(`dag task "${id}" prompt must be a string`);
+    }
+    if (run !== undefined && typeof run !== "function") {
+      throw new Error(`dag task "${id}" run must be a function`);
+    }
+    if (prompt === undefined && run === undefined) {
+      throw new Error(`dag task "${id}" must define prompt or run`);
+    }
+    const runFn = typeof run === "function" ? (run as DagTask["run"]) : undefined;
+    const { id: _id, prompt: _prompt, run: _run, dependsOn: _dependsOn, ...rest } = raw;
+    const agentOptions = AgentStepOptionsSchema.parse({
+      label: id,
+      ...rest,
+      ...(dependsOnRaw.length ? { dependsOn: dependsOnRaw } : {}),
+    });
+    return { id, dependsOn: dependsOnRaw, ...(prompt !== undefined ? { prompt } : {}), ...(runFn ? { run: runFn } : {}), agentOptions };
+  });
+  for (const task of tasks) {
+    for (const dep of task.dependsOn) {
+      if (!ids.has(dep)) throw new Error(`dag task "${task.id}" has unknown dependency "${dep}"`);
+    }
+  }
+  return tasks;
+};
+
+const topologicalLevels = (tasks: DagTask[]): DagTask[][] => {
+  const remaining = new Map(tasks.map((task) => [task.id, task]));
+  const completed = new Set<string>();
+  const levels: DagTask[][] = [];
+
+  while (remaining.size > 0) {
+    const ready = [...remaining.values()].filter((task) =>
+      task.dependsOn.every((dep) => completed.has(dep)),
+    );
+    if (ready.length === 0) {
+      throw new Error(`dag cycle detected among tasks: ${[...remaining.keys()].join(", ")}`);
+    }
+    levels.push(ready);
+    for (const task of ready) {
+      completed.add(task.id);
+      remaining.delete(task.id);
+    }
+  }
+
+  return levels;
+};
+
 export const executeWorkflowScript = async (
   script: string,
   input: ExecuteWorkflowInput,
@@ -213,6 +302,7 @@ export const executeWorkflowScript = async (
 
   const cacheResults: Array<{ cacheKey: string; result: unknown; progress: WorkflowProgressEntry }> = [];
   const transcripts: Array<{ agentId: string; transcript: unknown[] }> = [];
+  const dagContext = new AsyncLocalStorage<DagAgentContext>();
 
   let currentPhase: string | null = null;
   let logIndex = 0;
@@ -248,7 +338,17 @@ export const executeWorkflowScript = async (
   };
 
   const agent = async (prompt: string, rawOpts: unknown = {}): Promise<unknown> => {
-    const opts = AgentStepOptionsSchema.parse(rawOpts);
+    const dagStore = dagContext.getStore();
+    const rawWithDagDefaults =
+      dagStore && isRecord(rawOpts)
+        ? {
+            ...dagStore.agentDefaults,
+            ...rawOpts,
+            label: rawOpts.label ?? dagStore.agentDefaults.label ?? dagStore.taskId,
+            dependsOn: rawOpts.dependsOn ?? dagStore.dependsOn,
+          }
+        : rawOpts;
+    const opts = AgentStepOptionsSchema.parse(rawWithDagDefaults);
     const index = ++agentIndex;
     const agentId = newAgentId();
     const label = opts.label ?? `agent:${index}`;
@@ -282,6 +382,7 @@ export const executeWorkflowScript = async (
         phaseIndex,
         phaseTitle,
         state: "cached" as const,
+        ...(dagStore?.taskId ? { dagTaskId: dagStore.taskId } : {}),
         tokens: 0,
         toolCalls: 0,
         durationMs: 0,
@@ -303,6 +404,7 @@ export const executeWorkflowScript = async (
       ...(phaseIndex !== undefined ? { phaseIndex } : {}),
       ...(phaseTitle !== undefined ? { phaseTitle } : {}),
       agentId,
+      ...(dagStore?.taskId ? { dagTaskId: dagStore.taskId } : {}),
       model,
       effort,
       contextWindow,
@@ -315,6 +417,7 @@ export const executeWorkflowScript = async (
       toolCalls: 0,
       retries: 0,
       promptPreview: prompt.slice(0, 500),
+      ...(opts.dependsOn?.length ? { dependsOn: opts.dependsOn } : {}),
       cacheKey,
     };
     progress.push(entry);
@@ -371,6 +474,7 @@ export const executeWorkflowScript = async (
       retries: out.retries,
       ...(out.lastToolName ? { lastToolName: out.lastToolName } : {}),
       ...(out.lastToolSummary ? { lastToolSummary: out.lastToolSummary } : {}),
+      ...(out.recentToolCalls ? { recentToolCalls: out.recentToolCalls } : {}),
       resultPreview:
         typeof out.result === "string"
           ? out.result.slice(0, 200)
@@ -431,10 +535,35 @@ export const executeWorkflowScript = async (
     return results;
   };
 
+  const dag = async (rawTasks: unknown): Promise<Record<string, unknown>> => {
+    const tasks = normalizeDagTasks(rawTasks);
+    const levels = topologicalLevels(tasks);
+    const results: Record<string, unknown> = {};
+
+    for (const ready of levels) {
+      await Promise.all(
+        ready.map(async (task) => {
+          const context: DagAgentContext = {
+            taskId: task.id,
+            dependsOn: task.dependsOn,
+            agentDefaults: task.agentOptions,
+          };
+          const value = await dagContext.run(context, async () =>
+            task.run ? await task.run({ ...results }) : await agent(task.prompt!, task.agentOptions),
+          );
+          results[task.id] = value;
+        }),
+      );
+    }
+
+    return results;
+  };
+
   const runnerContext = vm.createContext({
     agent,
     parallel,
     pipeline,
+    dag,
     phase,
     log,
     args: input.args,

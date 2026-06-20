@@ -1,5 +1,5 @@
 import { execa } from "execa";
-import type { AgentStepOptions, JsonSchema } from "./types.js";
+import type { AgentStepOptions, JsonSchema, RecentToolCall } from "./types.js";
 
 export interface AgentRunInput {
   prompt: string;
@@ -26,6 +26,7 @@ export interface AgentRunOutput {
   retries: number;
   lastToolName?: string;
   lastToolSummary?: string;
+  recentToolCalls?: RecentToolCall[];
   transcript: unknown[];
 }
 
@@ -35,11 +36,123 @@ export interface BackendRawOutput {
   toolCalls?: number;
   lastToolName?: string;
   lastToolSummary?: string;
+  recentToolCalls?: RecentToolCall[];
 }
 
 export interface AgentBackend {
   run(input: AgentRunInput): Promise<BackendRawOutput>;
 }
+
+type JsonObject = Record<string, unknown>;
+const HIDDEN_ACTIVITY_TOOLS = new Set(["report_intent"]);
+
+const isObject = (value: unknown): value is JsonObject =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+const summarizeToolArguments = (
+  toolName: string,
+  args: unknown,
+  intentionSummary?: unknown,
+): string | undefined => {
+  if (!isObject(args)) {
+    return typeof intentionSummary === "string" ? intentionSummary : undefined;
+  }
+  const candidates =
+    toolName === "bash"
+      ? [args.command, args.description, intentionSummary]
+      : [args.path, args.file_path, args.filename, args.description, intentionSummary];
+  const value = candidates.find((candidate) => typeof candidate === "string" && candidate.trim());
+  if (typeof value === "string") return value;
+  const json = JSON.stringify(args);
+  return json === "{}" ? undefined : json;
+};
+
+export const parseCopilotJsonOutput = (stdout: string): BackendRawOutput => {
+  let tokens = 0;
+  let finalText = "";
+  let lastDeltaMessageId: string | undefined;
+  const deltas = new Map<string, string>();
+  const toolRequests = new Map<
+    string,
+    { name?: string; arguments?: unknown; intentionSummary?: unknown }
+  >();
+  const recentToolCalls: RecentToolCall[] = [];
+  let parsedEvents = 0;
+  let firstParseError: Error | undefined;
+
+  const lines = stdout.split(/\r?\n/).filter((line) => line.trim());
+  for (const [index, line] of lines.entries()) {
+    let event: unknown;
+    try {
+      event = JSON.parse(line);
+    } catch (err) {
+      firstParseError ??= new Error(
+        `copilot JSON output parse failed on line ${index + 1}: ${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+      continue;
+    }
+    parsedEvents += 1;
+    if (!isObject(event) || typeof event.type !== "string") continue;
+    const data = isObject(event.data) ? event.data : {};
+
+    if (event.type === "assistant.message") {
+      if (typeof data.outputTokens === "number" && Number.isFinite(data.outputTokens)) {
+        tokens += data.outputTokens;
+      }
+      if (typeof data.content === "string" && data.content.length > 0) {
+        finalText = data.content;
+      }
+      if (Array.isArray(data.toolRequests)) {
+        for (const request of data.toolRequests) {
+          if (!isObject(request) || typeof request.toolCallId !== "string") continue;
+          toolRequests.set(request.toolCallId, {
+            name: typeof request.name === "string" ? request.name : undefined,
+            arguments: request.arguments,
+            intentionSummary: request.intentionSummary,
+          });
+        }
+      }
+    } else if (event.type === "assistant.message_delta") {
+      if (typeof data.messageId === "string" && typeof data.deltaContent === "string") {
+        deltas.set(data.messageId, `${deltas.get(data.messageId) ?? ""}${data.deltaContent}`);
+        lastDeltaMessageId = data.messageId;
+      }
+    } else if (event.type === "tool.execution_start") {
+      const toolCallId = typeof data.toolCallId === "string" ? data.toolCallId : undefined;
+      const request = toolCallId ? toolRequests.get(toolCallId) : undefined;
+      const name =
+        (typeof data.toolName === "string" && data.toolName) ||
+        request?.name ||
+        "tool";
+      if (HIDDEN_ACTIVITY_TOOLS.has(name)) continue;
+      const summary = summarizeToolArguments(
+        name,
+        data.arguments ?? request?.arguments,
+        request?.intentionSummary,
+      );
+      recentToolCalls.push({
+        name,
+        ...(summary ? { summary } : {}),
+      });
+    }
+  }
+  if (parsedEvents === 0 && firstParseError) throw firstParseError;
+
+  if (!finalText && lastDeltaMessageId) {
+    finalText = deltas.get(lastDeltaMessageId) ?? "";
+  }
+  const lastTool = recentToolCalls.at(-1);
+  return {
+    text: finalText,
+    tokens,
+    toolCalls: recentToolCalls.length,
+    ...(lastTool ? { lastToolName: lastTool.name } : {}),
+    ...(lastTool?.summary ? { lastToolSummary: lastTool.summary } : {}),
+    ...(recentToolCalls.length ? { recentToolCalls: recentToolCalls.slice(-3) } : {}),
+  };
+};
 
 // Thrown when structured-output schema validation fails after all retries.
 // Carries the malformed attempts so the failed agent's transcript can persist.
@@ -119,6 +232,7 @@ export const runAgentWithSchemaRetry = async (
         retries: attempt,
         ...(raw.lastToolName ? { lastToolName: raw.lastToolName } : {}),
         ...(raw.lastToolSummary ? { lastToolSummary: raw.lastToolSummary } : {}),
+        ...(raw.recentToolCalls ? { recentToolCalls: raw.recentToolCalls } : {}),
         transcript: [{ role: "assistant", content: raw.text }],
       };
     }
@@ -134,6 +248,7 @@ export const runAgentWithSchemaRetry = async (
         retries: attempt,
         lastToolName: raw.lastToolName ?? "StructuredOutput",
         lastToolSummary: raw.lastToolSummary ?? raw.text.slice(0, 120),
+        ...(raw.recentToolCalls ? { recentToolCalls: raw.recentToolCalls } : {}),
         transcript: [{ role: "assistant", content: raw.text }],
       };
     } catch (err) {
@@ -179,12 +294,12 @@ export class CopilotPrintBackend implements AgentBackend {
     if (input.isolation === "worktree") {
       throw new Error("CopilotPrintBackend does not support isolation:'worktree' yet");
     }
-    const args = ["--model", input.model, "--effort", input.effort];
+    const args = ["--model", input.model, "--effort", input.effort, "--output-format", "json"];
     const mode = mapPermissionsToMode(input.permissions);
     if (mode) args.push("--mode", mode);
     for (const tool of input.allowedTools ?? []) args.push(`--allow-tool=${tool}`);
     for (const tool of input.deniedTools ?? []) args.push(`--deny-tool=${tool}`);
-    args.push("-p", input.prompt, "-s");
+    args.push("-p", input.prompt);
     return args;
   }
 
@@ -198,6 +313,6 @@ export class CopilotPrintBackend implements AgentBackend {
     if ((result.exitCode ?? 1) !== 0) {
       throw new Error(`copilot agent failed: ${result.stderr || result.stdout}`);
     }
-    return { text: result.stdout?.toString() ?? "", tokens: 0, toolCalls: 0 };
+    return parseCopilotJsonOutput(result.stdout?.toString() ?? "");
   }
 }

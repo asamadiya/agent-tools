@@ -18,6 +18,7 @@ import {
   DEFAULT_MODEL_CONFIG,
   WorkflowRunSchema,
   type WorkflowRun,
+  type WorkflowOwner,
 } from "./types.js";
 
 const DEFAULT_ROOT = join(homedir(), ".copilot", "workflows");
@@ -96,6 +97,23 @@ export interface CreateInitialRunInput extends StateOptions {
   defaultContextWindow?: number;
 }
 
+const maybeEnv = (name: string): string | undefined => {
+  const value = process.env[name]?.trim();
+  return value ? value : undefined;
+};
+
+const workflowOwnerFromEnv = (): WorkflowOwner | undefined => {
+  const owner: WorkflowOwner = {
+    sessionId: maybeEnv("SESSION_ID") ?? maybeEnv("COPILOT_AGENT_SESSION_ID"),
+    copilotAgentSessionId: maybeEnv("COPILOT_AGENT_SESSION_ID"),
+    tmuxPane: maybeEnv("TMUX_PANE"),
+    loaderPid: maybeEnv("COPILOT_LOADER_PID"),
+    cwd: process.cwd(),
+    pid: process.pid,
+  };
+  return Object.values(owner).some((value) => value !== undefined) ? owner : undefined;
+};
+
 export const createInitialRun = async (
   input: CreateInitialRunInput,
 ): Promise<WorkflowRun> => {
@@ -107,6 +125,7 @@ export const createInitialRun = async (
   writeFileSync(paths.scriptPath, input.script);
 
   const now = nowIso();
+  const owner = workflowOwnerFromEnv();
   const run: WorkflowRun = {
     runId,
     taskId: newTaskId(),
@@ -115,6 +134,7 @@ export const createInitialRun = async (
     script: input.script,
     scriptPath: paths.scriptPath,
     transcriptDir: paths.transcriptDir,
+    ...(owner ? { owner } : {}),
     ...(input.args !== undefined ? { args: input.args } : {}),
     ...(input.resumeFromRunId ? { resumeFromRunId: input.resumeFromRunId } : {}),
     ...(input.budgetTokens ? { budgetTokens: input.budgetTokens } : {}),

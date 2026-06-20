@@ -53,6 +53,7 @@ export const AgentStepOptionsSchema = z.object({
   allowedTools: z.array(z.string()).optional(),
   deniedTools: z.array(z.string()).optional(),
   isolation: z.enum(["none", "worktree"]).default("none"),
+  dependsOn: z.array(z.string().min(1)).optional(),
 });
 export type AgentStepOptions = z.infer<typeof AgentStepOptionsSchema>;
 
@@ -76,6 +77,12 @@ export const AgentStepStateSchema = z.enum([
 ]);
 export type AgentStepState = z.infer<typeof AgentStepStateSchema>;
 
+export const RecentToolCallSchema = z.object({
+  name: z.string().min(1),
+  summary: z.string().optional(),
+});
+export type RecentToolCall = z.infer<typeof RecentToolCallSchema>;
+
 export const WorkflowProgressEntrySchema = z.discriminatedUnion("type", [
   z.object({
     type: z.literal("workflow_phase"),
@@ -97,6 +104,7 @@ export const WorkflowProgressEntrySchema = z.discriminatedUnion("type", [
     phaseIndex: z.number().int().positive().optional(),
     phaseTitle: z.string().optional(),
     agentId: z.string().min(1),
+    dagTaskId: z.string().min(1).optional(),
     model: z.string(),
     effort: z.string(),
     contextWindow: z.number().int().positive(),
@@ -111,6 +119,8 @@ export const WorkflowProgressEntrySchema = z.discriminatedUnion("type", [
     toolCalls: z.number().int().nonnegative(),
     retries: z.number().int().nonnegative(),
     promptPreview: z.string().optional(),
+    dependsOn: z.array(z.string().min(1)).optional(),
+    recentToolCalls: z.array(RecentToolCallSchema).optional(),
     lastToolName: z.string().optional(),
     lastToolSummary: z.string().optional(),
     resultPreview: z.string().optional(),
@@ -120,6 +130,16 @@ export const WorkflowProgressEntrySchema = z.discriminatedUnion("type", [
 ]);
 export type WorkflowProgressEntry = z.infer<typeof WorkflowProgressEntrySchema>;
 
+export const WorkflowOwnerSchema = z.object({
+  sessionId: z.string().min(1).optional(),
+  copilotAgentSessionId: z.string().min(1).optional(),
+  tmuxPane: z.string().min(1).optional(),
+  loaderPid: z.string().min(1).optional(),
+  cwd: z.string().min(1).optional(),
+  pid: z.number().int().positive().optional(),
+});
+export type WorkflowOwner = z.infer<typeof WorkflowOwnerSchema>;
+
 export const WorkflowRunSchema = z.object({
   runId: z.string().min(1),
   taskId: z.string().min(1),
@@ -128,6 +148,7 @@ export const WorkflowRunSchema = z.object({
   script: z.string(),
   scriptPath: z.string(),
   transcriptDir: z.string(),
+  owner: WorkflowOwnerSchema.optional(),
   args: z.unknown().optional(),
   resumeFromRunId: z.string().optional(),
   budgetTokens: z.number().int().positive().optional(),
