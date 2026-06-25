@@ -8,6 +8,8 @@ const { patchSource, unpatchSource } = require("../lib/workflow-ui-patch");
 const source = [
   'pie=["mcp-apps","canvas-renderer"],jB=pie.filter(t=>t!=="mcp-apps"&&t!=="canvas-renderer");',
   'var nXn=({noMouse:t,session:_,statusLineMessage:M})=>r1.default.createElement(x5e,{footer:r1.default.createElement(r1.default.Fragment,null,!z&&M.length!==0?r1.default.createElement(T,null,M):null)});var xa=We(lt(),1);',
+  'function zZn(e,De){let{textTertiary:z}=Pe(),q=HZn(e,{});let Re=De.ctrl&&(De.code==="d"||De.code==="z"&&process.platform==="win32");return q||Re}',
+  'function _i(){if(eC(Ke,"/")){B.current=A,M(0)}}',
 ].join("");
 
 const patched = patchSource(source);
@@ -22,6 +24,15 @@ assert(patched.includes("statSync"));
 assert(!patched.includes("slice(0,24)"));
 assert(patched.includes("if(owns(run,sessionId))matched.push"));
 assert(patched.includes("scanned>=256"));
+assert(patched.includes("__copilotWorkflowInlineFocused"));
+assert(patched.includes("__copilotWorkflowInlineAvailable"));
+assert(patched.includes("__copilotWorkflowPromptReadyForWorkflowFocus"));
+assert(patched.includes('De.code==="down"'));
+assert(patched.includes('globalThis.__copilotWorkflowPromptReadyForWorkflowFocus&&De.code==="down"'));
+assert(!patched.includes('globalThis.__copilotWorkflowInlineAvailable&&De.code==="down"&&!De.ctrl'));
+assert(patched.includes('function _i(){if(globalThis.__copilotWorkflowInlineFocused)return;'));
+assert(patched.includes("process.stdout.columns"));
+assert(patched.includes("Math.max(leftRows.length,rightRows.length,12)"));
 assert(patched.includes("Workflows · details · ↑↓ scroll text"));
 assert(patched.includes("Task id: "));
 assert(patched.includes("Depends on: "));

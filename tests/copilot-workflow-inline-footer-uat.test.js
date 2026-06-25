@@ -32,8 +32,26 @@ const send = (key) => {
   run("tmux", ["send-keys", "-t", session, key]);
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 200);
 };
+const sendLiteral = (text) => {
+  run("tmux", ["send-keys", "-t", session, "-l", text]);
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 200);
+};
+const submitPrompt = (text) => {
+  sendLiteral(text);
+  send("Enter");
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, 1200);
+};
+const sleep = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 
-const capture = () => run("tmux", ["capture-pane", "-p", "-t", session, "-S", "-"]);
+const capture = () => run("tmux", ["capture-pane", "-p", "-t", session]);
+const maxLineLength = (text) => Math.max(...text.split(/\r?\n/).map((line) => line.length));
+const tableLines = (text) => text.split(/\r?\n/).filter((line) => /^[╭│╰]/.test(line.trimStart()));
+const maxTableLineLength = (text) => Math.max(...tableLines(text).map((line) => line.trimStart().length));
+const activePromptLine = (text) =>
+  text
+    .split(/\r?\n/)
+    .filter((line) => line.trimStart() === "❯" || line.trimStart().startsWith("❯ "))
+    .at(-1) ?? "";
 
 const waitFor = (predicate, label) => {
   for (let i = 0; i < 80; i++) {
@@ -146,7 +164,7 @@ const updateAgent = (runId, label, update) => {
 };
 
 fs.mkdirSync(path.join(root, "runs"), { recursive: true });
-run("tmux", ["new-session", "-d", "-s", session, "-x", "140", "-y", "42", "bash --noprofile --norc"]);
+run("tmux", ["new-session", "-d", "-s", session, "-x", "200", "-y", "36", "bash --noprofile --norc"]);
 const pane = run("tmux", ["display-message", "-p", "-t", session, "#{pane_id}"]).trim();
 seedRun({ copilotAgentSessionId: copilotSessionId }, "session-uat-workflow", "wf_session_uat");
 seedRun({ tmuxPane: pane }, "inline-uat-workflow", "wf_inline_uat");
@@ -167,17 +185,89 @@ assert(initial.includes("session-uat-workflow"), "matching session workflow did 
 assert(!initial.includes("foreign-uat-workflow"), "foreign pane workflow leaked into inline footer");
 assert(!initial.includes("foreign-session-uat-workflow"), "foreign session workflow leaked into inline footer");
 
+sleep(1000);
+submitPrompt("Reply exactly: HISTORY_SENTINEL");
+waitFor((out) => out.includes("HISTORY_SENTINEL"), "history sentinel prompt");
+sleep(1000);
+send("Up");
+waitFor((out) => activePromptLine(out).includes("HISTORY_SENTINEL"), "history sentinel recalled into prompt");
 send("Down");
-send("Enter");
+sleep(800);
+const afterHistoryDown = capture();
+assert(
+  !afterHistoryDown.includes("Workflows · ↑↓ select · → phases · Esc prompt"),
+  `first Down from history should return to latest prompt before focusing workflows\n\n${afterHistoryDown}`,
+);
+assert(
+  !activePromptLine(afterHistoryDown).includes("HISTORY_SENTINEL"),
+  `first Down from history did not leave previous prompt history\n\n${afterHistoryDown}`,
+);
 send("Down");
-send("Enter");
+waitFor((out) => out.includes("Workflows · ↑↓ select · → phases · Esc prompt"), "workflow focus");
+sendLiteral("Z");
+sleep(800);
+const afterFocusedPrintable = capture();
+assert(!activePromptLine(afterFocusedPrintable).includes("Z"), "printable key leaked into prompt while workflow was focused");
+send("Up");
+sleep(800);
+const afterFocusedUp = capture();
+assert(
+  !activePromptLine(afterFocusedUp).includes("HISTORY_SENTINEL"),
+  `workflow Up arrow replaced active prompt with history\n\n${afterFocusedUp}`,
+);
+send("Right");
+waitFor((out) => out.includes("╭ Phases") && out.includes("Plan"), "phase table before arrow isolation check");
+send("Left");
+send("Escape");
+sleep(1000);
+sendLiteral("X");
+sleep(800);
+const afterFocusedArrow = capture();
+assert(
+  activePromptLine(afterFocusedArrow).includes("X"),
+  `prompt cursor did not remain at end after workflow arrow navigation\n\n${afterFocusedArrow}`,
+);
+assert(!activePromptLine(afterFocusedArrow).includes("HISTORY_SENTINEL"), "workflow Left arrow leaked into prompt history movement");
+send("C-u");
+waitFor((out) => activePromptLine(out).trim() === "❯", "prompt cleared before refocusing workflow");
 send("Down");
-let tasks = waitFor((out) => out.includes("Tasks in Execute") && out.includes("task-b"), "task selection");
+send("Right");
+const phases = waitFor(
+  (out) =>
+    out.includes("╭ Phases") &&
+    out.includes("┬") &&
+    out.includes("Plan") &&
+    out.includes("Execute"),
+  "bordered phase table",
+);
+assert(phases.includes("╰"));
+assert(
+  maxTableLineLength(phases) >= 170,
+  `workflow table should use most of the pane width; max table line was ${maxTableLineLength(phases)}`,
+);
+assert(tableLines(phases).length >= 14, `workflow table should reserve useful height; got ${tableLines(phases).length} table lines`);
+assert(!phases.includes("> right"), "workflow Right arrow leaked into prompt text");
+assert(!phases.includes("> down"), "workflow Down arrow leaked into prompt text");
+send("Down");
+send("Right");
+send("Down");
+let tasks = waitFor(
+  (out) =>
+    out.includes("╭ Execute") &&
+    out.includes("task-b") &&
+    out.includes("Prompt · 4 lines"),
+  "bordered task selection",
+);
 assert(tasks.includes("Prompt · 4 lines"));
+assert(maxTableLineLength(tasks) >= 170, "task table should use most of the pane width");
 
-send("Enter");
+send("Right");
 let details = waitFor(
-  (out) => out.includes("Agent details: task-b") && out.includes("Task id: task-b") && out.includes("Depends on: task-a"),
+  (out) =>
+    out.includes("╭ Execute") &&
+    out.includes("┬ task-b") &&
+    out.includes("Task id: task-b") &&
+    out.includes("Depends on: task-a"),
   "agent dependency details",
 );
 assert(details.includes("Workflows · details"));
@@ -198,9 +288,13 @@ assert(!details.includes("foreign-uat-workflow"), "foreign pane workflow leaked 
 
 send("Left");
 send("Down");
-send("Enter");
+send("Right");
 const running = waitFor(
-  (out) => out.includes("Agent details: task-c") && out.includes("● Running · gpt-5.5 (1.1M context)") && out.includes("Prompt · 3 lines"),
+  (out) =>
+    out.includes("╭ Execute") &&
+    out.includes("┬ task-c") &&
+    out.includes("● Running · gpt-5.5 (1.1M context)") &&
+    out.includes("Prompt · 3 lines"),
   "running agent details",
 );
 assert(running.includes("112.1k tok · 34 tool calls"));
