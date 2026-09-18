@@ -1,0 +1,886 @@
+[
+ {
+  "brief": {
+   "id": "status_update-01",
+   "prompt": "Migration of all internal services off the ZooKeeper-backed config store Pylon onto Helix. Owner Priya Raghavan. Started Apr 6 2026, target completion Dec 12 2026. Total in scope 1,240 services; 744 cut over as of Sep 18, which is 60%. Remaining 496, of which 118 are tier-0. Trailing six-week burn rate is 62 services per week. Blocker: 96 of the remaining services call the deprecated watchAndReload API, which Helix does not implement; a compatibility shim is in code review with an ETA of Oct 9. Three rollbacks to date, all completed inside 24 hours; the Aug 27 rollback of notify-dispatch caused a 9-minute partial outage in which 12% of push notifications were delayed. The Pylon hardware lease expires Feb 28 2027 and will not be renewed. Two teams, Payments and Trust, have asked for exemptions through Q1; neither has filed a migration plan. Running both stores in parallel costs $310K per month. Write the quarterly status update for the infrastructure QBR, read by directors and the VP of Infrastructure.",
+   "facts": [
+    {
+     "key": "rollout_progress",
+     "value": "744 of 1,240 services migrated from Pylon to Helix as of Sep 18 2026 = 60%"
+    },
+    {
+     "key": "owner_and_dates",
+     "value": "Owner Priya Raghavan; started Apr 6 2026, target completion Dec 12 2026"
+    },
+    {
+     "key": "remaining_scope",
+     "value": "496 services remain, 118 of them tier-0"
+    },
+    {
+     "key": "burn_rate",
+     "value": "62 services per week over the trailing six weeks"
+    },
+    {
+     "key": "blocker",
+     "value": "96 remaining services use the deprecated watchAndReload API that Helix does not implement; compatibility shim ETA Oct 9"
+    },
+    {
+     "key": "rollbacks",
+     "value": "3 rollbacks, all inside 24 hours; Aug 27 notify-dispatch rollback caused a 9-minute partial outage delaying 12% of push notifications"
+    },
+    {
+     "key": "hard_deadline",
+     "value": "Pylon hardware lease expires Feb 28 2027 and will not be renewed"
+    },
+    {
+     "key": "parallel_cost",
+     "value": "Running Pylon and Helix in parallel costs $310K per month"
+    },
+    {
+     "key": "exemption_requests",
+     "value": "Payments and Trust asked for exemptions through Q1; neither filed a plan"
+    }
+   ],
+   "target_words": 600,
+   "has_human": false,
+   "source_doc": "",
+   "human_first_words": "",
+   "human_last_words": "",
+   "human_words": 0,
+   "human_span_words": 0
+  },
+  "questions": [
+   {
+    "id": "status_update-01-q1",
+    "brief_id": "status_update-01",
+    "q": "As of Sep 18 2026, how many services had been cut over to Helix, out of how many total in scope, and what percentage is that?",
+    "answer": "744 of 1,240 services, 60%",
+    "accept": [
+     "744 of 1240 (60%)",
+     "744/1,240, 60 percent",
+     "744 migrated of 1,240 in scope; 60%",
+     "744 services, 60% of 1,240",
+     "60% \u2014 744 of 1,240"
+    ]
+   },
+   {
+    "id": "status_update-01-q2",
+    "brief_id": "status_update-01",
+    "q": "How many of the not-yet-migrated services call the deprecated watchAndReload API that Helix does not implement, and when is the compatibility shim expected?",
+    "answer": "96 services; shim ETA Oct 9 2026",
+    "accept": [
+     "96; October 9",
+     "96 services, Oct 9",
+     "96 remaining services; ETA Oct 9 2026",
+     "96 \u2014 shim in code review, ETA October 9"
+    ]
+   },
+   {
+    "id": "status_update-01-q3",
+    "brief_id": "status_update-01",
+    "q": "What is the monthly cost of running the old and new config stores in parallel?",
+    "answer": "$310K per month",
+    "accept": [
+     "$310,000/month",
+     "310K a month",
+     "$310k per month",
+     "about $0.31M per month",
+     "$3.72M annualized (310K/mo)"
+    ]
+   },
+   {
+    "id": "status_update-01-q4",
+    "brief_id": "status_update-01",
+    "q": "The Aug 27 rollback of notify-dispatch caused a partial outage. How long did it last and what share of push notifications were affected?",
+    "answer": "9 minutes; 12% of push notifications delayed",
+    "accept": [
+     "9-minute outage, 12% of pushes delayed",
+     "nine minutes; 12 percent",
+     "9 min, 12%",
+     "~9 minutes and 12% of push notifications"
+    ]
+   },
+   {
+    "id": "status_update-01-q5",
+    "brief_id": "status_update-01",
+    "q": "What hard external deadline constrains the migration, and on what date does it fall?",
+    "answer": "The Pylon hardware lease expires Feb 28 2027 and will not be renewed",
+    "accept": [
+     "Feb 28 2027 \u2014 Pylon hardware lease expiry, not being renewed",
+     "hardware lease expiration, February 28 2027",
+     "Pylon lease ends 2/28/2027, no renewal",
+     "end of February 2027, lease expiry"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "status_update-02",
+   "prompt": "search-federator canary build 2026.9.3 has been running on 4 of 240 production hosts since Sep 8. Owner Dan Ortiz. p99 response time on canary hosts is 311 ms against 184 ms on the control fleet, an increase of 127 ms or 69%; p50 is essentially unchanged at 41 ms to 42 ms. The service SLO is p99 under 250 ms. Cause traced to a new gRPC interceptor that validates response payloads against a JSON schema synchronously on the serving path. The schema cache is a 512-entry LRU; at the canary's 2,900 QPS per host the working set is roughly 3,400 distinct schemas, so the cache thrashes, with a 71% hit rate against 99.6% in the pre-release load test, which exercised only 300 schemas. Median cost of the interceptor is 0.9 ms; p99 cost is 94 ms, dominated by schema recompilation. No member impact: canary carries 1.7% of traffic and zero error budget was consumed. Decision taken Sep 15: revert the interceptor from the release branch, raise the cache to 8,192 entries, move validation behind a 1% sampling flag, re-canary Sep 22. Write the status update for the weekly engineering review and the service's SLO owners.",
+   "facts": [
+    {
+     "key": "regression_size",
+     "value": "canary p99 311 ms vs control 184 ms, +127 ms or +69%; p50 flat at 41 ms to 42 ms"
+    },
+    {
+     "key": "slo_breach",
+     "value": "Service SLO is p99 under 250 ms, so the canary p99 of 311 ms breaches it"
+    },
+    {
+     "key": "canary_scope",
+     "value": "Build 2026.9.3 on 4 of 240 hosts, 1.7% of traffic, since Sep 8; zero error budget consumed"
+    },
+    {
+     "key": "root_cause",
+     "value": "New gRPC interceptor validates response payloads against JSON schemas synchronously on the serving path"
+    },
+    {
+     "key": "cache_thrash",
+     "value": "512-entry LRU schema cache against a ~3,400-schema working set at 2,900 QPS/host: 71% hit rate vs 99.6% in load test"
+    },
+    {
+     "key": "why_load_test_missed_it",
+     "value": "The pre-release load test used only 300 distinct schemas, which fit in the 512-entry cache"
+    },
+    {
+     "key": "cost_distribution",
+     "value": "Interceptor costs 0.9 ms at the median but 94 ms at p99, dominated by schema recompilation"
+    },
+    {
+     "key": "decision",
+     "value": "Sep 15: revert the interceptor, raise cache to 8,192 entries, put validation behind a 1% sampling flag, re-canary Sep 22"
+    },
+    {
+     "key": "owner",
+     "value": "Dan Ortiz"
+    }
+   ],
+   "target_words": 550,
+   "has_human": false,
+   "source_doc": "",
+   "human_first_words": "",
+   "human_last_words": "",
+   "human_words": 0,
+   "human_span_words": 0
+  },
+  "questions": [
+   {
+    "id": "status_update-02-q1",
+    "brief_id": "status_update-02",
+    "q": "What were the p99 response times on the canary hosts versus the control fleet, and what is the service's p99 SLO?",
+    "answer": "Canary p99 311 ms vs control 184 ms (+127 ms, +69%); SLO is p99 under 250 ms",
+    "accept": [
+     "311 ms canary, 184 ms control, SLO 250 ms",
+     "311 vs 184 ms; SLO p99 < 250 ms",
+     "canary 311ms, control 184ms, +127ms/69%, SLO 250ms",
+     "311 ms against 184 ms, breaching the 250 ms SLO"
+    ]
+   },
+   {
+    "id": "status_update-02-q2",
+    "brief_id": "status_update-02",
+    "q": "Why did the pre-release load test fail to surface this regression?",
+    "answer": "The load test exercised only about 300 distinct schemas, which fit inside the 512-entry cache, so it never thrashed",
+    "accept": [
+     "it only used 300 schemas, which fit in the 512-entry LRU",
+     "load test had ~300 distinct schemas vs ~3,400 in production, so no cache thrash",
+     "only 300 schemas were tested, small enough to stay cached",
+     "because the test's working set fit in the cache (300 schemas vs 512 entries)"
+    ]
+   },
+   {
+    "id": "status_update-02-q3",
+    "brief_id": "status_update-02",
+    "q": "What was the schema cache hit rate on the canary, and what had it been in the pre-release load test?",
+    "answer": "71% on the canary versus 99.6% in the load test",
+    "accept": [
+     "71% vs 99.6%",
+     "71 percent, down from 99.6 percent",
+     "~71% hit rate against ~99.6%",
+     "0.71 vs 0.996"
+    ]
+   },
+   {
+    "id": "status_update-02-q4",
+    "brief_id": "status_update-02",
+    "q": "What did the new interceptor cost at the median versus at p99, and what dominated the p99 cost?",
+    "answer": "0.9 ms at the median, 94 ms at p99, dominated by schema recompilation",
+    "accept": [
+     "median 0.9 ms, p99 94 ms; schema recompilation",
+     "0.9ms / 94ms, recompiling schemas",
+     "about 1 ms median and ~94 ms p99, driven by schema recompilation",
+     "0.9 ms vs 94 ms \u2014 recompilation of schemas"
+    ]
+   },
+   {
+    "id": "status_update-02-q5",
+    "brief_id": "status_update-02",
+    "q": "What three changes were decided on Sep 15, and when will the build be re-canaried?",
+    "answer": "Revert the interceptor from the release branch, raise the schema cache from 512 to 8,192 entries, and put validation behind a 1% sampling flag; re-canary Sep 22",
+    "accept": [
+     "revert interceptor, 8,192-entry cache, 1% sampling flag; re-canary Sept 22",
+     "pull the interceptor, enlarge cache to 8192, sample validation at 1%, re-canary on Sep 22",
+     "revert, bigger cache (8,192), 1% sampled validation; Sep 22"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "status_update-03",
+   "prompt": "graph-store capacity forecast prepared for the September 2026 capacity review. Owner Mei-Lin Chao. The fleet is 2,100 hosts across three regions serving a peak of 1.8M QPS, which is 857 QPS per host. The redline established by load testing is 1,050 QPS per host, so the fleet ceiling is 2.2M QPS. Trailing nine-month growth is 4.2% per month compounded and has stayed within 0.4 points of that every month since January. At that rate peak crosses the 2.2M ceiling in late February 2027 and reaches 2.6M QPS by June 2027. Serving 2.6M QPS at redline needs 2,476 hosts, so the request is 400 additional hosts for a fleet of 2,500, at $7,250 per host per year, $2.9M annualised. Hardware lead time is 14 weeks, so the purchase order must be signed by Nov 3 2026 for hosts to be racked before the February crossing. One alternative exists: moving the read path to the new columnar serialization is estimated to cut CPU per query by 18%, which would push the crossing to August 2027, but that work has no engineer assigned and has been unstaffed for two quarters. Write the capacity status and hardware request for the capacity review board.",
+   "facts": [
+    {
+     "key": "current_load",
+     "value": "2,100 hosts across three regions serving 1.8M QPS peak, i.e. 857 QPS per host"
+    },
+    {
+     "key": "ceiling",
+     "value": "Load-tested redline is 1,050 QPS/host, giving a fleet ceiling of 2.2M QPS"
+    },
+    {
+     "key": "growth_rate",
+     "value": "4.2% per month compounded over the trailing nine months, holding within 0.4 points every month since January"
+    },
+    {
+     "key": "crossing_date",
+     "value": "Peak crosses the 2.2M ceiling in late February 2027 and reaches 2.6M QPS by June 2027"
+    },
+    {
+     "key": "the_ask",
+     "value": "400 additional hosts (2,100 to 2,500) at $7,250/host/year, $2.9M annualised; 2.6M QPS at redline needs 2,476 hosts"
+    },
+    {
+     "key": "order_deadline",
+     "value": "14-week hardware lead time means the PO must be signed by Nov 3 2026 to beat the February crossing"
+    },
+    {
+     "key": "alternative",
+     "value": "Columnar serialization on the read path would cut CPU per query ~18% and push the crossing to August 2027"
+    },
+    {
+     "key": "why_alternative_is_not_the_plan",
+     "value": "The serialization work has no engineer assigned and has been unstaffed for two quarters"
+    },
+    {
+     "key": "owner",
+     "value": "Mei-Lin Chao"
+    }
+   ],
+   "target_words": 550,
+   "has_human": false,
+   "source_doc": "",
+   "human_first_words": "",
+   "human_last_words": "",
+   "human_words": 0,
+   "human_span_words": 0
+  },
+  "questions": [
+   {
+    "id": "status_update-03-q1",
+    "brief_id": "status_update-03",
+    "q": "What per-host redline did load testing establish, and what total fleet QPS ceiling does that imply at the current fleet size?",
+    "answer": "1,050 QPS per host, giving a fleet ceiling of 2.2M QPS",
+    "accept": [
+     "1,050 QPS/host; 2.2M QPS ceiling",
+     "1050 per host, ~2.2 million QPS total",
+     "1,050 QPS per host \u2192 2.2M QPS fleet ceiling",
+     "redline 1,050 QPS/host, ceiling ~2.2M"
+    ]
+   },
+   {
+    "id": "status_update-03-q2",
+    "brief_id": "status_update-03",
+    "q": "What is the trailing growth rate in peak traffic, and when does peak cross the fleet ceiling at that rate?",
+    "answer": "4.2% per month compounded; peak crosses the 2.2M QPS ceiling in late February 2027",
+    "accept": [
+     "4.2%/month compounded, crossing late Feb 2027",
+     "4.2 percent monthly; February 2027",
+     "~4.2% per month, ceiling crossed end of February 2027",
+     "4.2% compounded monthly \u2014 late Feb 2027"
+    ]
+   },
+   {
+    "id": "status_update-03-q3",
+    "brief_id": "status_update-03",
+    "q": "How many additional hosts is the team requesting, what fleet size does that reach, and what does it cost?",
+    "answer": "400 additional hosts, taking the fleet from 2,100 to 2,500, at $7,250 per host per year, $2.9M annualised",
+    "accept": [
+     "400 hosts (2,100 \u2192 2,500), $2.9M/year at $7,250 per host",
+     "400 more hosts for a 2,500-host fleet; $2.9 million annualized",
+     "+400 hosts, total 2500, $7,250/host/yr = $2.9M",
+     "400 hosts, $2.9M annualised"
+    ]
+   },
+   {
+    "id": "status_update-03-q4",
+    "brief_id": "status_update-03",
+    "q": "By what date must the purchase order be signed, and what drives that date?",
+    "answer": "Nov 3 2026, because hardware lead time is 14 weeks and the hosts must be racked before the February crossing",
+    "accept": [
+     "November 3 2026 \u2014 14-week lead time",
+     "Nov 3, 2026; 14 weeks of hardware lead time ahead of the Feb 2027 crossing",
+     "by 11/3/2026 due to the 14-week lead time",
+     "Nov 3 2026, driven by 14-week procurement lead time"
+    ]
+   },
+   {
+    "id": "status_update-03-q5",
+    "brief_id": "status_update-03",
+    "q": "What technical alternative to buying hardware exists, how much would it help, and why is it not the plan?",
+    "answer": "Moving the read path to the new columnar serialization would cut CPU per query about 18% and push the crossing to August 2027, but it has no engineer assigned and has been unstaffed for two quarters",
+    "accept": [
+     "columnar serialization on the read path, ~18% CPU savings, crossing moves to Aug 2027; unstaffed for two quarters",
+     "new columnar serialization (-18% CPU per query, delays crossing to August 2027) \u2014 nobody assigned",
+     "switch read path to columnar format, 18% less CPU, but no engineer for two quarters"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "status_update-04",
+   "prompt": "li-httpclient v3 reaches end of life on Jan 31 2027. Owner Tomasz Hejna. 1,000 multiproducts consume it; 388 are on v4, which is 38.8%, and 612 remain on v3. The driver is CVE-2026-31819, CVSS 7.5, an HTTP request-smuggling flaw in Netty 4.1.79, which v3 pins and cannot move off without an ABI break. v4 renames every connection-pool configuration key and drops support for HTTP/1.0 upstreams; 17 upstreams are known to still speak HTTP/1.0 and each needs an owner-side fix or a proxy shim. An automated codemod covers 84% of call sites, 7,910 of 9,417, leaving 1,507 that need hand edits, concentrated in 63 multiproducts. Build enforcement: v3 builds start failing on Dec 1 2026. An exemption process grants 30 days at a time; 22 exemptions have been granted so far, 9 of them to the same three teams. Median migration time for teams that have finished is 6 engineer-days. Office hours run Tuesdays and 41 teams have attended. Write the org-wide deprecation status update addressed to the engineering leads of every consuming team.",
+   "facts": [
+    {
+     "key": "eol_date",
+     "value": "li-httpclient v3 reaches end of life Jan 31 2027"
+    },
+    {
+     "key": "migration_progress",
+     "value": "388 of 1,000 consuming multiproducts on v4 (38.8%); 612 still on v3"
+    },
+    {
+     "key": "security_driver",
+     "value": "CVE-2026-31819, CVSS 7.5, HTTP request smuggling in Netty 4.1.79, which v3 pins and cannot move off without an ABI break"
+    },
+    {
+     "key": "breaking_changes",
+     "value": "v4 renames all connection-pool config keys and drops HTTP/1.0 upstream support; 17 upstreams still speak HTTP/1.0"
+    },
+    {
+     "key": "codemod_coverage",
+     "value": "Codemod handles 7,910 of 9,417 call sites (84%); 1,507 need hand edits, concentrated in 63 multiproducts"
+    },
+    {
+     "key": "build_enforcement",
+     "value": "v3 builds begin failing Dec 1 2026"
+    },
+    {
+     "key": "exemptions",
+     "value": "30-day exemptions, 22 granted, 9 of them to the same three teams"
+    },
+    {
+     "key": "effort_estimate",
+     "value": "Median migration is 6 engineer-days for teams that have finished"
+    },
+    {
+     "key": "owner",
+     "value": "Tomasz Hejna; Tuesday office hours, 41 teams attended"
+    }
+   ],
+   "target_words": 550,
+   "has_human": false,
+   "source_doc": "",
+   "human_first_words": "",
+   "human_last_words": "",
+   "human_words": 0,
+   "human_span_words": 0
+  },
+  "questions": [
+   {
+    "id": "status_update-04-q1",
+    "brief_id": "status_update-04",
+    "q": "How many of the consuming multiproducts have moved to v4, out of how many total, and how many remain on v3?",
+    "answer": "388 of 1,000 are on v4 (38.8%); 612 remain on v3",
+    "accept": [
+     "388/1,000 on v4, 612 on v3",
+     "38.8% migrated \u2014 388 of 1,000; 612 left",
+     "388 on v4 (about 39%), 612 still on v3",
+     "612 remaining of 1,000, 388 done"
+    ]
+   },
+   {
+    "id": "status_update-04-q2",
+    "brief_id": "status_update-04",
+    "q": "What specific vulnerability is driving the deprecation, what is its severity score, and which dependency carries it?",
+    "answer": "CVE-2026-31819, CVSS 7.5, an HTTP request-smuggling flaw in Netty 4.1.79 that v3 pins",
+    "accept": [
+     "CVE-2026-31819, CVSS 7.5, Netty 4.1.79 request smuggling",
+     "CVE-2026-31819 (7.5) in Netty 4.1.79",
+     "request smuggling in Netty 4.1.79; CVE-2026-31819, CVSS 7.5"
+    ]
+   },
+   {
+    "id": "status_update-04-q3",
+    "brief_id": "status_update-04",
+    "q": "How many call sites does the automated codemod handle, out of how many total, and how many need hand edits?",
+    "answer": "7,910 of 9,417 call sites (84%) are automated; 1,507 need hand edits, concentrated in 63 multiproducts",
+    "accept": [
+     "7,910/9,417 (84%); 1,507 manual, across 63 MPs",
+     "84% automated, 1,507 hand edits in 63 multiproducts",
+     "7910 of 9417 covered, 1507 by hand"
+    ]
+   },
+   {
+    "id": "status_update-04-q4",
+    "brief_id": "status_update-04",
+    "q": "On what date do builds on the old version start failing, and when does the old version actually reach end of life?",
+    "answer": "Builds begin failing Dec 1 2026; end of life is Jan 31 2027",
+    "accept": [
+     "build enforcement Dec 1 2026, EOL Jan 31 2027",
+     "December 1 2026 for build failures; January 31 2027 EOL",
+     "12/1/2026 builds fail, 1/31/2027 EOL"
+    ]
+   },
+   {
+    "id": "status_update-04-q5",
+    "brief_id": "status_update-04",
+    "q": "v4 drops support for one legacy protocol on upstreams. Which protocol is it, and how many upstreams are known to still use it?",
+    "answer": "HTTP/1.0; 17 upstreams still speak it",
+    "accept": [
+     "HTTP/1.0, 17 upstreams",
+     "HTTP 1.0 \u2014 seventeen known upstreams",
+     "17 upstreams on HTTP/1.0"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "status_update-05",
+   "prompt": "Experiment two-tower-v7, a session-aware retrieval head added to notifications ranking. Owner Aditi Sundaram. The LIX ramped to 2% on Jul 14, 4% on Aug 4, 10% on Aug 19, and was shut down Sep 5. Headline results at 10%: notification CTR -0.11% with a 95% confidence interval of -0.41% to +0.19%, so indistinguishable from zero. Downstream sessions per member -0.6% at p = 0.003, a significant regression. Serving cost up 31%, 4,100 GPU-hours per day against 3,130 for control. p99 scoring latency moved from 38 ms to 57 ms. Segment cut: members in the top decile by weekly session count gained +1.9% CTR, while the 62% of members with fewer than three sessions a week lost 0.8%, and that segment dominates the aggregate. Working hypothesis for the miss is that the session head needs at least four prior sessions to produce a useful embedding and falls back to a near-constant vector otherwise, which flattens ranking for light users. Decision taken Sep 5 with the metrics council: do not ramp, tear down the LIX, but keep the session embedding table in the feature store because two other teams now read it. Write the experiment wrap-up for the modeling org's review forum.",
+   "facts": [
+    {
+     "key": "outcome",
+     "value": "CTR -0.11%, 95% CI -0.41% to +0.19%, not distinguishable from zero"
+    },
+    {
+     "key": "regression",
+     "value": "Downstream sessions per member -0.6% at p = 0.003, a significant regression"
+    },
+    {
+     "key": "cost",
+     "value": "Serving cost +31%: 4,100 GPU-hours/day vs 3,130 for control; p99 scoring latency 38 ms to 57 ms"
+    },
+    {
+     "key": "segment_split",
+     "value": "Top decile by weekly sessions gained +1.9% CTR; the 62% with fewer than three sessions a week lost 0.8% and dominate the aggregate"
+    },
+    {
+     "key": "hypothesis",
+     "value": "The session head needs at least four prior sessions to produce a useful embedding and otherwise emits a near-constant vector"
+    },
+    {
+     "key": "ramp_schedule",
+     "value": "2% Jul 14, 4% Aug 4, 10% Aug 19, shut down Sep 5"
+    },
+    {
+     "key": "decision",
+     "value": "Sep 5 with the metrics council: do not ramp, tear down the LIX"
+    },
+    {
+     "key": "what_is_kept",
+     "value": "The session embedding table stays in the feature store because two other teams read it"
+    },
+    {
+     "key": "owner",
+     "value": "Aditi Sundaram"
+    }
+   ],
+   "target_words": 600,
+   "has_human": false,
+   "source_doc": "",
+   "human_first_words": "",
+   "human_last_words": "",
+   "human_words": 0,
+   "human_span_words": 0
+  },
+  "questions": [
+   {
+    "id": "status_update-05-q1",
+    "brief_id": "status_update-05",
+    "q": "To what traffic percentage did the experiment ramp before it was shut down, and what was the headline CTR effect with its confidence interval at that ramp?",
+    "answer": "Ramped to 10%; notification CTR -0.11% with a 95% CI of -0.41% to +0.19%, indistinguishable from zero",
+    "accept": [
+     "10%; CTR -0.11%, CI [-0.41%, +0.19%]",
+     "10 percent ramp, -0.11% CTR, CI -0.41 to +0.19",
+     "-0.11% CTR at 10% ramp, CI spans zero"
+    ]
+   },
+   {
+    "id": "status_update-05-q2",
+    "brief_id": "status_update-05",
+    "q": "What downstream member metric regressed, by how much, and at what significance level?",
+    "answer": "Sessions per member fell 0.6% at p = 0.003",
+    "accept": [
+     "downstream sessions per member -0.6%, p=0.003",
+     "-0.6% sessions per member, statistically significant (p = 0.003)",
+     "sessions/member down 0.6 percent at p 0.003"
+    ]
+   },
+   {
+    "id": "status_update-05-q3",
+    "brief_id": "status_update-05",
+    "q": "What happened to serving cost and scoring latency under the treatment?",
+    "answer": "Serving cost rose 31%, 4,100 GPU-hours per day versus 3,130 for control; p99 scoring latency went from 38 ms to 57 ms",
+    "accept": [
+     "+31% cost (4,100 vs 3,130 GPU-hours/day), p99 latency 38\u219257 ms",
+     "cost up 31 percent, latency 38 ms to 57 ms",
+     "4,100 GPU-hours/day against 3,130; p99 57 ms vs 38 ms"
+    ]
+   },
+   {
+    "id": "status_update-05-q4",
+    "brief_id": "status_update-05",
+    "q": "How did the effect split by member segment, and which segment dominated the aggregate?",
+    "answer": "The top decile by weekly session count gained +1.9% CTR, while the 62% of members with fewer than three sessions a week lost 0.8%; that light-user segment dominates the aggregate",
+    "accept": [
+     "heavy users (top decile) +1.9%, light users (62%, <3 sessions/week) -0.8%, and the light segment dominates",
+     "+1.9% for top decile, -0.8% for the 62% with under three sessions weekly",
+     "top-decile members up 1.9%, the 62% light-session majority down 0.8%"
+    ]
+   },
+   {
+    "id": "status_update-05-q5",
+    "brief_id": "status_update-05",
+    "q": "What is the working hypothesis for why the model did not deliver, specifically what the session head requires and what it does otherwise?",
+    "answer": "The session head needs at least four prior sessions to produce a useful embedding; below that it falls back to a near-constant vector, which flattens ranking for light users",
+    "accept": [
+     "it needs 4+ prior sessions, otherwise emits a near-constant embedding",
+     "fewer than four prior sessions produces a near-constant vector, flattening ranking",
+     "requires at least four sessions; otherwise the embedding is nearly constant"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "status_update-06",
+   "prompt": "Storage Platform team, owner Kwame Boateng, H2 2026 planning. Approved headcount 11, filled 7, with four requisitions open since February at an average age of 214 days; two offers were declined on compensation, in July and August. Two engineers left in Q2, one of whom was DRI for the compaction rewrite. The team is chartered for three workstreams: tiered storage, cross-region async replication, and the compaction rewrite. Tiered storage GA slips from Nov 17 2026 to Feb 23 2027, fourteen weeks. Cross-region async replication is paused with zero engineers assigned and no restart date. The compaction rewrite continues with one engineer instead of three. The internal transfer pipeline has three candidates in loop with an earliest possible start of Nov 30, and ramp on this codebase has historically taken eight weeks, so no capacity lands in Q4. Three options are on the table: borrow two engineers from the Index team for one quarter, which pushes Index's own query-planner goal out five weeks; contract the migration tooling to a vendor at $480K for two quarters; or cut scope to single-region tiered storage and hold the Nov 17 date. Write the roadmap status and recommendation for the VP staff planning review.",
+   "facts": [
+    {
+     "key": "headcount_gap",
+     "value": "11 approved, 7 filled; four reqs open since February, average age 214 days"
+    },
+    {
+     "key": "pipeline_failures",
+     "value": "Two offers declined on compensation in July and August; two engineers left in Q2, one the compaction-rewrite DRI"
+    },
+    {
+     "key": "slip",
+     "value": "Tiered storage GA slips from Nov 17 2026 to Feb 23 2027, fourteen weeks"
+    },
+    {
+     "key": "paused_workstream",
+     "value": "Cross-region async replication is paused with zero engineers assigned and no restart date"
+    },
+    {
+     "key": "degraded_workstream",
+     "value": "Compaction rewrite continues with one engineer instead of three"
+    },
+    {
+     "key": "no_q4_relief",
+     "value": "Three transfer candidates in loop, earliest start Nov 30, plus eight weeks of historical ramp, so no capacity lands in Q4"
+    },
+    {
+     "key": "option_borrow",
+     "value": "Borrow two Index engineers for a quarter, pushing Index's query-planner goal out five weeks"
+    },
+    {
+     "key": "option_contract",
+     "value": "Contract migration tooling to a vendor at $480K for two quarters"
+    },
+    {
+     "key": "option_cut_scope",
+     "value": "Ship single-region tiered storage only and hold the Nov 17 date"
+    },
+    {
+     "key": "owner",
+     "value": "Kwame Boateng"
+    }
+   ],
+   "target_words": 600,
+   "has_human": false,
+   "source_doc": "",
+   "human_first_words": "",
+   "human_last_words": "",
+   "human_words": 0,
+   "human_span_words": 0
+  },
+  "questions": [
+   {
+    "id": "status_update-06-q1",
+    "brief_id": "status_update-06",
+    "q": "How many headcount are approved versus filled on the team, and how long have the open requisitions been open?",
+    "answer": "11 approved, 7 filled; four requisitions open since February at an average age of 214 days",
+    "accept": [
+     "11 approved / 7 filled, 4 open reqs averaging 214 days",
+     "7 of 11 filled; reqs open since Feb, avg 214 days old",
+     "four vacancies, ~214 days average req age, 11 approved and 7 filled"
+    ]
+   },
+   {
+    "id": "status_update-06-q2",
+    "brief_id": "status_update-06",
+    "q": "What is the new date for tiered storage GA, what was the original date, and how large is the slip?",
+    "answer": "Slips from Nov 17 2026 to Feb 23 2027, a fourteen-week slip",
+    "accept": [
+     "Nov 17 2026 \u2192 Feb 23 2027, 14 weeks",
+     "from November 17 to February 23 2027; ~14 weeks late",
+     "14-week slip to Feb 23 2027"
+    ]
+   },
+   {
+    "id": "status_update-06-q3",
+    "brief_id": "status_update-06",
+    "q": "Which workstream is fully paused and with how many engineers, and how is the compaction rewrite staffed relative to plan?",
+    "answer": "Cross-region async replication is paused with zero engineers assigned and no restart date; the compaction rewrite runs with one engineer instead of three",
+    "accept": [
+     "async cross-region replication paused, 0 engineers; compaction rewrite 1 of 3 engineers",
+     "replication has no one on it; compaction has one engineer instead of three",
+     "cross-region replication stopped (zero staff), compaction at 1/3 staffing"
+    ]
+   },
+   {
+    "id": "status_update-06-q4",
+    "brief_id": "status_update-06",
+    "q": "Why will the hiring and transfer pipeline not relieve the team in Q4?",
+    "answer": "The three transfer candidates in loop can start no earlier than Nov 30, and ramp on this codebase historically takes eight weeks, so no usable capacity lands in Q4",
+    "accept": [
+     "earliest start Nov 30 plus an 8-week ramp pushes capacity past Q4",
+     "3 candidates, earliest start November 30, eight weeks to ramp",
+     "start date Nov 30 + 8-week ramp = nothing in Q4"
+    ]
+   },
+   {
+    "id": "status_update-06-q5",
+    "brief_id": "status_update-06",
+    "q": "What three options were presented, and what does each cost?",
+    "answer": "Borrow two Index engineers for a quarter, which pushes Index's query-planner goal out five weeks; contract the migration tooling to a vendor at $480K for two quarters; or cut scope to single-region tiered storage and hold the Nov 17 date",
+    "accept": [
+     "borrow 2 Index engineers (Index query planner slips 5 weeks), vendor contract $480K for two quarters, or single-region scope cut holding Nov 17",
+     "(1) 2 loaned engineers costing Index 5 weeks (2) $480K vendor (3) drop to single-region and keep Nov 17",
+     "borrow from Index, pay a vendor $480,000, or cut to single-region"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "status_update-07",
+   "prompt": "Cost programme codenamed Trim. Owner Renee Alvarez, finance partner Sanjay Kothari, monthly reporting cadence. Target is $28M annualised infrastructure savings by end of FY27. Booked to date is $16.4M, 59% of target. Composition of the booked amount: $9.1M from right-sizing 6,800 over-provisioned pods, median CPU request cut from 4.0 cores to 1.5; $4.2M from deleting 41 PB of object storage untouched for more than three years; $3.1M from converting 62% of the steady-state fleet to reserved instances. The remaining $11.6M is planned as $7.0M from GPU bin-packing, where cluster utilization is 38% today against a 65% target, and $4.6M from decommissioning three legacy datacenter halls by June 2027. Right-sizing caused five incidents, four SEV-3 and one SEV-2, all CPU throttling on services whose p99 CPU sat close to the new request. A guardrail shipped Aug 20 now blocks any cut where measured p99 CPU exceeds 70% of the proposed request; it has rejected 410 of 1,100 candidate cuts since. GPU bin-packing depends on a scheduler change owned by another org with no committed date. Write the monthly programme status for the business review.",
+   "facts": [
+    {
+     "key": "target_and_progress",
+     "value": "$28M annualised savings target by end of FY27; $16.4M booked, 59% of target"
+    },
+    {
+     "key": "rightsizing",
+     "value": "$9.1M from right-sizing 6,800 over-provisioned pods, median CPU request from 4.0 cores to 1.5"
+    },
+    {
+     "key": "storage_deletion",
+     "value": "$4.2M from deleting 41 PB of object storage untouched for more than three years"
+    },
+    {
+     "key": "reserved_instances",
+     "value": "$3.1M from converting 62% of the steady-state fleet to reserved instances"
+    },
+    {
+     "key": "remaining_plan",
+     "value": "$11.6M remaining: $7.0M from GPU bin-packing (38% utilization today, 65% target) and $4.6M from decommissioning three legacy datacenter halls by June 2027"
+    },
+    {
+     "key": "incidents_caused",
+     "value": "Right-sizing caused five incidents, four SEV-3 and one SEV-2, all CPU throttling where p99 CPU sat close to the new request"
+    },
+    {
+     "key": "guardrail",
+     "value": "Guardrail shipped Aug 20 blocks any cut where p99 CPU exceeds 70% of the proposed request; it has rejected 410 of 1,100 candidate cuts"
+    },
+    {
+     "key": "largest_risk",
+     "value": "The $7.0M GPU bin-packing line depends on a scheduler change owned by another org with no committed date"
+    },
+    {
+     "key": "owners",
+     "value": "Renee Alvarez, with finance partner Sanjay Kothari; monthly reporting"
+    }
+   ],
+   "target_words": 600,
+   "has_human": false,
+   "source_doc": "",
+   "human_first_words": "",
+   "human_last_words": "",
+   "human_words": 0,
+   "human_span_words": 0
+  },
+  "questions": [
+   {
+    "id": "status_update-07-q1",
+    "brief_id": "status_update-07",
+    "q": "What is the programme's savings target and deadline, and how much has been booked so far?",
+    "answer": "$28M annualised by end of FY27; $16.4M booked, 59% of target",
+    "accept": [
+     "$28M target, $16.4M booked (59%)",
+     "target $28 million by end of FY27; 16.4M booked",
+     "59% of the $28M goal, i.e. $16.4M"
+    ]
+   },
+   {
+    "id": "status_update-07-q2",
+    "brief_id": "status_update-07",
+    "q": "What is the largest booked savings line, and what change produced it?",
+    "answer": "$9.1M from right-sizing 6,800 over-provisioned pods, cutting the median CPU request from 4.0 cores to 1.5",
+    "accept": [
+     "$9.1M, right-sizing 6,800 pods (median CPU request 4.0 \u2192 1.5 cores)",
+     "pod right-sizing: $9.1 million, 6,800 pods, 4 cores down to 1.5",
+     "$9.1M from right-sizing, median request cut from 4.0 to 1.5 cores"
+    ]
+   },
+   {
+    "id": "status_update-07-q3",
+    "brief_id": "status_update-07",
+    "q": "How many incidents did the right-sizing work cause, at what severities, and what was the failure mode?",
+    "answer": "Five incidents \u2014 four SEV-3 and one SEV-2 \u2014 all CPU throttling on services whose p99 CPU sat close to the new request",
+    "accept": [
+     "5 incidents: 4 SEV-3, 1 SEV-2, all CPU throttling",
+     "four SEV-3s and one SEV-2, caused by CPU throttling near the new request",
+     "5 total (1 SEV-2, 4 SEV-3), throttling"
+    ]
+   },
+   {
+    "id": "status_update-07-q4",
+    "brief_id": "status_update-07",
+    "q": "What rule does the guardrail shipped on Aug 20 enforce, and how many candidate cuts has it rejected?",
+    "answer": "It blocks any cut where measured p99 CPU exceeds 70% of the proposed request; it has rejected 410 of 1,100 candidate cuts",
+    "accept": [
+     "blocks cuts where p99 CPU > 70% of the proposed request; 410 of 1,100 rejected",
+     "70% p99-CPU threshold against the new request, 410/1,100 blocked",
+     "rejects a cut if p99 CPU is above 70 percent of the request \u2014 410 of 1,100 so far"
+    ]
+   },
+   {
+    "id": "status_update-07-q5",
+    "brief_id": "status_update-07",
+    "q": "How much of the remaining savings is planned from GPU bin-packing, and what is that line blocked on?",
+    "answer": "$7.0M of the remaining $11.6M; it depends on a scheduler change owned by another org that has no committed date",
+    "accept": [
+     "$7M, blocked on another org's scheduler change with no committed date",
+     "$7.0 million from GPU bin-packing, gated on a scheduler change owned elsewhere",
+     "7M of the 11.6M remaining; dependency on an unscheduled scheduler change"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "status_update-08",
+   "prompt": "Security remediation burndown for a single finding class: unauthenticated internal gRPC endpoints, discovered by the internal red team in June 2026. Scope is 1,432 endpoints across 318 services. Owner Hiroshi Tanabe, security partner Dana Ruiz. Remediated 1,189, which is 83%, leaving 243. Of the remainder, 61 sit in services with no registered owner and 12 are in systems already declared end-of-life. The fix is mTLS plus a per-endpoint ACL; median time to fix is 11 days and p90 is 74 days. P1 endpoints, those reachable from outside the service mesh, numbered 96 and all were closed by the Aug 15 deadline. The P2 deadline is Oct 31. Current run rate is 26 endpoints per week, which from Sep 18 finishes on Nov 23, three weeks past the deadline. A proposal for Oct 6 would switch the mesh ingress to deny-by-default for the 61 orphaned services, closing the exposure with no code change, but it is known to break four cross-team callers, three of which have not responded to outreach. Write the monthly burndown status for the security review board.",
+   "facts": [
+    {
+     "key": "scope_and_progress",
+     "value": "1,432 unauthenticated internal gRPC endpoints across 318 services; 1,189 remediated (83%), 243 remaining"
+    },
+    {
+     "key": "hard_cases",
+     "value": "Of the 243 remaining, 61 are in services with no registered owner and 12 are in end-of-life systems"
+    },
+    {
+     "key": "fix_and_latency",
+     "value": "Fix is mTLS plus a per-endpoint ACL; median time to fix 11 days, p90 74 days"
+    },
+    {
+     "key": "p1_met",
+     "value": "All 96 P1 endpoints (reachable from outside the service mesh) were closed by the Aug 15 deadline"
+    },
+    {
+     "key": "p2_will_miss",
+     "value": "P2 deadline is Oct 31; at 26 endpoints/week the 243 remaining finish Nov 23, three weeks late"
+    },
+    {
+     "key": "proposed_mitigation",
+     "value": "Oct 6 proposal: deny-by-default at the mesh ingress for the 61 orphaned services, closing exposure with no code change"
+    },
+    {
+     "key": "mitigation_cost",
+     "value": "Deny-by-default is known to break four cross-team callers, three of which have not responded to outreach"
+    },
+    {
+     "key": "origin",
+     "value": "Finding class came from an internal red-team exercise in June 2026"
+    },
+    {
+     "key": "owners",
+     "value": "Hiroshi Tanabe with security partner Dana Ruiz"
+    }
+   ],
+   "target_words": 550,
+   "has_human": false,
+   "source_doc": "",
+   "human_first_words": "",
+   "human_last_words": "",
+   "human_words": 0,
+   "human_span_words": 0
+  },
+  "questions": [
+   {
+    "id": "status_update-08-q1",
+    "brief_id": "status_update-08",
+    "q": "How many endpoints are in scope for this finding class, across how many services, and how many have been remediated?",
+    "answer": "1,432 endpoints across 318 services; 1,189 remediated (83%), leaving 243",
+    "accept": [
+     "1,432 across 318 services, 1,189 fixed (83%), 243 left",
+     "1189 of 1432 done, 243 remaining, 318 services",
+     "83% remediated \u2014 1,189 of 1,432; 243 open"
+    ]
+   },
+   {
+    "id": "status_update-08-q2",
+    "brief_id": "status_update-08",
+    "q": "Of the endpoints still open, how many sit in services with no registered owner, and how many are in systems already declared end-of-life?",
+    "answer": "61 have no registered owner; 12 are in end-of-life systems",
+    "accept": [
+     "61 ownerless, 12 EOL",
+     "61 orphaned services' endpoints and 12 in EOL systems",
+     "61 unowned; 12 end-of-life"
+    ]
+   },
+   {
+    "id": "status_update-08-q3",
+    "brief_id": "status_update-08",
+    "q": "How many P1 endpoints were there, what made them P1, and were they closed on time?",
+    "answer": "96 P1 endpoints, those reachable from outside the service mesh; all were closed by the Aug 15 deadline",
+    "accept": [
+     "96, reachable from outside the mesh, all closed by Aug 15",
+     "96 P1s (externally reachable from outside the service mesh) \u2014 100% closed on the August 15 deadline",
+     "all 96 met the Aug 15 date"
+    ]
+   },
+   {
+    "id": "status_update-08-q4",
+    "brief_id": "status_update-08",
+    "q": "At the current run rate, when do the remaining endpoints finish, and how does that compare with the P2 deadline?",
+    "answer": "At 26 endpoints per week the remaining 243 finish Nov 23, three weeks past the Oct 31 P2 deadline",
+    "accept": [
+     "26/week \u2192 Nov 23, missing the Oct 31 deadline by 3 weeks",
+     "finishes November 23 versus an October 31 deadline, ~3 weeks late",
+     "Nov 23 at 26 endpoints/week; 3 weeks past P2"
+    ]
+   },
+   {
+    "id": "status_update-08-q5",
+    "brief_id": "status_update-08",
+    "q": "What mitigation is proposed for the orphaned services, and what is known to break if it ships?",
+    "answer": "Switching the mesh ingress to deny-by-default on Oct 6 for the 61 orphaned services, closing the exposure with no code change; it breaks four cross-team callers, three of which have not responded to outreach",
+    "accept": [
+     "deny-by-default at mesh ingress (Oct 6) for the 61 unowned services; breaks 4 cross-team callers, 3 unresponsive",
+     "default-deny ingress, no code change needed, but four callers break and three teams haven't replied",
+     "Oct 6 deny-by-default for orphaned services; 4 broken callers"
+    ]
+   }
+  ]
+ }
+]

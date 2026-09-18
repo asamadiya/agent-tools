@@ -1,0 +1,903 @@
+[
+ {
+  "brief": {
+   "id": "postmortem-01",
+   "prompt": "Raw material, Cloudflare, 18 November 2025, all times UTC. 11:05 a permissions change was deployed on a ClickHouse database cluster so users could see metadata for underlying tables in the r0 database, not just the default database. The Bot Management feature file is regenerated every five minutes by a query over system.columns that filters on table name but not on database name. After 11:05 that query started returning duplicate rows, so the generated file roughly doubled in feature count. The proxy's bots module preallocates memory and caps features at 200; actual usage is about 60. Over 200 features triggered an unwrap on an Err in the FL2 Rust path: thread fl2_worker_thread panicked, returning HTTP 5xx. Rollout was gradual across ClickHouse nodes, so good and bad files alternated every five minutes and the network recovered then failed repeatedly. FL2 customers saw 5xx; FL1 customers saw no errors but all traffic scored bot=0, producing false positives for anyone blocking on bot score. Cloudflare's independently hosted status page went down coincidentally; responders suspected an Aisuru-style DDoS. 11:28 impact starts, 11:31 first automated detection, 11:35 incident call, 13:05 Workers KV and Access bypass, 14:24 propagation stopped, 14:30 core traffic normal, 17:06 all clear. Worst outage since 2019. Write the root-cause section of the public postmortem for customers and outside engineers.",
+   "facts": [
+    {
+     "key": "trigger",
+     "value": "A ClickHouse permissions change deployed at 11:05 UTC made r0 table metadata visible to the query that builds the Bot Management feature file."
+    },
+    {
+     "key": "why_the_file_doubled",
+     "value": "The generating query filtered on table name but not on database name, so it returned duplicate column rows once r0 metadata became visible."
+    },
+    {
+     "key": "hard_limit",
+     "value": "The bots module preallocates memory for at most 200 features; production used roughly 60, and the doubled file exceeded 200."
+    },
+    {
+     "key": "failure_mode",
+     "value": "Exceeding the cap caused an unwrap on an Err in the FL2 Rust worker thread, panicking and returning HTTP 5xx."
+    },
+    {
+     "key": "oscillation",
+     "value": "The file regenerated every five minutes and only bad on already-updated ClickHouse nodes, so the network recovered and failed repeatedly until every node produced bad files."
+    },
+    {
+     "key": "split_impact_by_proxy",
+     "value": "FL2 customers received 5xx; FL1 customers got a bot score of zero for all traffic, causing false positives for rules that block on bot score."
+    },
+    {
+     "key": "misdiagnosis",
+     "value": "The coincidental failure of the externally hosted status page led responders to suspect a hyper-scale DDoS attack rather than an internal change."
+    },
+    {
+     "key": "key_timestamps",
+     "value": "11:05 change deployed, 11:28 impact starts, 11:31 automated detection, 13:05 KV/Access bypass, 14:24 propagation stopped, 14:30 core traffic normal, 17:06 fully resolved."
+    },
+    {
+     "key": "fix",
+     "value": "Stop generating and propagating the bad feature file, inject a known-good file into the distribution queue, and force a core proxy restart."
+    },
+    {
+     "key": "severity",
+     "value": "Cloudflare's worst outage since 2019 and the first in over six years to stop the majority of core traffic."
+    }
+   ],
+   "target_words": 700,
+   "has_human": true,
+   "source_doc": "cloudflare-18-november-2025-outage",
+   "human_first_words": "Every request to Cloudflare takes a well-defined path through our network. It",
+   "human_last_words": "check and was the source of the unhandled error is shown below:",
+   "human_words": 1186,
+   "human_span_words": 1186
+  },
+  "questions": [
+   {
+    "id": "postmortem-01-q1",
+    "brief_id": "postmortem-01",
+    "q": "What was the maximum number of Bot Management features the proxy's bots module preallocated memory for, and roughly how many were actually in use in production?",
+    "answer": "Limit of 200 features; about 60 in actual use",
+    "accept": [
+     "200 limit, ~60 used",
+     "200 and 60",
+     "cap of 200, roughly 60 in use",
+     "200 features max, approximately 60 used"
+    ]
+   },
+   {
+    "id": "postmortem-01-q2",
+    "brief_id": "postmortem-01",
+    "q": "Why did the query that generates the Bot Management feature file start returning duplicate rows after the permissions change?",
+    "answer": "It filtered on table name but not on database name, so once r0 database metadata became visible the query matched the same columns in more than one database",
+    "accept": [
+     "the query did not filter by database name, only table name",
+     "missing database name filter meant r0 columns were returned too, duplicating rows",
+     "no database filter in the query over system.columns"
+    ]
+   },
+   {
+    "id": "postmortem-01-q3",
+    "brief_id": "postmortem-01",
+    "q": "How did customers on the older FL1 proxy experience the incident differently from those on FL2?",
+    "answer": "FL2 customers got HTTP 5xx errors; FL1 customers saw no errors but all traffic was scored bot=0, causing false positives for anyone blocking on bot score",
+    "accept": [
+     "FL2 saw 5xx, FL1 got bot score of zero for all traffic",
+     "FL1 had no errors but bot score 0 causing false positives; FL2 returned 5xx",
+     "FL2: 500 errors. FL1: every request scored 0 for bot"
+    ]
+   },
+   {
+    "id": "postmortem-01-q4",
+    "brief_id": "postmortem-01",
+    "q": "Why did the network appear to recover and then fail again repeatedly in the early part of the incident?",
+    "answer": "The feature file was regenerated every five minutes, and the ClickHouse permissions rollout was gradual, so a good or bad file was produced depending on whether the node running the query had been updated yet",
+    "accept": [
+     "the file regenerated every 5 minutes and only updated ClickHouse nodes produced bad files, so good and bad files alternated",
+     "gradual ClickHouse rollout plus 5-minute regeneration caused alternating good/bad files",
+     "because only some ClickHouse nodes had the new permissions, the every-five-minute regeneration alternated between good and bad output"
+    ]
+   },
+   {
+    "id": "postmortem-01-q5",
+    "brief_id": "postmortem-01",
+    "q": "What led responders to initially suspect a large-scale DDoS attack rather than an internal change?",
+    "answer": "Cloudflare's independently hosted status page went down at the same time, coincidentally, which looked like a hyper-scale attack",
+    "accept": [
+     "the external status page failed coincidentally, suggesting a DDoS",
+     "the third-party-hosted status page going down at the same moment",
+     "coincidental failure of the externally hosted status page pointed toward an Aisuru-style DDoS"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "postmortem-02",
+   "prompt": "Raw material, Cloudflare, 18 November 2025 incident, downstream blast radius only, all times UTC. Workers KV returned heavily elevated 5xx because its front-end gateway calls the core proxy, which was failing. At 13:04 a patch let Workers KV bypass the core proxy; everything downstream of KV, including Access, saw error rates fall. Cloudflare Access saw widespread authentication failures from the start of the incident until the 13:05 rollback. Existing Access sessions kept working. Every failed authentication ended at an error page, so no user reached a target application while auth was broken, and successful logins during the window were logged correctly. Access configuration updates attempted during the window either failed outright or propagated very slowly; all have since been recovered. The Dashboard depends on Workers KV internally and on Turnstile in the login flow; Turnstile failed to load, so anyone without an active session could not log in. Dashboard availability dropped across two separate windows: 11:30 to 13:10, ended by the KV bypass at 13:10, and 14:40 to 15:30, caused by a backlog of queued login attempts plus retries after the feature file was restored, ended by scaling control plane concurrency around 15:30. Email Security kept processing and delivering mail but lost access to an IP reputation source, reducing spam-detection accuracy and suppressing some new-domain-age detections; some Auto Move actions failed and were later remediated. CDN response latency also rose because debugging and observability systems consumed large amounts of CPU enriching uncaught errors. Write the impact analysis section of the postmortem for affected enterprise customers.",
+   "facts": [
+    {
+     "key": "kv_dependency",
+     "value": "Workers KV returned elevated 5xx because its front-end gateway routes through the failing core proxy."
+    },
+    {
+     "key": "kv_mitigation",
+     "value": "A patch at 13:04 made Workers KV bypass the core proxy, which reduced errors for every system downstream of KV, including Access."
+    },
+    {
+     "key": "access_boundary",
+     "value": "Access authentication failed widely until the 13:05 rollback, but existing Access sessions were unaffected and no failed login ever reached a target application."
+    },
+    {
+     "key": "access_logging",
+     "value": "Successful logins during the incident were logged correctly; configuration updates either failed outright or propagated very slowly and were later recovered."
+    },
+    {
+     "key": "dashboard_two_windows",
+     "value": "Dashboard availability dropped twice: 11:30-13:10 and 14:40-15:30."
+    },
+    {
+     "key": "first_window_cause",
+     "value": "The first dashboard window was caused by Workers KV impact and ended at 13:10 when KV bypassed the core proxy."
+    },
+    {
+     "key": "second_window_cause",
+     "value": "The second dashboard window came from a backlog of queued logins plus retries after recovery; scaling control plane concurrency restored availability around 15:30."
+    },
+    {
+     "key": "turnstile",
+     "value": "Turnstile failed to load, blocking login for any user without an active dashboard session."
+    },
+    {
+     "key": "email_security",
+     "value": "Mail processing and delivery were unaffected, but loss of an IP reputation source reduced spam-detection accuracy and some Auto Move actions failed and were remediated."
+    },
+    {
+     "key": "latency_cause",
+     "value": "CDN latency rose because debugging and observability systems burned CPU enriching uncaught errors with extra context."
+    }
+   ],
+   "target_words": 550,
+   "has_human": true,
+   "source_doc": "cloudflare-18-november-2025-outage",
+   "human_first_words": "Other systems that rely on our core proxy were impacted during the",
+   "human_last_words": "reducing dashboard availability. Scaling control plane concurrency restored availability at approximately 15:30.",
+   "human_words": 221,
+   "human_span_words": 221
+  },
+  "questions": [
+   {
+    "id": "postmortem-02-q1",
+    "brief_id": "postmortem-02",
+    "q": "What change was made at roughly 13:04-13:05 UTC that reduced errors for Workers KV and everything downstream of it?",
+    "answer": "A patch that let Workers KV bypass the failing core proxy",
+    "accept": [
+     "Workers KV was made to bypass the core proxy",
+     "bypassing the core proxy for KV's front-end gateway",
+     "a patch removing KV's dependency on the core proxy"
+    ]
+   },
+   {
+    "id": "postmortem-02-q2",
+    "brief_id": "postmortem-02",
+    "q": "During the window when Cloudflare Access authentication was failing, could any user with a failed login still reach a target application?",
+    "answer": "No. Every failed authentication ended at an error page, so no user reached a target application",
+    "accept": [
+     "No",
+     "no, all failures terminated at an error page",
+     "no one got through; failures ended on an error page"
+    ]
+   },
+   {
+    "id": "postmortem-02-q3",
+    "brief_id": "postmortem-02",
+    "q": "The Dashboard lost availability in two separate windows. Give both windows and the cause of the second one.",
+    "answer": "11:30 to 13:10 and 14:40 to 15:30; the second was caused by a backlog of queued login attempts plus retries after the feature file was restored",
+    "accept": [
+     "11:30-13:10 and 14:40-15:30; second caused by queued login backlog and retries",
+     "first 11:30-13:10, second 14:40-15:30 due to backlog of logins/retries after recovery",
+     "two windows, 11:30-13:10 and 14:40-15:30; the later one from login queue backlog plus retries"
+    ]
+   },
+   {
+    "id": "postmortem-02-q4",
+    "brief_id": "postmortem-02",
+    "q": "What ended the second Dashboard availability drop?",
+    "answer": "Scaling up control plane concurrency, around 15:30",
+    "accept": [
+     "scaling control plane concurrency",
+     "increasing concurrency in the control plane at ~15:30",
+     "control plane concurrency was scaled up around 15:30"
+    ]
+   },
+   {
+    "id": "postmortem-02-q5",
+    "brief_id": "postmortem-02",
+    "q": "What specifically degraded in Email Security during the incident, and what kept working?",
+    "answer": "Mail processing and delivery kept working; loss of an IP reputation source reduced spam-detection accuracy and suppressed some new-domain-age detections, and some Auto Move actions failed",
+    "accept": [
+     "processing and delivery unaffected; lost an IP reputation source so spam detection accuracy dropped and some Auto Move actions failed",
+     "mail still processed and delivered, but reduced spam detection accuracy due to losing an IP reputation source",
+     "delivery fine; accuracy of spam detection down from missing IP reputation data, some Auto Move failures later remediated"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "postmortem-03",
+   "prompt": "Raw material, Cloudflare, 5 December 2025, all times UTC. Impact 08:47 to 09:12, about 25 minutes. Roughly 28% of all HTTP traffic Cloudflare serves was affected. Not an attack. The WAF buffers HTTP request bodies in memory for inspection; the buffer had been 128KB. To cover customers against CVE-2025-55182, a critical React Server Components vulnerability, Cloudflare began raising the buffer to 1MB, the Next.js default limit. That first change went out through the gradual deployment system. During rollout an internal WAF testing tool turned out not to support the larger buffer, so a second change disabled that tool. The tool had no effect on customer traffic, but the disable was made through the global configuration system, which does no staged rollout and reaches the entire fleet within seconds. The disable was implemented as a killswitch in the rulesets system. A rule's action can be block, log, skip, or execute, where execute triggers evaluation of a sub-ruleset. A killswitch had never before been applied to a rule with action execute. The skip was honoured, but result-processing code still dereferenced rule_result.execute, which did not exist, producing a Lua nil index error at init.lua line 314 in the FL1 proxy and HTTP 500s. The bug had sat undetected for years; the Rust reimplementation in FL2 does not have it. Affected: customers on FL1 with the Cloudflare Managed Ruleset deployed, all requests 500ing except some test endpoints such as /cdn-cgi/trace. China network traffic unaffected. 08:50 declared by automated alerts, 09:11 revert, 09:12 propagation complete. Write the public incident writeup for customers who saw 500s.",
+   "facts": [
+    {
+     "key": "duration_and_scope",
+     "value": "Impact ran 08:47 to 09:12 UTC, about 25 minutes, and touched roughly 28% of all HTTP traffic Cloudflare serves."
+    },
+    {
+     "key": "originating_change",
+     "value": "The WAF request-body buffer was being raised from 128KB to 1MB, the Next.js default, to cover customers against CVE-2025-55182 in React Server Components."
+    },
+    {
+     "key": "second_change",
+     "value": "An internal WAF testing tool did not support the larger buffer, so a second change disabled it."
+    },
+    {
+     "key": "deployment_asymmetry",
+     "value": "The buffer increase used gradual deployment, but the disable used the global configuration system, which propagates fleet-wide in seconds with no staged rollout."
+    },
+    {
+     "key": "novel_condition",
+     "value": "A killswitch had never previously been applied to a rule whose action was execute."
+    },
+    {
+     "key": "code_defect",
+     "value": "Result-processing code dereferenced rule_result.execute for any rule with action execute, but the skipped rule had no such object, yielding a Lua nil index error at init.lua line 314."
+    },
+    {
+     "key": "affected_population",
+     "value": "Only customers served by the older FL1 proxy who also had the Cloudflare Managed Ruleset deployed were affected."
+    },
+    {
+     "key": "exceptions",
+     "value": "Some test endpoints such as /cdn-cgi/trace still returned correctly, and traffic on the China network was not affected."
+    },
+    {
+     "key": "language_contrast",
+     "value": "The equivalent code in the newer FL2 proxy, written in Rust, did not exhibit the error because strong typing prevents this class of defect."
+    },
+    {
+     "key": "relation_to_nov_18",
+     "value": "Remediations promised after the 18 November incident, including staged rollouts for configuration and fail-open error handling, were not yet finished deploying and would likely have contained this one."
+    }
+   ],
+   "target_words": 600,
+   "has_human": true,
+   "source_doc": "cloudflare-5-december-2025-outage",
+   "human_first_words": "Cloudflare's Web Application Firewall (WAF) provides customers with protection against malicious payloads,",
+   "human_last_words": "FL2 proxy, which is written in Rust, the error did not occur.",
+   "human_words": 751,
+   "human_span_words": 751
+  },
+  "questions": [
+   {
+    "id": "postmortem-03-q1",
+    "brief_id": "postmortem-03",
+    "q": "What was the WAF request-body buffer size being changed from and to, and why that target value?",
+    "answer": "From 128KB to 1MB, because 1MB is the Next.js default limit",
+    "accept": [
+     "128KB to 1MB, matching the Next.js default",
+     "from 128 KB to 1 MB (the Next.js default body size limit)",
+     "128 kilobytes raised to 1 megabyte, the Next.js default"
+    ]
+   },
+   {
+    "id": "postmortem-03-q2",
+    "brief_id": "postmortem-03",
+    "q": "Which two changes were deployed, and how did their deployment mechanisms differ?",
+    "answer": "The buffer increase went out through the gradual/staged deployment system; the change disabling the internal WAF testing tool went through the global configuration system, which has no staged rollout and reaches the whole fleet within seconds",
+    "accept": [
+     "buffer increase used gradual deployment; the testing-tool disable used the global config system that propagates fleet-wide in seconds",
+     "one staged, one global with no staged rollout reaching all machines in seconds",
+     "buffer change was progressive, the killswitch disable was global and instant"
+    ]
+   },
+   {
+    "id": "postmortem-03-q3",
+    "brief_id": "postmortem-03",
+    "q": "What condition had never occurred before and triggered the code defect?",
+    "answer": "A killswitch had never previously been applied to a rule whose action was execute",
+    "accept": [
+     "applying a killswitch to a rule with the execute action",
+     "first time a killswitch hit an execute-action rule",
+     "a skip applied to an execute rule, which had never happened before"
+    ]
+   },
+   {
+    "id": "postmortem-03-q4",
+    "brief_id": "postmortem-03",
+    "q": "What was the precise code-level failure, and where did it occur?",
+    "answer": "Result-processing code dereferenced rule_result.execute, which did not exist for the skipped rule, producing a Lua nil index error at init.lua line 314 in the FL1 proxy",
+    "accept": [
+     "a nil index error in Lua at init.lua:314 from accessing rule_result.execute on a skipped rule",
+     "dereferencing rule_result.execute that wasn't there; Lua nil index at line 314 of init.lua",
+     "attempt to index a nil value (rule_result.execute) at init.lua line 314"
+    ]
+   },
+   {
+    "id": "postmortem-03-q5",
+    "brief_id": "postmortem-03",
+    "q": "Which customers were affected, and what notable traffic or endpoints were not?",
+    "answer": "Only customers on the older FL1 proxy with the Cloudflare Managed Ruleset deployed were affected; some test endpoints such as /cdn-cgi/trace still worked, and China network traffic was unaffected",
+    "accept": [
+     "FL1 customers with the Cloudflare Managed Ruleset; /cdn-cgi/trace and the China network were unaffected",
+     "only FL1 + Managed Ruleset; test endpoints like /cdn-cgi/trace kept working and China network traffic was fine",
+     "FL1 proxy customers running the Managed Ruleset; exceptions were some test endpoints and the China network"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "postmortem-04",
+   "prompt": "Raw material, Cloudflare, 20 February 2026, all times UTC. Outage began 17:48; total duration 6 hours 7 minutes. Customers using Bring Your Own IP saw their prefixes withdrawn via BGP. Of 6,500 prefixes advertised to a given peer, 4,306 are BYOIP; about 1,100 were withdrawn between 17:56 and 18:46, roughly 25% of all BYOIP prefixes. Affected customers hit BGP path hunting: connections wander looking for a route and hang until timeout. Visitors to the one.one.one.one website got HTTP 403 with an Edge IP Restricted message; DNS resolution over 1.1.1.1, including DNS over HTTPS, kept working. Root cause: a new cleanup sub-task meant to automate removal of BYOIP prefixes issued GET /v1/prefixes?pending_delete with no value. Query().Get(\"pending_delete\") returned an empty string, so the API served every BYOIP prefix, and the sub-task treated all of them as queued for deletion, removing prefixes and their dependent service bindings until an engineer killed it. The Addressing API is the authoritative source for customer IP addresses and pushes changes to the edge immediately. Timeline: code merged 2026-02-05 21:53, deployed 17:46, impact 17:56, Cloudflare engaged on one.one.one.one failures 18:13, internal incident 18:18, Addressing API team paged 18:21, sub-process terminated 18:46, mitigation 19:11, self-remediation guidance 19:19, about 800 prefixes restored around 20:20, remaining ~300 manually restored 23:03. Staging data and mocks were insufficient; tests covered the customer self-service journey but not a task runner mutating user data with no explicit input. Write the public postmortem for BYOIP customers and network operators.",
+   "facts": [
+    {
+     "key": "trigger",
+     "value": "A cleanup sub-task sent GET /v1/prefixes?pending_delete with no value; the server read an empty string and returned every BYOIP prefix, which the task then deleted."
+    },
+    {
+     "key": "blast_radius",
+     "value": "About 1,100 of 6,500 advertised prefixes were withdrawn between 17:56 and 18:46, roughly 25% of the 4,306 BYOIP prefixes."
+    },
+    {
+     "key": "duration",
+     "value": "Total incident duration was 6 hours 7 minutes starting at 17:48 UTC, most of it spent restoring prefix configurations."
+    },
+    {
+     "key": "customer_failure_mode",
+     "value": "Withdrawn prefixes put connections into BGP path hunting, so they wandered the Internet and failed only at timeout rather than failing fast."
+    },
+    {
+     "key": "resolver_boundary",
+     "value": "The one.one.one.one website returned HTTP 403 Edge IP Restricted, but DNS resolution over 1.1.1.1, including DNS over HTTPS, was unaffected."
+    },
+    {
+     "key": "why_not_everyone",
+     "value": "The configuration change was applied iteratively rather than instantaneously, and was reverted before it reached all BYOIP customers."
+    },
+    {
+     "key": "propagation_property",
+     "value": "The Addressing API is the authoritative dataset for customer IPs and any change to it propagates to the Cloudflare edge immediately."
+    },
+    {
+     "key": "two_recovery_paths",
+     "value": "Around 800 prefixes were restored via revert and customer dashboard re-advertisement by roughly 20:20, but ~300 had service configurations removed by a software bug and needed manual restoration at 23:03."
+    },
+    {
+     "key": "latent_window",
+     "value": "The broken sub-process was merged on 2026-02-05 at 21:53 and did not deploy until 2026-02-20 at 17:46, executing ten minutes later."
+    },
+    {
+     "key": "test_gap",
+     "value": "Testing and review covered the BYOIP self-service API journey but not a task-runner service independently mutating user data without explicit input, and staging mock data did not resemble production closely enough."
+    }
+   ],
+   "target_words": 700,
+   "has_human": true,
+   "source_doc": "cloudflare-february-20-2026-outage",
+   "human_first_words": "The Addressing API is an authoritative dataset of the addresses present on",
+   "human_last_words": "task-runner service would independently execute changes to user data without explicit input.",
+   "human_words": 641,
+   "human_span_words": 641
+  },
+  "questions": [
+   {
+    "id": "postmortem-04-q1",
+    "brief_id": "postmortem-04",
+    "q": "What exact API request did the new cleanup sub-task make, and why did it return every BYOIP prefix?",
+    "answer": "GET /v1/prefixes?pending_delete with no value; Query().Get(\"pending_delete\") returned an empty string, so the API applied no filter and returned all BYOIP prefixes",
+    "accept": [
+     "a GET to /v1/prefixes?pending_delete with an empty value, so the empty-string parameter matched everything",
+     "pending_delete was sent with no value; the empty string meant the server returned all prefixes",
+     "GET /v1/prefixes?pending_delete= (blank), which the server read as an empty string and returned every prefix"
+    ]
+   },
+   {
+    "id": "postmortem-04-q2",
+    "brief_id": "postmortem-04",
+    "q": "How many prefixes were withdrawn, out of how many BYOIP prefixes, and over what time window?",
+    "answer": "About 1,100 withdrawn between 17:56 and 18:46 UTC, roughly 25% of the 4,306 BYOIP prefixes",
+    "accept": [
+     "~1,100 of 4,306 BYOIP prefixes (about 25%), 17:56-18:46",
+     "approximately 1100 prefixes, a quarter of the 4,306 BYOIP prefixes",
+     "1,100 out of 4,306 BYOIP (of 6,500 total advertised), between 17:56 and 18:46"
+    ]
+   },
+   {
+    "id": "postmortem-04-q3",
+    "brief_id": "postmortem-04",
+    "q": "Why did affected connections hang rather than fail immediately?",
+    "answer": "Because withdrawing the BGP prefixes put connections into BGP path hunting, where they wander the Internet looking for a route and only fail at timeout",
+    "accept": [
+     "BGP path hunting: traffic searched for alternate routes and only failed when it timed out",
+     "path hunting meant connections wandered rather than failing fast",
+     "the withdrawal caused path hunting, so connections hung until timeout instead of erroring immediately"
+    ]
+   },
+   {
+    "id": "postmortem-04-q4",
+    "brief_id": "postmortem-04",
+    "q": "How did the one.one.one.one website behave during the incident compared with DNS resolution on 1.1.1.1?",
+    "answer": "The website returned HTTP 403 with an Edge IP Restricted message, but DNS resolution over 1.1.1.1, including DNS over HTTPS, kept working",
+    "accept": [
+     "403 Edge IP Restricted on the website; DNS resolution including DoH was unaffected",
+     "the site 403'd but the resolver kept resolving, DoH included",
+     "website broken with HTTP 403, resolver service fine"
+    ]
+   },
+   {
+    "id": "postmortem-04-q5",
+    "brief_id": "postmortem-04",
+    "q": "Why did roughly 300 prefixes take until 23:03 to recover when about 800 were back around 20:20?",
+    "answer": "The ~800 recovered via the revert plus customers re-advertising from the dashboard, but the remaining ~300 had their service configurations removed by a software bug and had to be manually restored",
+    "accept": [
+     "those 300 had service bindings/configurations deleted and needed manual restoration",
+     "the bug removed dependent service configurations for ~300 prefixes, so they couldn't be fixed by a dashboard re-advertisement",
+     "800 were restorable by revert and customer dashboard action; 300 needed manual config restoration"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "postmortem-05",
+   "prompt": "Raw material: remediation plan following Cloudflare's 20 February 2026 BYOIP prefix-withdrawal outage, where a cleanup sub-task passed pending_delete with no value and deleted roughly 1,100 prefixes and their service bindings. Three workstreams. First, API schema standardization: the pending_delete flag was interpreted as a string, so neither client nor server could reason about its value; a stricter schema lets tooling validate whether a call is well formed. Second, separating operational state from configured state. Today customer configuration and operational actions hit the same authoritative database, which forces engineers to recover from database snapshots rather than reconcile desired against actual state. The plan is to snapshot what is read from the database and applied to production, then roll those snapshots out the same way binaries ship, gated by health metrics that halt a bad rollout, giving near-instant revert of individual customers or all customers to a known-good version. The stated tradeoff: during an outage customers are temporarily blocked from direct API updates, but their traffic keeps being served instead of going down. Third, a circuit breaker: monitoring that detects when changes are happening too fast or too broadly, such as bulk BGP prefix withdrawal or deletion, and halts snapshot deployment; signals from direct monitoring of customer services can also trip it. Recovery classes observed: withdrawn only, recoverable by dashboard toggle; withdrawn plus some bindings removed, partially recoverable; withdrawn plus all bindings removed, needing a global config push to every edge machine. All of this sits under Code Orange: Fail Small, whose three buckets are controlled rollouts for any network-propagated configuration change, break-glass procedures without circular dependencies, and well-defined behaviour under all failure modes. Write the remediation section for customers and internal engineering leadership.",
+   "facts": [
+    {
+     "key": "schema_fix",
+     "value": "The pending_delete flag was typed as a string, so the API schema will be standardized to let both client and server validate whether a call is well formed."
+    },
+    {
+     "key": "state_separation",
+     "value": "Customer configuration and operational actions share one authoritative database, forcing recovery from database snapshots instead of reconciling desired against actual state."
+    },
+    {
+     "key": "snapshot_deployment",
+     "value": "Data read from the database and applied to production will be snapshotted and rolled out health-mediated, like binary releases, so a bad rollout stops automatically."
+    },
+    {
+     "key": "revert_capability",
+     "value": "The snapshot design allows near-instant revert of individual customers or all customers to a known-good version."
+    },
+    {
+     "key": "explicit_tradeoff",
+     "value": "During an outage customers will temporarily lose direct API updates, accepted because traffic keeps being served rather than going down."
+    },
+    {
+     "key": "circuit_breaker",
+     "value": "Monitoring will detect changes happening too fast or too broadly, such as bulk BGP prefix withdrawal, and disable snapshot deployment to bound blast radius."
+    },
+    {
+     "key": "customer_signal",
+     "value": "Direct monitoring of customer service behaviour will also be able to trip the circuit breaker and hold dangerous changes pending investigation."
+    },
+    {
+     "key": "three_recovery_classes",
+     "value": "Prefixes withdrawn only could be fixed by dashboard toggle; those with some bindings removed recovered partially; those with all bindings removed needed a global configuration push to every edge machine and took longest."
+    },
+    {
+     "key": "missing_system",
+     "value": "The health-mediated snapshot rollback system was not in production at the time of the incident, which is why recovery was not immediate."
+    },
+    {
+     "key": "code_orange_buckets",
+     "value": "Code Orange: Fail Small has three buckets: controlled rollouts for any configuration change propagated to the network, break-glass procedures free of circular dependencies, and reviewed and tested failure modes for all traffic-handling systems."
+    }
+   ],
+   "target_words": 550,
+   "has_human": true,
+   "source_doc": "cloudflare-february-20-2026-outage",
+   "human_first_words": "One of the issues in this incident is that the pending_delete flag",
+   "human_last_words": "with the first Code Orange workstream, which involves safe deployment of changes.",
+   "human_words": 449,
+   "human_span_words": 449
+  },
+  "questions": [
+   {
+    "id": "postmortem-05-q1",
+    "brief_id": "postmortem-05",
+    "q": "What was wrong with the typing of the pending_delete flag, and what is the planned fix?",
+    "answer": "It was interpreted as a string, so neither client nor server could reason about its value; the fix is to standardize the API schema so tooling can validate whether a call is well formed",
+    "accept": [
+     "it was a string, giving no validation; a stricter/standardized API schema will let client and server validate calls",
+     "string typing meant an empty value was accepted; API schema standardization is the remediation",
+     "untyped string flag, to be replaced by a strict schema that validates well-formedness"
+    ]
+   },
+   {
+    "id": "postmortem-05-q2",
+    "brief_id": "postmortem-05",
+    "q": "How will configuration data be deployed after the remediation, and what capability does that give operators?",
+    "answer": "What is read from the database and applied to production will be snapshotted and rolled out the way binaries ship, gated by health metrics that halt a bad rollout, giving near-instant revert of individual customers or all customers to a known-good version",
+    "accept": [
+     "health-mediated snapshot rollouts like binary releases, with near-instant revert per customer or fleet-wide",
+     "snapshots deployed progressively and gated on health metrics; instant rollback to a known-good version",
+     "configuration snapshots shipped like binaries, auto-halting on bad health, revertible for one or all customers"
+    ]
+   },
+   {
+    "id": "postmortem-05-q3",
+    "brief_id": "postmortem-05",
+    "q": "What tradeoff does Cloudflare explicitly accept with the snapshot approach during an outage?",
+    "answer": "Customers are temporarily blocked from making direct API updates, accepted because their traffic keeps being served instead of going down",
+    "accept": [
+     "temporary loss of direct API config updates in exchange for traffic continuing to be served",
+     "customers can't update configuration via API during an outage, but their traffic stays up",
+     "no direct API updates during an outage; the payoff is traffic keeps flowing"
+    ]
+   },
+   {
+    "id": "postmortem-05-q4",
+    "brief_id": "postmortem-05",
+    "q": "What conditions will trip the planned circuit breaker, and what does it do?",
+    "answer": "Monitoring detects changes happening too fast or too broadly, such as bulk BGP prefix withdrawal or deletion, and halts snapshot deployment; signals from direct monitoring of customer services can also trip it",
+    "accept": [
+     "changes that are too fast or too broad, e.g. bulk BGP prefix withdrawal; it disables snapshot deployment",
+     "rate/breadth of change plus customer service monitoring signals; it stops the rollout",
+     "bulk withdrawals or deletions, or customer-service signals, halt snapshot deployment pending investigation"
+    ]
+   },
+   {
+    "id": "postmortem-05-q5",
+    "brief_id": "postmortem-05",
+    "q": "What were the three observed recovery classes for affected prefixes, and which took longest?",
+    "answer": "Withdrawn only, recoverable by a dashboard toggle; withdrawn plus some bindings removed, partially recoverable; withdrawn plus all bindings removed, which needed a global configuration push to every edge machine and took longest",
+    "accept": [
+     "withdrawn only (dashboard toggle), some bindings removed (partial), all bindings removed (global config push to every edge machine, slowest)",
+     "three classes by how much service binding was lost; the all-bindings-removed class needed a fleet-wide config push",
+     "toggle-recoverable, partially recoverable, and those needing a global push to all edge machines"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "postmortem-06",
+   "prompt": "Raw material, Cloudflare, 12 September 2025, all times UTC. The Tenant Service API went down and took much of the public API and the Cloudflare Dashboard with it, because Tenant Service sits in the API request authorization path; when authorization cannot be evaluated, requests return 5xx. Trigger: a dashboard bug. API calls were driven by a React useEffect whose dependency array contained an object recreated on every state or prop change, so React treated it as always new and the call to /organizations fired many times per render, with retries on failure. Timeline: 16:32 the buggy dashboard version ships; 17:50 a new Tenant API Service version deploys; 17:57 Tenant Service is overwhelmed and dashboard availability starts dropping; 18:17 after adding resources the API reaches 98% availability but the dashboard does not recover; 18:58 an attempt to remove erroring codepaths ships and makes API impact worse; 19:01 a temporary rate-limiting rule is published; 19:12 the changes are reverted and dashboard availability returns to 100%. Tenant Service is a Go process on Kubernetes in a subset of datacenters; responders added pods and a global rate limit. Restarting it caused every dashboard to re-authenticate at once, a thundering herd amplified by the dashboard loop. Control plane and data plane are strictly separated, so network services were unaffected and most users noticed nothing unless making config changes. Argo Rollouts, which auto-rolls-back on detected errors, had not yet been adopted for Tenant Service and would have caught the second bad update. Responders could not distinguish retries from new requests in telemetry. Write the public postmortem for dashboard and API users.",
+   "facts": [
+    {
+     "key": "authorization_coupling",
+     "value": "Tenant Service is part of API request authorization, so when it was overloaded, authorization could not be evaluated and API requests returned 5xx."
+    },
+    {
+     "key": "root_cause",
+     "value": "A React useEffect dependency array held an object recreated on every state or prop change, so the hook re-ran constantly and fired many /organizations calls per dashboard render."
+    },
+    {
+     "key": "coincidence",
+     "value": "The dashboard bug shipped at 16:32 and only overwhelmed Tenant Service at 17:57, when it coincided with a Tenant API Service deployment at 17:50."
+    },
+    {
+     "key": "partial_recovery",
+     "value": "Adding resources brought the Cloudflare API back to 98% availability at 18:17, but the dashboard still did not recover."
+    },
+    {
+     "key": "self_inflicted_second_outage",
+     "value": "At 18:58 a patch removing erroring codepaths was released to fix the dashboard and instead increased API impact; reverting at 19:12 restored dashboard availability to 100%."
+    },
+    {
+     "key": "thundering_herd",
+     "value": "Restarting Tenant Service made every dashboard re-authenticate at once, a thundering herd amplified by the dashboard's retry loop."
+    },
+    {
+     "key": "blast_radius_boundary",
+     "value": "The failure was confined to the control plane, which is strictly separated from the data plane, so services on Cloudflare's network were unaffected."
+    },
+    {
+     "key": "missing_guardrail",
+     "value": "Tenant Service had not yet been migrated to Argo Rollouts, which would have automatically rolled back the second bad update and limited the second outage."
+    },
+    {
+     "key": "observability_gap",
+     "value": "Telemetry could not distinguish retries from new requests, which delayed identifying the dashboard loop as the source of the load."
+    },
+    {
+     "key": "capacity",
+     "value": "Tenant Service, a Go process on Kubernetes in a subset of datacenters, was not provisioned for spikes of this kind and has since been given substantially more resources plus capacity alerting."
+    }
+   ],
+   "target_words": 550,
+   "has_human": true,
+   "source_doc": "cloudflare-sept-12-dashboard-api-outage",
+   "human_first_words": "In this case we noticed increased usage across our Tenant Service, so",
+   "human_last_words": "additional information, including if the request is a retry or new request.",
+   "human_words": 640,
+   "human_span_words": 640
+  },
+  "questions": [
+   {
+    "id": "postmortem-06-q1",
+    "brief_id": "postmortem-06",
+    "q": "What coding defect in the Cloudflare Dashboard caused the overload, and what was its effect on request volume?",
+    "answer": "A React useEffect dependency array contained an object recreated on every state or prop change, so React treated it as always new and the call to /organizations fired many times per render, with retries on failure",
+    "accept": [
+     "a useEffect dependency array holding an object rebuilt each render, causing repeated /organizations API calls",
+     "object in the React hook dependency array was never referentially stable, so the effect re-ran constantly and hammered the API",
+     "a React useEffect bug that fired the /organizations call many times per render plus retries"
+    ]
+   },
+   {
+    "id": "postmortem-06-q2",
+    "brief_id": "postmortem-06",
+    "q": "Why did the outage start at 17:57 when the buggy dashboard version had shipped at 16:32?",
+    "answer": "The load only overwhelmed Tenant Service when it coincided with a new Tenant API Service version deploying at 17:50",
+    "accept": [
+     "a Tenant API Service deployment at 17:50 coincided with the elevated load and tipped it over",
+     "the buggy code alone wasn't enough; the 17:50 Tenant Service deploy reduced capacity and triggered failure",
+     "because of a coinciding Tenant API Service deployment at 17:50"
+    ]
+   },
+   {
+    "id": "postmortem-06-q3",
+    "brief_id": "postmortem-06",
+    "q": "What happened when responders shipped a patch at 18:58 to remove erroring codepaths, and what finally restored dashboard availability?",
+    "answer": "The 18:58 patch made API impact worse; reverting the changes at 19:12 restored dashboard availability to 100%",
+    "accept": [
+     "it increased API impact, and the 19:12 revert brought the dashboard back to 100%",
+     "the fix made things worse; a revert at 19:12 restored full availability",
+     "API impact worsened; rolling back at 19:12 returned dashboard availability to 100%"
+    ]
+   },
+   {
+    "id": "postmortem-06-q4",
+    "brief_id": "postmortem-06",
+    "q": "Why did restarting Tenant Service make the situation worse rather than better?",
+    "answer": "It caused every dashboard to re-authenticate at once, a thundering herd that was amplified by the dashboard's retry loop",
+    "accept": [
+     "thundering herd: all dashboards re-authenticated simultaneously, amplified by the retry loop",
+     "restart forced simultaneous re-authentication from every dashboard session",
+     "every dashboard re-authenticated at the same time, and the buggy retry loop multiplied it"
+    ]
+   },
+   {
+    "id": "postmortem-06-q5",
+    "brief_id": "postmortem-06",
+    "q": "Which deployment safeguard had not yet been adopted for Tenant Service, and what would it have prevented?",
+    "answer": "Argo Rollouts, which automatically rolls back on detected errors; it would have caught and rolled back the second bad update at 18:58",
+    "accept": [
+     "Argo Rollouts with automatic rollback on error detection, which would have caught the second bad deploy",
+     "Argo Rollouts \u2014 it would have auto-reverted the 18:58 change",
+     "automated progressive rollout/rollback (Argo Rollouts), missing for Tenant Service"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "postmortem-07",
+   "prompt": "Raw material, Cloudflare, 14 July 2025, all times UTC. The 1.1.1.1 public DNS Resolver was globally unavailable from 21:52 to 22:54, 62 minutes, with intermittent degradation of Gateway DNS. Origin: on 6 June at 17:38, a release preparing a service topology for a future Data Localization Suite service accidentally attached the 1.1.1.1 Resolver prefixes to that non-production service. Nothing changed on the production network, no traffic shifted, no alerts fired, and the error sat dormant. On 14 July at 21:48 an offline test location was attached to the same non-production service for internal testing. That triggered a global refresh of network configuration, which collapsed the 1.1.1.1 topology from all locations to one offline location and withdrew every Resolver prefix worldwide. 22:01 internal health alerts fire and the incident is declared; 22:20 revert initiated, prefixes re-advertised, traffic returns to about 77% of pre-incident levels; the remaining gap is roughly 23% of edge servers whose IP bindings had been removed and had to be reconfigured through change management, normally staged over hours, accelerated after validation in test locations; 22:54 normal traffic; 22:55 resolved. Affected prefixes include 1.1.1.0/24, 1.0.0.0/24, 2606:4700:4700::/48 and others. UDP, TCP and DoT query volume collapsed; DoH stayed mostly stable because most DoH users reach cloudflare-dns.com, which uses different addresses. At 21:54 Tata Communications India (AS4755) began advertising 1.1.1.0/24, a hijack exposed by the withdrawal but not a cause. The legacy topology system hard-codes location lists and does not use canary deployment despite peer review. Write the public postmortem for resolver users and network engineers.",
+   "facts": [
+    {
+     "key": "outage_window",
+     "value": "1.1.1.1 was globally unavailable for 62 minutes, from 21:52 to 22:54 UTC on 14 July 2025."
+    },
+    {
+     "key": "latent_defect",
+     "value": "A 6 June release attached the 1.1.1.1 Resolver prefixes to a non-production DLS service topology; because no traffic changed, no alerts fired and the error stayed dormant for weeks."
+    },
+    {
+     "key": "detonator",
+     "value": "Attaching an offline test location to that same non-production service on 14 July triggered a global configuration refresh, reducing the 1.1.1.1 topology to one offline location and withdrawing all its prefixes."
+    },
+    {
+     "key": "partial_restore",
+     "value": "The 22:20 revert restored traffic to roughly 77% of pre-incident levels immediately."
+    },
+    {
+     "key": "residual_gap",
+     "value": "About 23% of edge servers had had their IP bindings removed and required reconfiguration through change management, which is normally staged over hours and was deliberately accelerated after validation in test locations."
+    },
+    {
+     "key": "protocol_asymmetry",
+     "value": "UDP, TCP and DNS-over-TLS query volume collapsed while DNS-over-HTTPS stayed mostly stable, because most DoH users reach cloudflare-dns.com, which resolves to different IP addresses."
+    },
+    {
+     "key": "non_causal_hijack",
+     "value": "Tata Communications India (AS4755) began advertising 1.1.1.0/24 at 21:54, visible only because Cloudflare had withdrawn the prefix; it was not a cause of the outage."
+    },
+    {
+     "key": "systemic_weakness",
+     "value": "The legacy addressing system hard-codes explicit data center location lists per prefix and pushes updates to every data center at once, with no canary stage, even when peer-reviewed."
+    },
+    {
+     "key": "anycast_property",
+     "value": "Because nearly all Cloudflare services are announced via anycast, a fault in advertising that address space produces a global rather than regional outage."
+    },
+    {
+     "key": "remediation",
+     "value": "Cloudflare will deprecate the legacy addressing components in favour of topologies that do not hard-code IPs and that support progressive, health-mediated deployment with rollback."
+    }
+   ],
+   "target_words": 650,
+   "has_human": true,
+   "source_doc": "cloudflare-1111-incident-july-14-2025",
+   "human_first_words": "As described above, a configuration change on June 6 introduced an error",
+   "human_last_words": "and safely as possible. Normal traffic levels were observed at 22:54 UTC.",
+   "human_words": 700,
+   "human_span_words": 700
+  },
+  "questions": [
+   {
+    "id": "postmortem-07-q1",
+    "brief_id": "postmortem-07",
+    "q": "How long was 1.1.1.1 globally unavailable, and between which times?",
+    "answer": "62 minutes, from 21:52 to 22:54 UTC",
+    "accept": [
+     "62 minutes",
+     "about an hour, 21:52-22:54 UTC",
+     "roughly 1 hour 2 minutes, 21:52 to 22:54"
+    ]
+   },
+   {
+    "id": "postmortem-07-q2",
+    "brief_id": "postmortem-07",
+    "q": "What mistake was made on 6 June, and why did nobody notice it for weeks?",
+    "answer": "A release preparing a service topology for a future Data Localization Suite service accidentally attached the 1.1.1.1 Resolver prefixes to that non-production service; because nothing changed on the production network and no traffic shifted, no alerts fired and the error stayed dormant",
+    "accept": [
+     "Resolver prefixes were attached to a non-production DLS service topology; no traffic moved so no alert fired",
+     "the 1.1.1.1 prefixes were bound to an unused pre-production service, which changed nothing live and so was silent",
+     "a latent misconfiguration from 6 June linking the resolver prefixes to a non-production service, invisible because no production behaviour changed"
+    ]
+   },
+   {
+    "id": "postmortem-07-q3",
+    "brief_id": "postmortem-07",
+    "q": "What action on 14 July detonated the latent defect, and what did it do to the 1.1.1.1 topology?",
+    "answer": "An offline test location was attached to the same non-production service, triggering a global network configuration refresh that collapsed the 1.1.1.1 topology from all locations to that single offline location and withdrew every Resolver prefix worldwide",
+    "accept": [
+     "adding an offline test location to the non-production service caused a global config refresh, shrinking the topology to one offline datacenter",
+     "the topology was reduced to a single offline location, withdrawing all prefixes globally",
+     "attaching an offline test datacenter triggered a global refresh that withdrew the resolver prefixes everywhere"
+    ]
+   },
+   {
+    "id": "postmortem-07-q4",
+    "brief_id": "postmortem-07",
+    "q": "After the revert began at 22:20, what fraction of traffic came back immediately, and what accounted for the remaining gap?",
+    "answer": "Traffic returned to about 77% of pre-incident levels; the remaining roughly 23% was edge servers whose IP bindings had been removed and had to be reconfigured through change management",
+    "accept": [
+     "about 77% recovered immediately; the other ~23% were edge servers needing IP binding reconfiguration",
+     "77 percent; the residual 23 percent of servers had lost their IP bindings",
+     "roughly three quarters (77%) instantly, with ~23% of edge servers requiring change-managed reconfiguration"
+    ]
+   },
+   {
+    "id": "postmortem-07-q5",
+    "brief_id": "postmortem-07",
+    "q": "Which DNS transport stayed mostly stable during the outage, and why?",
+    "answer": "DNS over HTTPS stayed mostly stable, because most DoH users reach cloudflare-dns.com, which uses different IP addresses than the withdrawn prefixes",
+    "accept": [
+     "DoH, because cloudflare-dns.com resolves to different addresses",
+     "DNS-over-HTTPS held up since most users query the cloudflare-dns.com hostname on other IPs",
+     "DoH traffic was largely unaffected; UDP, TCP and DoT collapsed"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "postmortem-08",
+   "prompt": "Raw material, Cloudflare, 21 August 2025, all times UTC. A single customer began requesting large volumes of cached objects from AWS us-east-1 at about 16:27, and the response traffic doubled total Cloudflare-to-AWS traffic, saturating every direct peering link between the two networks. At 16:37 AWS started withdrawing BGP advertisements on congested private network interconnects to shed load; that steered traffic onto peering links reached through an offsite interconnection switch, which then also saturated. Two pre-existing conditions made it worse: one direct peering link was running at half capacity due to an earlier failure, and the Data Center Interconnect to the offsite switch was already due for a capacity upgrade. 16:44 the network team is alerted to congestion in Ashburn (IAD); 16:45 responders find that uncongested paths no longer carry AWS prefixes because of the withdrawals; 17:22 dropped traffic increases; 17:45 a customer-impact incident is raised; 19:05 rate-limiting the customer reduces congestion; 19:27 traffic engineering fully resolves congestion; 19:45 AWS begins reverting withdrawals; 20:07 AWS finishes normalizing announcements over IAD PNIs; 20:18 impact ends. Router queues grew and edge routers dropped high-priority packets throughout. Customers saw latency, timeouts and low throughput; the share of synthetic origin requests missing the latency SLO tracked the packet drops. Latency recovered after drops because both sides were renormalizing prefix advertisements. Regional only; global Cloudflare services were unaffected. Not an attack, not a BGP hijack. Write the public postmortem for customers with origins in AWS us-east-1.",
+   "facts": [
+    {
+     "key": "trigger",
+     "value": "One customer's surge of cache-object requests from AWS us-east-1 doubled total Cloudflare-to-AWS traffic and saturated all direct peering links, starting about 16:27 UTC."
+    },
+    {
+     "key": "escalating_action",
+     "value": "AWS withdrew BGP advertisements on congested PNIs at 16:37 to shed load, which pushed traffic onto offsite-switch peering links that then saturated too."
+    },
+    {
+     "key": "aggravator_one",
+     "value": "One direct peering link was already running at half capacity because of a pre-existing failure."
+    },
+    {
+     "key": "aggravator_two",
+     "value": "The Data Center Interconnect linking Cloudflare's edge routers to the offsite switch was already due for a capacity upgrade."
+    },
+    {
+     "key": "response_constraint",
+     "value": "By 16:45 responders could not shift traffic to uncongested paths, because AWS's withdrawals had removed its prefixes from exactly those paths."
+    },
+    {
+     "key": "resolution_steps",
+     "value": "Rate-limiting the single customer at 19:05 reduced congestion and traffic engineering fully resolved it at 19:27; AWS reverted withdrawals from 19:45 and finished at 20:07."
+    },
+    {
+     "key": "impact_window",
+     "value": "Impact began at 16:27, was substantially reduced by 19:38, and intermittent latency continued until 20:18 UTC."
+    },
+    {
+     "key": "symptom_mechanism",
+     "value": "Congestion grew router queues until Ashburn edge routers dropped even high-priority packets, producing latency, timeouts and low throughput to origins."
+    },
+    {
+     "key": "lag_in_recovery",
+     "value": "Packet drops resolved before customer latency did, because Cloudflare and AWS were still renormalizing the prefix advertisements each had adjusted."
+    },
+    {
+     "key": "scope",
+     "value": "The event was regional, confined to traffic between Cloudflare and AWS us-east-1; global Cloudflare services were unaffected, and it was congestion rather than an attack or BGP hijack."
+    },
+    {
+     "key": "remediation",
+     "value": "Short term: selective deprioritization of a customer congesting the network, expedited DCI upgrades, and coordination with AWS on BGP traffic engineering. Long term: a per-customer network resource budget that prevents one customer degrading others, with automation replacing the manual actions used here."
+    }
+   ],
+   "target_words": 600,
+   "has_human": true,
+   "source_doc": "cloudflare-incident-august-21-2025",
+   "human_first_words": "When impact started, we saw a significant amount of traffic related to",
+   "human_last_words": "were taken to attempt to remediate the congestion seen during this incident.",
+   "human_words": 513,
+   "human_span_words": 513
+  },
+  "questions": [
+   {
+    "id": "postmortem-08-q1",
+    "brief_id": "postmortem-08",
+    "q": "What started the congestion, and what did it do to total Cloudflare-to-AWS traffic volume?",
+    "answer": "A single customer began requesting large volumes of cached objects from AWS us-east-1 at about 16:27 UTC, which doubled total Cloudflare-to-AWS traffic",
+    "accept": [
+     "one customer's surge of cached-object requests doubled traffic between the two networks",
+     "a single customer's request volume from AWS us-east-1 caused total traffic to double",
+     "traffic to/from AWS doubled because of one customer pulling large volumes of cached objects"
+    ]
+   },
+   {
+    "id": "postmortem-08-q2",
+    "brief_id": "postmortem-08",
+    "q": "What did AWS do at 16:37 to shed load, and why did it make the response harder?",
+    "answer": "AWS withdrew BGP advertisements on congested private network interconnects; that steered traffic onto peering links reached through an offsite interconnection switch, which also saturated, and it removed AWS prefixes from exactly the uncongested paths Cloudflare wanted to move traffic to",
+    "accept": [
+     "withdrew BGP advertisements on congested PNIs, which pushed traffic to offsite-switch links and removed prefixes from the uncongested paths responders needed",
+     "AWS's prefix withdrawals meant the alternate uncongested paths no longer carried AWS routes",
+     "BGP withdrawals on the congested interconnects, which both saturated the backup path and eliminated the routes needed for traffic engineering"
+    ]
+   },
+   {
+    "id": "postmortem-08-q3",
+    "brief_id": "postmortem-08",
+    "q": "What two pre-existing conditions made the congestion worse?",
+    "answer": "One direct peering link was running at half capacity because of an earlier failure, and the Data Center Interconnect to the offsite switch was already due for a capacity upgrade",
+    "accept": [
+     "a peering link at 50% capacity from a prior failure, and an under-provisioned DCI already scheduled for upgrade",
+     "one link degraded to half capacity plus a DCI pending a capacity upgrade",
+     "half-capacity direct peering link and an undersized Data Center Interconnect"
+    ]
+   },
+   {
+    "id": "postmortem-08-q4",
+    "brief_id": "postmortem-08",
+    "q": "What two actions resolved the congestion, and at what times?",
+    "answer": "Rate-limiting the single customer at 19:05 reduced congestion, and traffic engineering fully resolved it at 19:27",
+    "accept": [
+     "rate-limiting the customer (19:05) and traffic engineering (19:27)",
+     "19:05 customer rate limit, 19:27 traffic engineering completed",
+     "throttling the offending customer then re-engineering traffic paths, 19:05 and 19:27"
+    ]
+   },
+   {
+    "id": "postmortem-08-q5",
+    "brief_id": "postmortem-08",
+    "q": "Why did customer-visible latency keep lagging after packet drops had stopped?",
+    "answer": "Because Cloudflare and AWS were still renormalizing the prefix advertisements each had adjusted during the event",
+    "accept": [
+     "both networks were still restoring/renormalizing their BGP prefix advertisements",
+     "routing was still converging as advertisements were put back",
+     "the prefix advertisements on both sides were being reverted, so latency recovered after the drops did"
+    ]
+   }
+  ]
+ }
+]

@@ -1,0 +1,945 @@
+[
+ {
+  "brief": {
+   "id": "design_doc-01",
+   "prompt": "Raw material. The empirical Lorenz curve L(P) answers: of total mean latency, how much is contributed by requests faster than percentile P. So 1-L(P) is the share contributed by requests at or above P. From raw samples: L = sum(sorted(x)[:k]) / sum(x), with n samples and k = p*n. From a quantile vector you must interpolate and extrapolate; a power-law fit is one option, exact only if you go back to sorted raw samples. Worked example: quantiles [1, 10, 200, 10000, 20000] ms measured at percentiles [0, 0.5, 0.9, 0.99, 0.999] give 1-L = [1, 0.9938, 0.9308, 0.5171, 0.1034]. Requests at or above p50 account for ~99% of mean latency; requests at or above p99 account for ~52%. Little's law makes that same fraction the share of system concurrency: in a threaded service, if 1-L(p)=k then 100k% of busy threads are occupied by requests that will finish above the pth percentile. Values of 1-L(0.99) above 0.5 or 0.75 are common. Constraints: tail alpha must exceed 1 or the mean is not estimable; measured percentiles are themselves estimates and uncertainty grows with the percentile. Write a design doc for a capacity and performance team on how to prioritise latency work against cost.",
+   "facts": [
+    {
+     "key": "lorenz_definition",
+     "value": "1 - L(P) is the share of mean latency contributed by requests at or above percentile P; L(P) is the share from requests faster than P"
+    },
+    {
+     "key": "sample_formula",
+     "value": "From raw samples: L = sum(sorted(x)[:k]) / sum(x), for n samples with k = p*n"
+    },
+    {
+     "key": "worked_example",
+     "value": "Quantiles [1, 10, 200, 10000, 20000] at percentiles [0, 0.5, 0.9, 0.99, 0.999] yield 1-L = [1, 0.9938, 0.9308, 0.5171, 0.1034]"
+    },
+    {
+     "key": "p99_share",
+     "value": "In that example, requests at or above p99 contribute about 52% of mean latency; requests at or above p50 contribute about 99%"
+    },
+    {
+     "key": "littles_law_link",
+     "value": "By Little's law the same fraction is the share of concurrency: if 1-L(p)=k, then 100k% of busy threads hold requests that finish above the pth percentile"
+    },
+    {
+     "key": "typical_magnitude",
+     "value": "In real services 1-L(0.99) greater than 0.5, or even 0.75, is not unusual"
+    },
+    {
+     "key": "cost_consequence",
+     "value": "Because tail requests dominate concurrency, cutting the tail reduces capacity demand, lock contention, and other concurrency-driven costs"
+    },
+    {
+     "key": "estimability_bound",
+     "value": "Extrapolation requires tail alpha greater than 1; at alpha <= 1 the mean is infinite and not estimable"
+    },
+    {
+     "key": "estimation_caveat",
+     "value": "Measured percentiles are estimates of true percentiles and uncertainty grows with the percentile; heavy tails plus small samples give variable results"
+    },
+    {
+     "key": "interpolation_caveat",
+     "value": "Interpolation and extrapolation choices between quantiles are arbitrary; an exact answer requires the sorted raw samples"
+    },
+    {
+     "key": "do_not_trim",
+     "value": "Trimming the tail from measurements removes the very requests that drive cost"
+    }
+   ],
+   "target_words": 600,
+   "has_human": true,
+   "source_doc": "brooker-lorenz-and-little",
+   "human_first_words": "Here\u2019s a question: how much does each of my latency percentiles contributed",
+   "human_last_words": "often the thing that\u2019s driving costs! (And, of course, bad customer experiences).",
+   "human_words": 569,
+   "human_span_words": 569
+  },
+  "questions": [
+   {
+    "id": "design_doc-01-q1",
+    "brief_id": "design_doc-01",
+    "q": "In the worked example (quantiles 1, 10, 200, 10000, 20000 ms), roughly what share of total mean latency is contributed by requests at or slower than the 99th percentile?",
+    "answer": "About 52% (0.5171)",
+    "accept": [
+     "52%",
+     "~52%",
+     "0.5171",
+     "0.52",
+     "51.7%",
+     "about half",
+     "roughly 52 percent",
+     "0.5171 of the mean"
+    ]
+   },
+   {
+    "id": "design_doc-01-q2",
+    "brief_id": "design_doc-01",
+    "q": "In that same worked example, what share of mean latency comes from requests at or above the median (p50)?",
+    "answer": "About 99% (0.9938)",
+    "accept": [
+     "99%",
+     "~99%",
+     "0.9938",
+     "0.99",
+     "99.4%",
+     "about 99 percent",
+     "nearly all of it, ~99%"
+    ]
+   },
+   {
+    "id": "design_doc-01-q3",
+    "brief_id": "design_doc-01",
+    "q": "Which law converts the mean-latency share 1-L(p) into a statement about system concurrency, and what does that statement say?",
+    "answer": "Little's law: if 1-L(p)=k then 100k% of busy threads are occupied by requests that will finish above the pth percentile",
+    "accept": [
+     "Little's law",
+     "Littles law; the same fraction is the share of busy threads/concurrency",
+     "Little's law \u2014 the same fraction of busy threads is held by requests finishing above p"
+    ]
+   },
+   {
+    "id": "design_doc-01-q4",
+    "brief_id": "design_doc-01",
+    "q": "Given n raw latency samples, what exact computation yields L(p)?",
+    "answer": "L = sum(sorted(x)[:k]) / sum(x), with k = p*n",
+    "accept": [
+     "sum of the k smallest samples divided by the sum of all samples, k = p*n",
+     "sum(sorted(x)[:k])/sum(x)",
+     "sort the samples, sum the first p*n of them, divide by the total sum"
+    ]
+   },
+   {
+    "id": "design_doc-01-q5",
+    "brief_id": "design_doc-01",
+    "q": "What condition on the tail exponent alpha must hold before extrapolating beyond the measured quantiles, and why?",
+    "answer": "alpha must be greater than 1; at alpha <= 1 the mean is infinite and not estimable",
+    "accept": [
+     "alpha > 1",
+     "tail alpha greater than one, otherwise the mean is infinite",
+     "alpha must exceed 1 or the mean does not exist"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "design_doc-02",
+   "prompt": "Raw material. Two disputes. A service reports mean request time of 100ms; a user reports her mean wait is 1s. A service reports MTTR under 1 minute; a user reports mean outage length of 1 hour. Both sides are right. The operator counts events (one request, one outage); the customer samples elapsed time, and the number of times a customer hits a given outage is proportional to that outage's length. This is the inspection paradox: customers do not see f(t), they see a t-weighted version. If the operator's mean is E[X], the customer-experienced mean is E_a[X] = E[X^2] / (2 E[X]) = 0.5 * (E[X] + Var(X)/E[X]). The gap is proportional to Var(X)/E[X], and Var(X) is often very large relative to E[X]. Fitted log-normal example: median TTR 30 minutes, p99 600 minutes (10 hours, one event in 100) gives MTTR just over 1 hour and a customer-experienced mean near 6 hours. A simulator uses lognormal failure_mu=1.0, failure_sigma=3.0, Poisson client arrivals at rate 100, 1000 samples. Timeout-and-retry can hide some service-time tail, but nothing hides recovery-time tail. Write a design doc for a platform org proposing how availability and recovery should be measured.",
+   "facts": [
+    {
+     "key": "latency_disagreement",
+     "value": "Operator measures mean request time of 100ms while the customer reports a mean wait of 1s; both measurements are correct"
+    },
+    {
+     "key": "outage_disagreement",
+     "value": "Operator reports MTTR under 1 minute while the customer sees mean outage length of 1 hour"
+    },
+    {
+     "key": "cause",
+     "value": "Operators count per-event (one request, one outage); customers sample in elapsed time, and sample count is proportional to outage length"
+    },
+    {
+     "key": "inspection_paradox_formula",
+     "value": "Customer-experienced mean E_a[X] = E[X^2]/(2E[X]) = 0.5*(E[X] + Var(X)/E[X])"
+    },
+    {
+     "key": "gap_driver",
+     "value": "The divergence between operator mean and customer mean is proportional to Var(X)/E[X], and Var(X) is often very large compared with E[X]"
+    },
+    {
+     "key": "worked_example",
+     "value": "Median TTR 30 minutes with p99 of 600 minutes (10 hours, 1 in 100 events) gives MTTR just over 1 hour but a customer-experienced mean around 6 hours"
+    },
+    {
+     "key": "simulator_params",
+     "value": "Simulation uses lognormal failure_mu=1.0, failure_sigma=3.0, Poisson client arrival rate 100, 1000 outage samples"
+    },
+    {
+     "key": "retry_asymmetry",
+     "value": "Timeout-and-retry can hide service-time tail (unless the running request holds locks or exclusive resources); no equivalent hiding exists for recovery time"
+    },
+    {
+     "key": "against_trimming",
+     "value": "Trimmed measurements such as trimmed means discard right-tail shape, which is what dominates customer experience"
+    },
+    {
+     "key": "why_heavy_tailed",
+     "value": "Recovery distributions are heavy-tailed because remedies for single-host and datacenter failures are well known and robust, while remedies for long outages remain unsolved industry-wide"
+    },
+    {
+     "key": "lognormal_caveat",
+     "value": "Log-normal was chosen for numerical convenience, not fit; a non-parametric approach is preferred for latency and recovery metrics"
+    }
+   ],
+   "target_words": 450,
+   "has_human": true,
+   "source_doc": "brooker-waiting",
+   "human_first_words": "Meet Alice. Alice uses your web service. Alice, like most humans, measures",
+   "human_last_words": "Your customers experience a mean time to recovery of around 6 hours!",
+   "human_words": 385,
+   "human_span_words": 385
+  },
+  "questions": [
+   {
+    "id": "design_doc-02-q1",
+    "brief_id": "design_doc-02",
+    "q": "In the two disputes described, what pair of numbers does the operator report versus the customer for request time, and for outage length?",
+    "answer": "Request time: operator 100ms mean vs customer 1s mean. Outages: operator MTTR under 1 minute vs customer mean outage of 1 hour",
+    "accept": [
+     "100ms vs 1s; under 1 minute vs 1 hour",
+     "operator 100 ms mean / customer 1 second; operator sub-minute MTTR / customer 1 hour",
+     "0.1s vs 1s and <1 min vs 60 min"
+    ]
+   },
+   {
+    "id": "design_doc-02-q2",
+    "brief_id": "design_doc-02",
+    "q": "What formula gives the customer-experienced mean E_a[X] in terms of the operator-measured distribution?",
+    "answer": "E_a[X] = E[X^2] / (2 E[X]) = 0.5 * (E[X] + Var(X)/E[X])",
+    "accept": [
+     "E[X^2]/(2E[X])",
+     "0.5*(E[X] + Var(X)/E[X])",
+     "half of (mean plus variance over mean)",
+     "second moment divided by twice the mean"
+    ]
+   },
+   {
+    "id": "design_doc-02-q3",
+    "brief_id": "design_doc-02",
+    "q": "For the fitted recovery-time example with median 30 minutes and a p99 of 600 minutes, what MTTR and what customer-experienced mean result?",
+    "answer": "MTTR just over 1 hour; customer-experienced mean near 6 hours",
+    "accept": [
+     "MTTR ~1 hour, customer mean ~6 hours",
+     "just over 60 minutes and about 360 minutes",
+     "1 hr vs 6 hrs",
+     "slightly more than an hour versus roughly six hours"
+    ]
+   },
+   {
+    "id": "design_doc-02-q4",
+    "brief_id": "design_doc-02",
+    "q": "What parameters does the outage simulation use for the lognormal failure distribution and for client arrivals?",
+    "answer": "lognormal failure_mu=1.0 and failure_sigma=3.0, Poisson client arrivals at rate 100, 1000 samples",
+    "accept": [
+     "mu=1.0, sigma=3.0, Poisson rate 100, 1000 samples",
+     "failure_mu 1.0 / failure_sigma 3.0 / arrival rate 100",
+     "mu 1, sigma 3, Poisson arrivals at 100"
+    ]
+   },
+   {
+    "id": "design_doc-02-q5",
+    "brief_id": "design_doc-02",
+    "q": "What asymmetry is drawn between service-time tail and recovery-time tail with respect to timeouts and retries?",
+    "answer": "Timeout-and-retry can hide some of the service-time tail (unless the running request holds locks or exclusive resources), but nothing hides recovery-time tail",
+    "accept": [
+     "retries can mask service-time tail but not recovery-time tail",
+     "timeout and retry hides slow requests; no equivalent trick exists for outage recovery",
+     "service latency tail can be hidden by retry, recovery tail cannot"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "design_doc-03",
+   "prompt": "Raw material. Paul E. McKenney published Stochastic Fairness Queuing in 1990. Baseline fairness queuing keeps a separate FCFS queue per conversation and services queues bit-by-bit round-robin; ill-behaved conversations that exceed their fair share get longer delays and higher packet loss than well-behaved ones. The same construction works for RPC traffic by keying on something else, such as authorized customer id, instead of a source-destination address pair. Cost of the baseline in a distributed system: O(customers) queues plus O(customers) work to round-robin across them. SFQ replaces per-conversation queues with a fixed set of queues and a simple hash mapping into them: O(1) queues, O(1) time. New problem: two conversations that collide keep colliding, so each persistently receives less than its share. Remedy: periodically perturb the hash function so colliders in one period are unlikely to collide in the next. A further variant combines SFQ with shuffle sharding and best-of-two: map each customer to a subset of queues (possibly just two), enqueue each request into the shortest queue in that customer's subset, and periodically perturb subsets. Properties: O(1) queues, O(1) enqueue, O(1) dequeue, strong noisy-neighbour isolation provided only a small portion of customers are noisy. Usable on a single host or across hosts for load balancing. Write a design doc proposing a request-queuing scheme for a multi-tenant RPC service.",
+   "facts": [
+    {
+     "key": "origin",
+     "value": "Stochastic Fairness Queuing comes from Paul E. McKenney's 1990 paper of that name"
+    },
+    {
+     "key": "baseline_fq",
+     "value": "Fairness queuing keeps a separate FCFS queue per conversation and services them bit-by-bit round-robin, so over-share conversations get longer delays and higher packet loss"
+    },
+    {
+     "key": "baseline_cost",
+     "value": "Per-conversation queuing needs O(customers) queues and O(customers) work to round-robin across them"
+    },
+    {
+     "key": "sfq_mechanism",
+     "value": "SFQ uses a fixed set of queues with a simple hash mapping conversations into them, giving O(1) queues and O(1) time"
+    },
+    {
+     "key": "rpc_keying",
+     "value": "The same scheme applies to RPC requests by hashing a different key, such as the authorized customer id, instead of a source-destination address pair"
+    },
+    {
+     "key": "collision_problem",
+     "value": "Two conversations hashing to the same queue keep colliding, so each persistently receives less than its fair share"
+    },
+    {
+     "key": "perturbation_fix",
+     "value": "Periodically perturbing the hash function makes conversations that collided in one period unlikely to collide in the next"
+    },
+    {
+     "key": "combined_variant",
+     "value": "The combined variant maps each customer to a subset of queues (possibly only two), enqueues to the shortest queue in that subset, and periodically perturbs the subsets"
+    },
+    {
+     "key": "variant_properties",
+     "value": "The combined variant gives O(1) queues, O(1) enqueue effort, O(1) dequeue effort, and strong noisy-neighbour isolation"
+    },
+    {
+     "key": "isolation_precondition",
+     "value": "The isolation guarantee assumes only a relatively small portion of customers are noisy neighbours"
+    },
+    {
+     "key": "deployment_scope",
+     "value": "The scheme works both on a single host servicing multiple clients and as a load-balancing policy across multiple hosts"
+    }
+   ],
+   "target_words": 600,
+   "has_human": true,
+   "source_doc": "brooker-sfq",
+   "human_first_words": "Paul E. McKenney\u2019s 1990 paper Stochastic Fairness Queuing contains one of my",
+   "human_last_words": "customers (assuming only a relatively small portion of customers are noisy neighbors).",
+   "human_words": 622,
+   "human_span_words": 622
+  },
+  "questions": [
+   {
+    "id": "design_doc-03-q1",
+    "brief_id": "design_doc-03",
+    "q": "Who published the paper that introduced Stochastic Fairness Queuing, and in what year?",
+    "answer": "Paul E. McKenney, 1990",
+    "accept": [
+     "McKenney 1990",
+     "Paul McKenney, 1990",
+     "P. E. McKenney in 1990"
+    ]
+   },
+   {
+    "id": "design_doc-03-q2",
+    "brief_id": "design_doc-03",
+    "q": "What are the queue-count and per-operation costs of classic per-conversation fairness queuing, and what does SFQ reduce them to?",
+    "answer": "Classic fairness queuing needs O(customers) queues and O(customers) work to round-robin; SFQ reduces both to O(1)",
+    "accept": [
+     "O(customers) queues and O(customers) time, reduced to O(1) queues and O(1) time",
+     "O(n) in the number of customers, versus O(1) for SFQ",
+     "linear in customers -> constant"
+    ]
+   },
+   {
+    "id": "design_doc-03-q3",
+    "brief_id": "design_doc-03",
+    "q": "What failure mode does hashing conversations into a fixed set of queues introduce, and what remedy is proposed?",
+    "answer": "Two conversations that collide keep colliding, so each persistently receives less than its share; the remedy is to periodically perturb the hash function so colliders in one period are unlikely to collide in the next",
+    "accept": [
+     "persistent hash collisions starving the colliding pair; fix by periodically perturbing/changing the hash",
+     "repeat collisions give both less than fair share; perturb the hash each period",
+     "colliders stay collided; rotate the hash function periodically"
+    ]
+   },
+   {
+    "id": "design_doc-03-q4",
+    "brief_id": "design_doc-03",
+    "q": "In the combined variant that borrows from shuffle sharding and best-of-two, how is a request placed, and what is done periodically?",
+    "answer": "Each customer is mapped to a subset of queues (possibly just two) and each request is enqueued into the shortest queue in that customer's subset; the subsets are periodically perturbed",
+    "accept": [
+     "map customer to a small subset (maybe two queues), enqueue to the shortest of them, and periodically perturb the subsets",
+     "shuffle-sharded subset plus best-of-two shortest-queue placement, with periodic re-shuffling"
+    ]
+   },
+   {
+    "id": "design_doc-03-q5",
+    "brief_id": "design_doc-03",
+    "q": "What assumption must hold for the combined variant's noisy-neighbour isolation claim to stand?",
+    "answer": "Only a relatively small portion of customers are noisy neighbours",
+    "accept": [
+     "only a small fraction of customers are noisy",
+     "isolation holds provided noisy tenants are a small minority",
+     "assumes a relatively small portion of customers misbehave"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "design_doc-04",
+   "prompt": "Raw material. Aurora DSQL's stated goal: a relational database that removes scale, reliability, durability, and multi-region fault tolerance from what an application builder has to think about. A database of first resort, simple to adopt at low scale, growing with the application without adding complexity. The operational-simplicity argument applies to human-built systems and is magnified for agent-built ones, because agents build well but are weak at long-horizon tasks such as database operations. The architecture is disaggregated: multiple independent services, each owning a small number of well-defined concerns. DSQL is not the first disaggregated OLTP database; Aurora and DynamoDB came earlier. The lessons carried over from operating those at scale: avoid large caches, which make failovers and read scaling awkward; offer strongly consistent scalable reads, which removes whole classes of hot-key and partition problems; push expensive operations such as scans down into storage, where they run next to local SSD. DSQL goes further than predecessors by fully disaggregating replication from transaction isolation and from storage. Multi-tenant packing reduces the peak-to-average load ratio on a physical machine at approximately the rate of sqrt(number of loads); cost scales with peak while revenue scales with average. The same packing argument appeared in the Firecracker paper. Write an architecture design doc for a team building a new disaggregated data service.",
+   "facts": [
+    {
+     "key": "product_goal",
+     "value": "The goal is a relational database that frees builders from worrying about scale, reliability, durability, and multi-region fault tolerance"
+    },
+    {
+     "key": "first_resort",
+     "value": "It is intended as a database of first resort: simple to adopt at low scale and able to grow with the application without adding complexity"
+    },
+    {
+     "key": "agent_motivation",
+     "value": "Operational simplicity matters more for agent-built systems because agents build well but are weak at long-horizon tasks such as database operations"
+    },
+    {
+     "key": "disaggregation",
+     "value": "The architecture is disaggregated into multiple independent services, each owning a small number of well-defined concerns"
+    },
+    {
+     "key": "prior_art",
+     "value": "DSQL is not the first disaggregated OLTP database; Aurora and DynamoDB came before it"
+    },
+    {
+     "key": "lesson_caches",
+     "value": "Avoid large caches, because they make failovers and read scaling tricky"
+    },
+    {
+     "key": "lesson_reads",
+     "value": "Offer strongly consistent scalable reads, which avoids whole classes of hot-key and partition problems"
+    },
+    {
+     "key": "lesson_scans",
+     "value": "Push expensive operations such as scans down to storage, where they run next to local SSD"
+    },
+    {
+     "key": "novel_step",
+     "value": "DSQL takes disaggregation further than predecessors by completely separating replication from transaction isolation and from storage"
+    },
+    {
+     "key": "packing_economics",
+     "value": "Packing multiple workloads reduces peak-to-average load on a machine at approximately the rate of sqrt(number of loads)"
+    },
+    {
+     "key": "cost_vs_revenue",
+     "value": "Resource cost typically scales with peak load while revenue scales with average load, which is what makes packing economically favourable"
+    },
+    {
+     "key": "packing_precedent",
+     "value": "The same peak-to-average packing argument was made in the Firecracker paper"
+    }
+   ],
+   "target_words": 500,
+   "has_human": true,
+   "source_doc": "brooker-dsql-paper",
+   "human_first_words": "I\u2019ve written about this argument before (in DSQL: Simplifying Architectures ), and",
+   "human_last_words": "cheekily replicating a point we also made in the Firecracker paper .",
+   "human_words": 302,
+   "human_span_words": 302
+  },
+  "questions": [
+   {
+    "id": "design_doc-04-q1",
+    "brief_id": "design_doc-04",
+    "q": "At approximately what rate does packing multiple workloads onto one machine reduce the peak-to-average load ratio, and which earlier paper made the same argument?",
+    "answer": "Approximately sqrt(number of loads); the Firecracker paper made the same argument",
+    "accept": [
+     "square root of the number of loads; Firecracker",
+     "sqrt(n) where n is the number of workloads, as in the Firecracker paper",
+     "~1/sqrt(number of loads), argued in Firecracker"
+    ]
+   },
+   {
+    "id": "design_doc-04-q2",
+    "brief_id": "design_doc-04",
+    "q": "Why is that packing effect economically favourable \u2014 what scales with peak and what scales with average?",
+    "answer": "Resource cost scales with peak load while revenue scales with average load",
+    "accept": [
+     "cost tracks peak, revenue tracks average",
+     "you pay for peak but earn on average",
+     "cost is set by peak demand and revenue by mean demand"
+    ]
+   },
+   {
+    "id": "design_doc-04-q3",
+    "brief_id": "design_doc-04",
+    "q": "What three operational lessons from running earlier disaggregated databases are carried into this architecture?",
+    "answer": "Avoid large caches (they make failovers and read scaling awkward); offer strongly consistent scalable reads (removes hot-key and partition problems); push expensive operations such as scans down into storage next to local SSD",
+    "accept": [
+     "no big caches, strongly consistent scalable reads, push scans into storage",
+     "avoid large caches; strongly consistent scalable reads; push expensive scans down to storage/local SSD"
+    ]
+   },
+   {
+    "id": "design_doc-04-q4",
+    "brief_id": "design_doc-04",
+    "q": "In what specific way does this design disaggregate further than its predecessors?",
+    "answer": "It completely separates replication from transaction isolation and from storage",
+    "accept": [
+     "full disaggregation of replication from transaction isolation and storage",
+     "replication is pulled apart from isolation and from storage",
+     "separates the replication concern from isolation and storage entirely"
+    ]
+   },
+   {
+    "id": "design_doc-04-q5",
+    "brief_id": "design_doc-04",
+    "q": "Why is operational simplicity argued to matter even more for agent-built systems than human-built ones?",
+    "answer": "Agents build software well but are weak at long-horizon tasks such as database operations",
+    "accept": [
+     "agents are good at building but bad at long-horizon work like operating databases",
+     "agents struggle with long-horizon operational tasks",
+     "because DB operations is a long-horizon task and agents are weak there"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "design_doc-05",
+   "prompt": "Raw material. Concurrency control choice in Aurora DSQL. Optimistic concurrency control is credited with a practical advantage beyond throughput: clients can never block other clients. At scale, performance cross talk between clients is a significant contributor to tail latency in applications backed by pessimistic relational databases; the canonical case is a client that pauses for garbage collection while holding a write lock. Operational experience at Amazon: contention on locks, and retries after failing to acquire locks, are frequent contributors to system outages and to metastable failures that drive long recovery times. Avoiding that class of failure, plus more mundane failures caused by misbehaving clients and client code, was a design objective. Figure 6 of the paper reports SELECT and UPDATE latencies that stay fast even in the multi-region configuration. Separate thread: the 2007 Amazon Dynamo paper's embrace of eventual consistency, and Werner Vogels' 2009 article Eventually Consistent, reflected the belief that cloud-scale systems had to accept eventual consistency to hit availability and latency goals. Since then, advances in time distribution, data-center networking, power and cooling infrastructure, and distributed protocols have moved those trade-offs. The position taken: strong consistency is the right default and the right choice for nearly all applications. Write a design doc justifying the concurrency-control and consistency defaults for a new transactional datastore.",
+   "facts": [
+    {
+     "key": "occ_advantage",
+     "value": "Optimistic concurrency control prevents clients from ever blocking other clients"
+    },
+    {
+     "key": "cross_talk",
+     "value": "Performance cross talk between clients is a significant contributor to tail latency in apps backed by pessimistic relational databases"
+    },
+    {
+     "key": "gc_example",
+     "value": "The canonical cross-talk case is a client pausing for garbage collection while holding a write lock"
+    },
+    {
+     "key": "amazon_experience",
+     "value": "Operational experience at Amazon shows lock contention and retries on failed lock acquisition are frequent contributors to outages"
+    },
+    {
+     "key": "metastability_link",
+     "value": "Lock contention and lock-acquire retries also drive metastable failures, which cause long recovery times"
+    },
+    {
+     "key": "design_intent",
+     "value": "DSQL was designed to help applications avoid metastable failures and a broader class of failures caused by misbehaving clients and client code"
+    },
+    {
+     "key": "figure_6",
+     "value": "Figure 6 of the paper reports fast SELECT and UPDATE latencies even in the multi-region configuration"
+    },
+    {
+     "key": "historical_position",
+     "value": "The 2007 Dynamo paper and Werner Vogels' 2009 article Eventually Consistent reflected the then-current view that cloud-scale systems needed eventual consistency for availability and latency"
+    },
+    {
+     "key": "what_changed",
+     "value": "Advances in time distribution, data-center networks, power and cooling infrastructure, and distributed protocols have since changed those trade-offs"
+    },
+    {
+     "key": "consistency_stance",
+     "value": "Strong consistency is argued to be the right default and the right choice for nearly all applications"
+    },
+    {
+     "key": "hardware_trend",
+     "value": "Improvements to databases and software systems are flowing from hardware, datacenter design, and networking innovation, with significant opportunity remaining"
+    }
+   ],
+   "target_words": 450,
+   "has_human": true,
+   "source_doc": "brooker-dsql-paper",
+   "human_first_words": "I\u2019ve written about metastable failures (have you tried Stability Sim ?) many",
+   "human_last_words": "is the right default, and the right choice for nearly all applications.",
+   "human_words": 243,
+   "human_span_words": 243
+  },
+  "questions": [
+   {
+    "id": "design_doc-05-q1",
+    "brief_id": "design_doc-05",
+    "q": "What practical advantage of optimistic concurrency control, beyond throughput, is the design's main justification?",
+    "answer": "Clients can never block other clients",
+    "accept": [
+     "no client can block another client",
+     "it eliminates client-on-client blocking",
+     "clients never block one another"
+    ]
+   },
+   {
+    "id": "design_doc-05-q2",
+    "brief_id": "design_doc-05",
+    "q": "What is given as the canonical example of performance cross talk under pessimistic locking?",
+    "answer": "A client pausing for garbage collection while holding a write lock",
+    "accept": [
+     "GC pause while holding a write lock",
+     "a client that stops for garbage collection with a write lock held",
+     "garbage-collection pause with a lock held"
+    ]
+   },
+   {
+    "id": "design_doc-05-q3",
+    "brief_id": "design_doc-05",
+    "q": "According to operational experience at Amazon, what two lock-related behaviours are frequent contributors to outages, and what class of failure do they drive?",
+    "answer": "Contention on locks and retries after failing to acquire locks; they drive metastable failures, which cause long recovery times",
+    "accept": [
+     "lock contention and lock-acquisition retries; metastable failures",
+     "contention plus retry-on-failed-acquire; metastability and long recovery",
+     "lock contention and retries, leading to metastable failure"
+    ]
+   },
+   {
+    "id": "design_doc-05-q4",
+    "brief_id": "design_doc-05",
+    "q": "Which four areas of advance are credited with shifting the availability/latency trade-offs that once made eventual consistency necessary?",
+    "answer": "Time distribution, data-center networking, power and cooling infrastructure, and distributed protocols",
+    "accept": [
+     "time distribution, datacenter networks, power and cooling, distributed protocols",
+     "clock/time distribution, DC networking, power & cooling infra, protocol advances"
+    ]
+   },
+   {
+    "id": "design_doc-05-q5",
+    "brief_id": "design_doc-05",
+    "q": "Which two publications are cited as reflecting the older belief that cloud-scale systems had to accept eventual consistency, and from what years?",
+    "answer": "The Amazon Dynamo paper (2007) and Werner Vogels' article Eventually Consistent (2009)",
+    "accept": [
+     "Dynamo 2007 and Vogels' Eventually Consistent 2009",
+     "the 2007 Dynamo paper and the 2009 Eventually Consistent article"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "design_doc-06",
+   "prompt": "Raw material. Three cost claims. Turning written business logic into code now costs approximately zero. Integrating services and libraries, the plumbing, also costs approximately zero. Building efficient, reliable, secure, end-to-end systems is starting to get cheaper, but slowly. Two possible readings of that moment. Reading one: the end of programming as a high-value economic craft, following weaving, ploughing, and coopering. Supporting anecdote: a mostly retired expert in analog circuit design who, in the late 1960s, founded a hardware company with friends on the bet that serious customers would reject digital logic; the 74 series had just launched and they found it graceless, unreliable, and full of problems. Measured by the ratio of transistors in digital versus analog circuits in 2026, the bet was wrong by ten or more orders of magnitude, yet he still made a small fortune, enough to keep his children comfortable, because the world changes slower than anyone would like. Reading two: new tools bring new industries, research fields, and careers. Amdahl's Law explains where the value moves: speeding up one portion of a problem makes that portion a shrinking share of total time. What remains sticky: real-world feedback loops, human stubbornness, occasional adversaries. Integration, translation, simple analysis, and small-scale synthesis are solved; genuinely new ideas are not, and grow more valuable as the lever lengthens. Write a technical strategy document for an engineering organisation deciding where to invest over the next decade.",
+   "facts": [
+    {
+     "key": "cost_business_logic",
+     "value": "The cost of turning written business logic into code has dropped to zero or near-zero"
+    },
+    {
+     "key": "cost_plumbing",
+     "value": "The cost of integrating services and libraries, the plumbing of software, has also dropped to zero or near-zero"
+    },
+    {
+     "key": "cost_systems",
+     "value": "The cost of building efficient, reliable, secure, end-to-end systems is only starting to drop, and slowly"
+    },
+    {
+     "key": "two_readings",
+     "value": "The moment admits two readings: the end of programming as a uniquely valued economic craft, or the beginning of the most powerful new toolset since computing began"
+    },
+    {
+     "key": "analog_anecdote",
+     "value": "In the late 1960s an analog-circuit expert and friends founded a hardware company betting serious customers would reject digital logic, just as the 74 series launched"
+    },
+    {
+     "key": "magnitude_of_error",
+     "value": "Measured by the ratio of transistors in digital versus analog circuits in 2026, that bet was wrong by ten or more orders of magnitude"
+    },
+    {
+     "key": "wrong_but_profitable",
+     "value": "He still made a small fortune, enough to keep his children comfortable, because the world changes slower than we would like"
+    },
+    {
+     "key": "amdahl",
+     "value": "Amdahl's Law explains the shift: a massive speedup on one portion of the problem makes that portion a diminishing contributor to overall speedup"
+    },
+    {
+     "key": "where_opportunity_is",
+     "value": "The largest opportunity is the third cost claim, lowering the cost of building end-to-end systems, which remains hard"
+    },
+    {
+     "key": "why_slow",
+     "value": "That work will take a long time because the real world is full of sticky problems, surprising feedback loops, human stubbornness, and occasional adversaries"
+    },
+    {
+     "key": "solved_vs_scarce",
+     "value": "Integration, translation, simple analysis and small-scale synthesis are solved problems; genuinely transformative new ideas remain scarce and grow more valuable as the lever lengthens"
+    },
+    {
+     "key": "prediction",
+     "value": "The stated prediction is that the next two decades look like the last four"
+    }
+   ],
+   "target_words": 800,
+   "has_human": true,
+   "source_doc": "brooker-you-are-here",
+   "human_first_words": "The cost of turning written business logic into code has dropped to",
+   "human_last_words": "economically valuable, and more mentally stimulating than we can imagine right now.",
+   "human_words": 825,
+   "human_span_words": 825
+  },
+  "questions": [
+   {
+    "id": "design_doc-06-q1",
+    "brief_id": "design_doc-06",
+    "q": "Of the three cost claims made about software work, which one has NOT dropped to approximately zero, and how is its trajectory described?",
+    "answer": "Building efficient, reliable, secure end-to-end systems; it is only starting to get cheaper, and slowly",
+    "accept": [
+     "end-to-end systems work; cost is starting to drop but slowly",
+     "building reliable secure efficient whole systems, which is falling only slowly",
+     "the third: full systems; slow decline"
+    ]
+   },
+   {
+    "id": "design_doc-06-q2",
+    "brief_id": "design_doc-06",
+    "q": "What bet did the analog-circuit expert and his friends make when they founded a hardware company, and what had just launched at that time?",
+    "answer": "In the late 1960s they bet that serious customers would reject digital logic; the 74 series had just launched and they found it graceless, unreliable and full of problems",
+    "accept": [
+     "that serious customers would refuse digital logic, just as the 74-series logic ICs appeared",
+     "digital logic would be rejected; the 7400/74 series had just been released",
+     "late-1960s bet against digital logic at the launch of the 74 series"
+    ]
+   },
+   {
+    "id": "design_doc-06-q3",
+    "brief_id": "design_doc-06",
+    "q": "By roughly how much was that bet wrong when measured by the ratio of digital to analog transistors in 2026, and what happened to him financially anyway?",
+    "answer": "Wrong by ten or more orders of magnitude, yet he still made a small fortune, enough to keep his children comfortable, because the world changes slower than anyone would like",
+    "accept": [
+     "ten or more orders of magnitude; he still made a small fortune",
+     "~10+ orders of magnitude wrong, but he got rich anyway because change is slow",
+     "off by 10 orders of magnitude or more; still profitable"
+    ]
+   },
+   {
+    "id": "design_doc-06-q4",
+    "brief_id": "design_doc-06",
+    "q": "Which law is invoked to explain where value moves once one part of the work becomes nearly free, and what does it imply here?",
+    "answer": "Amdahl's Law: speeding up one portion of a problem makes that portion a shrinking share of total time, so the remaining un-sped-up work dominates",
+    "accept": [
+     "Amdahl's Law",
+     "Amdahl \u2014 the accelerated portion becomes a diminishing contributor to overall speedup",
+     "Amdahl's law; the bottleneck moves to what wasn't sped up"
+    ]
+   },
+   {
+    "id": "design_doc-06-q5",
+    "brief_id": "design_doc-06",
+    "q": "Which categories of work are declared solved, and which are declared scarce and rising in value?",
+    "answer": "Integration, translation, simple analysis and small-scale synthesis are solved; genuinely new/transformative ideas remain scarce and grow more valuable as the lever lengthens",
+    "accept": [
+     "solved: integration, translation, simple analysis, small-scale synthesis; scarce: genuinely new ideas",
+     "plumbing/translation/small synthesis solved; transformative new ideas scarce and more valuable"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "design_doc-07",
+   "prompt": "Raw material. Framing for coding-agent capability, from an electrical-engineering analogy. Coding agents now build meaningful, correct software quickly and at very low cost, with super-human ability on some coding tasks. Computers have had super-human abilities for at least 85 years, dating to work such as Marian Rejewski's in the 1930s; a current MacBook adds 64-bit numbers roughly 100,000,000,000 times faster than a human. The pattern across those nine decades: vastly super-human in some areas, well short of human in others. The circuit: an opamp plus an analog multiplier IC, for example the long-obsolete MC1495. Apply a voltage on the left and the output on the right is its square root. Mechanism: the opamp drives its two inputs to equality, so feeding the output multiplied by itself back into one input forces the output to the square root of the input. Generalisation: components inside feedback loops can behave very differently from their open-loop behaviour, and excellent outputs can be extracted from poor components. AI agents are feedback loops built around an LLM, a component with useful but flawed open-loop behaviour. Developer tooling moved over roughly two years from open-loop autocomplete in IDEs to agents, relocating the build-test-iterate loop from the human into the agent. Write a design doc for a developer-tools team setting out how to reason about agent capability.",
+   "facts": [
+    {
+     "key": "agent_capability_now",
+     "value": "Coding agents build meaningful and correct software quickly and at transformatively low cost, with super-human ability on some coding tasks"
+    },
+    {
+     "key": "historical_precedent",
+     "value": "Computers have had super-human abilities for at least 85 years, dating back to work such as Marian Rejewski's in the 1930s"
+    },
+    {
+     "key": "arithmetic_ratio",
+     "value": "A current MacBook adds 64-bit numbers roughly 100,000,000,000 times faster than a human can"
+    },
+    {
+     "key": "mixed_capability_pattern",
+     "value": "Across nine decades the pattern holds: the technology is vastly super-human in some areas and well short of human in others"
+    },
+    {
+     "key": "circuit_components",
+     "value": "The square-root circuit uses two components, an opamp and an analog multiplier IC such as the obsolete MC1495"
+    },
+    {
+     "key": "circuit_behaviour",
+     "value": "Applying a voltage at the input produces its square root at the output"
+    },
+    {
+     "key": "circuit_mechanism",
+     "value": "The opamp adjusts its output so its two inputs match; feeding the output multiplied by itself into one input forces the output to the square root of the input"
+    },
+    {
+     "key": "feedback_principle",
+     "value": "Components inside feedback loops can behave very differently from their open-loop behaviour, so excellent outputs can be extracted from poor components"
+    },
+    {
+     "key": "agents_as_loops",
+     "value": "AI agents are feedback loops wrapped around an LLM, a component with useful but flawed open-loop behaviour"
+    },
+    {
+     "key": "tooling_shift",
+     "value": "Developer tooling moved in about two years from open-loop AI (smart autocomplete in IDEs) to agents, moving the build-test-iterate loop from the human into the agent"
+    },
+    {
+     "key": "discourse_gap",
+     "value": "Most discussion of long-term agent capability concerns open-loop model behaviour, which is at most half the picture and arguably the less important half"
+    }
+   ],
+   "target_words": 500,
+   "has_human": true,
+   "source_doc": "brooker-whats-easy-whats-hard",
+   "human_first_words": "Early on in my EE education, one of my professors drew a",
+   "human_last_words": "the picture. Feedback is the thing that\u2019s going to drive long-term capabilities.",
+   "human_words": 286,
+   "human_span_words": 286
+  },
+  "questions": [
+   {
+    "id": "design_doc-07-q1",
+    "brief_id": "design_doc-07",
+    "q": "How many times faster than a human is a current MacBook said to add 64-bit numbers?",
+    "answer": "Roughly 100,000,000,000 times (about 100 billion)",
+    "accept": [
+     "100 billion",
+     "1e11",
+     "10^11",
+     "100,000,000,000",
+     "~100 billion times faster"
+    ]
+   },
+   {
+    "id": "design_doc-07-q2",
+    "brief_id": "design_doc-07",
+    "q": "For how long are computers said to have had super-human abilities, and whose work is cited as the starting point?",
+    "answer": "At least 85 years, dating to work such as Marian Rejewski's in the 1930s",
+    "accept": [
+     "85 years, Marian Rejewski in the 1930s",
+     "at least 85 years; Rejewski's 1930s work",
+     "since the 1930s (Rejewski), ~85 years"
+    ]
+   },
+   {
+    "id": "design_doc-07-q3",
+    "brief_id": "design_doc-07",
+    "q": "Which two components make up the analog square-root circuit, and what specific part number is named?",
+    "answer": "An opamp and an analog multiplier IC, for example the long-obsolete MC1495",
+    "accept": [
+     "opamp plus analog multiplier, e.g. MC1495",
+     "an op-amp and a multiplier IC (MC1495)",
+     "operational amplifier + MC1495 multiplier"
+    ]
+   },
+   {
+    "id": "design_doc-07-q4",
+    "brief_id": "design_doc-07",
+    "q": "By what mechanism does that circuit produce a square root at its output?",
+    "answer": "The opamp drives its two inputs to equality, so feeding the output multiplied by itself back into one input forces the output to be the square root of the input",
+    "accept": [
+     "the opamp equalises its inputs; the multiplier squares the output and feeds it back, so output^2 = input",
+     "negative feedback: output squared is compared to the input, forcing output to sqrt(input)"
+    ]
+   },
+   {
+    "id": "design_doc-07-q5",
+    "brief_id": "design_doc-07",
+    "q": "What general principle about feedback loops is drawn from the circuit, and how is it applied to AI agents?",
+    "answer": "Components inside feedback loops can behave very differently from their open-loop behaviour, so excellent outputs can be extracted from poor components; agents are feedback loops built around an LLM, a component with useful but flawed open-loop behaviour",
+    "accept": [
+     "closed-loop behaviour differs from open-loop; good output from imperfect parts, and agents are loops around an LLM",
+     "feedback can extract excellent results from poor components; the LLM is such a component inside an agent loop"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "design_doc-08",
+   "prompt": "Raw material. The feedback loop hypothesis: in the long term, coding agents will find tasks with effective feedback easy and tasks without effective feedback hard, and the availability of accurate feedback sets the limit on their capability. Current evidence. Good error messages keep agents unstuck. Rust steers agents toward correct code by signalling some kinds of incorrectness explicitly and immediately. Agents do well on performance work where good benchmarks exist. Property-based testing is unusually valuable. Agents do poorly on architecture, where feedback is of the know-it-when-I-see-it kind, and on concurrent programs, where feedback arrives as silent data corruption at runtime. Two comparison problems: building a delightful, ergonomic photo-editing website, and building a correct high-performance database storage engine at the scale of RocksDB or InnoDB, not Aurora DSQL or PostgreSQL. For open-loop models the website is easier and gets closer to success in a single shot. The hypothesis inverts this over the long run: the website's loop needs a human, and humans are slow, squishy, inconsistent feedback providers, while the storage engine has a simple specification covering API, safety properties, and liveness properties, so iteration needs no human. Implied tooling: Rust, Hydro, Verus at compile time; TLA+ and P at modelling time; Kiro's spec analyzer; testing tools, simulators, mocks. Write a design doc for engineering leadership on where to invest in agent tooling.",
+   "facts": [
+    {
+     "key": "hypothesis",
+     "value": "The feedback loop hypothesis: agents will find tasks with effective feedback easy and tasks without effective feedback hard, and feedback availability sets the limit on their capabilities"
+    },
+    {
+     "key": "rust_evidence",
+     "value": "Tools like Rust guide agents toward correct code by giving explicit and immediate feedback about some kinds of incorrectness"
+    },
+    {
+     "key": "benchmark_evidence",
+     "value": "Agents perform well on performance work, where good benchmarks supply accurate feedback"
+    },
+    {
+     "key": "pbt_evidence",
+     "value": "Property-based testing is uniquely valuable as a feedback source for agents"
+    },
+    {
+     "key": "architecture_weakness",
+     "value": "Agents are weak at architecture because its feedback is of the know-it-when-I-see-it kind"
+    },
+    {
+     "key": "concurrency_weakness",
+     "value": "Agents are weak at concurrent programs because the feedback arrives as silent data corruption at runtime"
+    },
+    {
+     "key": "two_problems",
+     "value": "The comparison is a delightful ergonomic photo-editing website versus a correct high-performance database storage engine"
+    },
+    {
+     "key": "open_loop_ordering",
+     "value": "For open-loop models the website is the easier problem and gets closer to success in a single shot with a pure vibe-coding workflow"
+    },
+    {
+     "key": "long_run_inversion",
+     "value": "Under the hypothesis the storage engine is the easier long-term problem, because its loop needs no human"
+    },
+    {
+     "key": "why_website_is_hard",
+     "value": "The website's feedback loop requires a human in the loop, and humans are slow, squishy, and inconsistent feedback providers"
+    },
+    {
+     "key": "why_engine_is_easy",
+     "value": "The storage engine has a simple specification covering API, safety properties, and liveness properties, so the right tools let iteration proceed without humans"
+    },
+    {
+     "key": "scale_caveat",
+     "value": "The claim is scoped to engines at the scale of RocksDB or InnoDB, not Aurora DSQL or PostgreSQL; large-scale distributed systems are judged harder to hill-climb toward"
+    }
+   ],
+   "target_words": 550,
+   "has_human": true,
+   "source_doc": "brooker-whats-easy-whats-hard",
+   "human_first_words": "On one hand, we should see this as uncontroversial. Anybody who has",
+   "human_last_words": "of software development is building these feedback loops. Many hard problems remain.",
+   "human_words": 403,
+   "human_span_words": 403
+  },
+  "questions": [
+   {
+    "id": "design_doc-08-q1",
+    "brief_id": "design_doc-08",
+    "q": "What does the feedback loop hypothesis claim sets the limit on coding-agent capability?",
+    "answer": "The availability of accurate/effective feedback: tasks with effective feedback will be easy, tasks without it will be hard",
+    "accept": [
+     "availability of accurate feedback",
+     "whether an effective feedback loop exists",
+     "the quality/availability of feedback, not the model alone"
+    ]
+   },
+   {
+    "id": "design_doc-08-q2",
+    "brief_id": "design_doc-08",
+    "q": "What form does the feedback take for the two task types agents are said to do badly at?",
+    "answer": "Architecture feedback is know-it-when-I-see-it; concurrency feedback arrives as silent data corruption at runtime",
+    "accept": [
+     "architecture: know-it-when-you-see-it judgement; concurrency: silent data corruption at runtime",
+     "vague subjective feedback for architecture, and silent runtime corruption for concurrent programs"
+    ]
+   },
+   {
+    "id": "design_doc-08-q3",
+    "brief_id": "design_doc-08",
+    "q": "Which two contrasting problems are used as the comparison, and which one is easier for an open-loop model in a single shot?",
+    "answer": "A delightful, ergonomic photo-editing website versus a correct high-performance database storage engine; the website is easier for open-loop models and gets closer to success in one shot",
+    "accept": [
+     "photo-editing website vs database storage engine; the website wins open-loop",
+     "the ergonomic photo editing site and the storage engine; website is easier one-shot"
+    ]
+   },
+   {
+    "id": "design_doc-08-q4",
+    "brief_id": "design_doc-08",
+    "q": "Under the hypothesis, why does that ordering invert over the long run?",
+    "answer": "The website's feedback loop needs a human, and humans are slow, squishy and inconsistent feedback providers, whereas the storage engine has a simple specification (API, safety properties, liveness properties) so iteration needs no human",
+    "accept": [
+     "website needs a slow, squishy, inconsistent human in the loop; the engine has a crisp spec of API, safety and liveness so it can iterate without humans",
+     "human-dependent feedback vs machine-checkable specification"
+    ]
+   },
+   {
+    "id": "design_doc-08-q5",
+    "brief_id": "design_doc-08",
+    "q": "What scale limit is placed on the storage-engine claim?",
+    "answer": "It is scoped to engines at the scale of RocksDB or InnoDB, not Aurora DSQL or PostgreSQL; large-scale distributed systems are judged harder to hill-climb toward",
+    "accept": [
+     "RocksDB/InnoDB scale, not DSQL or PostgreSQL",
+     "single-node engines like RocksDB or InnoDB, not full distributed databases",
+     "scoped below Aurora DSQL / PostgreSQL scale"
+    ]
+   }
+  ]
+ }
+]

@@ -1,0 +1,899 @@
+[
+ {
+  "brief": {
+   "id": "perf_analysis-01",
+   "prompt": "Netflix, 2014, migrating services from CentOS Linux to Ubuntu. A Cassandra database cluster moved to Ubuntu and write latency went up by over 30%; basic stats showed over 30% higher CPU consumption. Instances are EC2 Xen VMs. Steps and results: top(1) showed only the Cassandra database consuming CPU, no rogue Ubuntu service. execsnoop(8) (Ftrace version at the time) showed no short-lived processes. CPU flame graphs were collected on a CentOS instance and an Ubuntu instance in parallel so the time-of-day traffic mix matched. Java stacks were broken in both (pre -XX:+PreserveFramePointer era), only one or two green frames instead of a tower of Java methods. That breakage accidentally merged the os::javaTimeMillis() calls into one block instead of scattering them as thin stacks: 30.14% in the middle of the Ubuntu flame graph, 32.1% total after searching. os::javaTimeMillis calls gettimeofday(2), entering tracesys() and syscall_trace_enter/exit(). Two theories: (A) syscall tracing enabled on Ubuntu (auditing? apparmor?), (B) fetching time is slower on Ubuntu via a library or kernel/clocksource change. Frame widths favored A. Caveat: profile used perf(1) with software cpu-clock soft interrupts, not hardware NMI, because it is a Xen guest, so interrupts-disabled kernel paths and all hypervisor time are invisible. Ubuntu showed a vDSO frame with the syscall still above it, because Xen pvclock did not support vDSO then. Colleagues had not hit it and the internet had nothing on os::javaTimeMillis, clocksource, tracesys, Ubuntu, EC2, Xen. Write the investigation narrative for an engineering blog read by systems and performance engineers.",
+   "facts": [
+    {
+     "key": "symptom",
+     "value": "Cassandra write latency rose over 30% after the CentOS-to-Ubuntu switch, with over 30% higher CPU consumption"
+    },
+    {
+     "key": "time_cost",
+     "value": "os::javaTimeMillis() was 30.14% in the middle of the Ubuntu flame graph and 32.1% of CPU in total, about a third of cycles spent reading the clock"
+    },
+    {
+     "key": "ruled_out",
+     "value": "top(1) showed only Cassandra on CPU and execsnoop(8) found no short-lived processes, so the extra CPU was inside Cassandra itself"
+    },
+    {
+     "key": "comparison_method",
+     "value": "CentOS and Ubuntu instances ran in parallel, so flame graphs could be collected at the same time-of-day traffic mix and compared side by side"
+    },
+    {
+     "key": "broken_stacks_helped",
+     "value": "Java stacks were broken (no PreserveFramePointer yet), which accidentally merged the os::javaTimeMillis() calls into one visible block instead of scattering them as thin stacks"
+    },
+    {
+     "key": "call_path",
+     "value": "os::javaTimeMillis calls gettimeofday(2), which enters tracesys() and syscall_trace_enter/exit()"
+    },
+    {
+     "key": "two_theories",
+     "value": "Either syscall tracing was enabled on Ubuntu (auditing/apparmor), or fetching time itself was slower via a library or kernel/clocksource change"
+    },
+    {
+     "key": "profiler_blind_spots",
+     "value": "As a Xen guest the profile used perf software cpu-clock interrupts, not hardware NMI, so interrupts-disabled kernel paths and all hypervisor time were missing"
+    },
+    {
+     "key": "vdso_detail",
+     "value": "Ubuntu showed a vDSO frame with the syscall still above it, because the Xen pvclock source did not support vDSO at the time"
+    },
+    {
+     "key": "no_prior_art",
+     "value": "Colleagues had not seen the issue and internet searches on os::javaTimeMillis, clocksource, tracesys, Ubuntu, EC2 and Xen returned nothing in 2014"
+    }
+   ],
+   "target_words": 800,
+   "has_human": true,
+   "source_doc": "gregg-the-speed-of-time",
+   "human_first_words": "The Cassandra systems were EC2 virtual machine (Xen) instances. I logged into",
+   "human_last_words": "(C) looked like a kernel rebuild, I started with (D) and (E).",
+   "human_words": 842,
+   "human_span_words": 842
+  },
+  "questions": [
+   {
+    "id": "perf_analysis-01-q1",
+    "brief_id": "perf_analysis-01",
+    "q": "After the Cassandra cluster moved from CentOS to Ubuntu, roughly how much did write latency and CPU consumption increase?",
+    "answer": "Both rose by over 30%",
+    "accept": [
+     "over 30%",
+     "more than 30%",
+     "30%+",
+     "~30% higher write latency and ~30% higher CPU",
+     "greater than 30 percent"
+    ]
+   },
+   {
+    "id": "perf_analysis-01-q2",
+    "brief_id": "perf_analysis-01",
+    "q": "What percentage of CPU did os::javaTimeMillis() account for in total on the Ubuntu flame graph, and what single block in the middle of the graph first drew attention?",
+    "answer": "32.1% total, with a 30.14% block in the middle of the graph",
+    "accept": [
+     "32.1% total, 30.14% in the middle",
+     "32.1 percent total and 30.14 percent block",
+     "30.14% block, 32.1% total",
+     "about 32% total, 30.14% block"
+    ]
+   },
+   {
+    "id": "perf_analysis-01-q3",
+    "brief_id": "perf_analysis-01",
+    "q": "Which two tools were used to rule out a rogue Ubuntu service or short-lived processes as the source of the extra CPU?",
+    "answer": "top(1) showed only Cassandra on CPU, and execsnoop(8) found no short-lived processes",
+    "accept": [
+     "top and execsnoop",
+     "top(1) and execsnoop(8)",
+     "top(1) plus the Ftrace version of execsnoop"
+    ]
+   },
+   {
+    "id": "perf_analysis-01-q4",
+    "brief_id": "perf_analysis-01",
+    "q": "Why did the broken Java stacks (pre -XX:+PreserveFramePointer) actually help the investigation rather than hinder it?",
+    "answer": "They accidentally merged the os::javaTimeMillis() calls into one visible block instead of scattering them as thin stacks",
+    "accept": [
+     "the broken stacks merged javaTimeMillis into a single wide block instead of scattering it into thin stacks",
+     "they collapsed the time calls into one block, making the 30% visible",
+     "merging the calls into one block made it obvious rather than spread thin"
+    ]
+   },
+   {
+    "id": "perf_analysis-01-q5",
+    "brief_id": "perf_analysis-01",
+    "q": "Why could the perf profile not see interrupts-disabled kernel paths or hypervisor time, and what specific frame did Ubuntu show that was unexpected given a syscall was still above it?",
+    "answer": "Because it was a Xen guest, perf used software cpu-clock interrupts instead of hardware NMI; Ubuntu showed a vDSO frame with the syscall still above it, since Xen pvclock did not support vDSO at the time",
+    "accept": [
+     "Xen guest forced software cpu-clock profiling rather than NMI; a vDSO frame appeared with the syscall still above it",
+     "software cpu-clock soft interrupts (not hardware NMI) on Xen; vDSO frame with a syscall above it because Xen pvclock lacked vDSO support"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "perf_analysis-02",
+   "prompt": "Follow-on to a 2014 Netflix investigation where a Cassandra cluster on Ubuntu/EC2-Xen was burning about a third of its CPU inside os::javaTimeMillis(). No existing microbenchmark for that call existed, so one was written: TimeBench.java loops 100,000,000 times calling System.currentTimeMillis(), with a comparison against 87362 and a println inside the loop so the compiler will not optimize the loop away (which slows the test slightly). Run under shell time(1). CentOS: real 0m12.989s, user 0m3.368s, sys 0m18.561s. Ubuntu: real 1m8.300s, user 0m38.337s, sys 0m29.875s. Per-call cost is about 0.13 us on CentOS and 0.68 us on Ubuntu, Ubuntu 5x slower. A C version calling gettimeofday(2) directly, compiled -O0 to keep the loop, gave similar results; short benchmarks like this can be disassembled to confirm the compiler did what you expected. Second experiment: /sys/devices/system/clocksource/clocksource0/available_clocksource listed xen, tsc, hpet, acpi_pm; current was xen, matching the pvclock_clocksource_read() frame in the flame graph. Echoing tsc into current_clocksource took effect immediately: TimeBench then ran real 0m3.370s, user 0m3.353s, sys 0m0.026s, over 20x faster than before and nearly 4x faster than CentOS. At roughly 33 ns per call the loop instructions themselves inflate the number; partially unrolling the loop would tighten it. TSC reads time with a single RDTSC instruction and works through vDSO with no syscall. TSC was historically avoided over clock-drift concerns; a processor engineer met at a conference said tsc had been stable for years but knew of no public reference. Combined with Netflix's fault-tolerant cloud, that was enough to try tsc in production. Production graphs showed write latencies drop 43%, slightly better than CentOS, and os::javaTimeMillis() fell to 1.6% with only a vdso frame above it. Write the experimentation-and-fix section of an engineering blog post for systems and performance engineers.",
+   "facts": [
+    {
+     "key": "benchmark_design",
+     "value": "TimeBench.java calls System.currentTimeMillis() 100 million times in a loop, with a comparison and println inside so the compiler cannot eliminate the loop"
+    },
+    {
+     "key": "centos_runtime",
+     "value": "CentOS ran the 100M-call benchmark in real 12.989s (user 3.368s, sys 18.561s)"
+    },
+    {
+     "key": "ubuntu_runtime",
+     "value": "Ubuntu ran the same benchmark in real 1m8.300s (user 38.337s, sys 29.875s)"
+    },
+    {
+     "key": "per_call_cost",
+     "value": "About 0.13 us per call on CentOS versus about 0.68 us on Ubuntu, roughly 5x slower"
+    },
+    {
+     "key": "c_cross_check",
+     "value": "A C rewrite calling gettimeofday(2) directly, compiled with -O0 so the loop survived, produced similar results"
+    },
+    {
+     "key": "clocksource_default",
+     "value": "available_clocksource listed xen, tsc, hpet and acpi_pm; the current source was xen, matching the pvclock_clocksource_read() frame in the flame graph"
+    },
+    {
+     "key": "tsc_result",
+     "value": "Switching to tsc took effect immediately and cut the benchmark to real 3.370s, over 20x faster than before and nearly 4x faster than CentOS"
+    },
+    {
+     "key": "measurement_limit",
+     "value": "At about 33 ns per call the loop instructions themselves inflate the result; partial loop unrolling would be needed for more accuracy"
+    },
+    {
+     "key": "why_tsc_is_fast",
+     "value": "TSC retrieves time with a single RDTSC instruction and, with vDSO, avoids the syscall entirely"
+    },
+    {
+     "key": "production_outcome",
+     "value": "In production write latencies dropped 43%, slightly better than CentOS, and os::javaTimeMillis() fell to 1.6% of CPU with only a vdso frame above it"
+    },
+    {
+     "key": "risk_decision",
+     "value": "TSC was avoided historically over clock drift; a processor engineer's word that tsc had been stable for years plus Netflix's fault-tolerant cloud made the production trial acceptable"
+    }
+   ],
+   "target_words": 750,
+   "has_human": true,
+   "source_doc": "gregg-the-speed-of-time",
+   "human_first_words": "Is there already a microbenchmark for os::javaTimeMillis()? This would help confirm that",
+   "human_last_words": "write latencies dropped by 43%, delivering slightly better performance than on CentOS.",
+   "human_words": 657,
+   "human_span_words": 657
+  },
+  "questions": [
+   {
+    "id": "perf_analysis-02-q1",
+    "brief_id": "perf_analysis-02",
+    "q": "How many iterations did the TimeBench.java microbenchmark run, and what two things were placed inside the loop to stop the compiler optimizing it away?",
+    "answer": "100,000,000 iterations, with a comparison against 87362 and a println inside the loop",
+    "accept": [
+     "100 million calls; a comparison (against 87362) and a println",
+     "100,000,000 iterations, comparison and println inside the loop",
+     "100M loop with a comparison and a print statement"
+    ]
+   },
+   {
+    "id": "perf_analysis-02-q2",
+    "brief_id": "perf_analysis-02",
+    "q": "What wall-clock (real) times did the benchmark take on CentOS versus Ubuntu?",
+    "answer": "CentOS 12.989s real, Ubuntu 1m8.300s real",
+    "accept": [
+     "CentOS about 13 seconds, Ubuntu about 68 seconds",
+     "0m12.989s vs 1m8.300s",
+     "~13s vs ~68s",
+     "12.989 seconds and 68.3 seconds"
+    ]
+   },
+   {
+    "id": "perf_analysis-02-q3",
+    "brief_id": "perf_analysis-02",
+    "q": "What was the approximate per-call cost of the time call on CentOS versus Ubuntu, and what was the ratio?",
+    "answer": "About 0.13 us on CentOS versus about 0.68 us on Ubuntu, roughly 5x slower",
+    "accept": [
+     "0.13 microseconds vs 0.68 microseconds, about 5x",
+     "130 ns vs 680 ns, 5x slower",
+     "~0.13us and ~0.68us, 5 times slower"
+    ]
+   },
+   {
+    "id": "perf_analysis-02-q4",
+    "brief_id": "perf_analysis-02",
+    "q": "Which clocksources were listed as available, which one was in use before the fix, and what flame graph frame corroborated it?",
+    "answer": "xen, tsc, hpet and acpi_pm were available; xen was current, matching the pvclock_clocksource_read() frame",
+    "accept": [
+     "xen, tsc, hpet, acpi_pm; current was xen, matching pvclock_clocksource_read()",
+     "available were xen/tsc/hpet/acpi_pm with xen selected, confirmed by the pvclock_clocksource_read frame"
+    ]
+   },
+   {
+    "id": "perf_analysis-02-q5",
+    "brief_id": "perf_analysis-02",
+    "q": "After switching the clocksource to tsc, what was the benchmark's real time, and how did that compare to both the pre-fix Ubuntu run and to CentOS?",
+    "answer": "3.370s real, over 20x faster than before and nearly 4x faster than CentOS",
+    "accept": [
+     "real 0m3.370s, >20x faster than Ubuntu before and ~4x faster than CentOS",
+     "about 3.4 seconds, over 20 times faster than the xen clocksource and nearly 4 times faster than CentOS"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "perf_analysis-03",
+   "prompt": "Netflix case study, later summarized at Kernel Recipes 2017. A microservice team doing metrics ingestion updated their base OS image (BaseAMI) and then claimed ZFS was eating over 30% of CPU capacity. The engineer asked to help had worked on ZFS internals at Sun Microsystems and did not believe it: unless badly misconfigured, ZFS cannot consume that much CPU. He checked anyway. Atlas, the cloud-wide monitoring tool, showed 38% of CPU time in sys, highly unusual for Netflix cloud workloads. Rather than SSH in for mpstat(1) and perf(1), he used Netflix's flame graph fetch tooling (Vector, later FlameCommander). The flame graph showed two orange kernel towers, left and right. The left tower was arc_reclaim_thread; the right entered spl_kmem_cache_reap_now(), another ZFS memory-freeing path, probably contending on the same locks. Background: the ZFS Adaptive Replacement Cache (ARC) is the filesystem's main memory cache; arc_reclaim_thread runs arc_adjust() to evict and to maintain a free-memory threshold, periodically or when woken by low memory. A known past cause of arc_reclaim_thread CPU burn was a tiny record size such as 512 bytes creating millions of buffers, but the default is 128 Kbytes and nobody should tune below 8 Kbytes. First theory: a new infrastructure project using ZFS for containers, churning containers and therefore filesystems. The team said they were not using containers, then said they were not using ZFS at all. df -h, mount and zfs list showed no ZFS filesystems mounted, on two instances. /proc/spl/kstat/zfs/arcstats showed every counter at zero: hits 0, misses 0, all of them. Root cause found by reading source and change history: a multilist performance feature had split ARC lists one-per-CPU to cut lock contention, and eviction picked a list at random using a cryptographically-secure random number generator; the flame graph paths led to get_random_bytes() and extract_entropy(). ARC was detecting low system memory, randomly selecting a zero-sized list at expensive cost, then finding nothing to do. Filed as ZFS issue #6531; the first fix had arc_reclaim_thread bail out earlier when ZFS was unused. Write the case-study narrative for an engineering blog read by systems and performance engineers.",
+   "facts": [
+    {
+     "key": "claim",
+     "value": "A metrics-ingestion microservice team claimed ZFS was eating over 30% of CPU capacity after updating their BaseAMI"
+    },
+    {
+     "key": "monitoring_number",
+     "value": "Atlas showed 38% of CPU time in sys, highly unusual for Netflix cloud workloads"
+    },
+    {
+     "key": "flame_graph_evidence",
+     "value": "Two orange kernel towers: arc_reclaim_thread on the left and spl_kmem_cache_reap_now() on the right, likely contending on the same locks"
+    },
+    {
+     "key": "arc_role",
+     "value": "The ARC is ZFS's main memory cache; arc_reclaim_thread runs arc_adjust() to evict memory and hold a free-memory threshold, periodically or on low-memory wakeups"
+    },
+    {
+     "key": "disproof_of_theory",
+     "value": "The container-churn theory died when the team said they used neither containers nor ZFS"
+    },
+    {
+     "key": "mount_check",
+     "value": "df -h, mount and zfs list showed no ZFS filesystems mounted on either instance checked"
+    },
+    {
+     "key": "arcstats_zero",
+     "value": "/proc/spl/kstat/zfs/arcstats showed every counter at zero, hits and misses included, proving ZFS had never been used"
+    },
+    {
+     "key": "root_cause",
+     "value": "A multilist feature split ARC lists one per CPU to cut lock contention, and eviction chose a list using a cryptographically-secure random number generator (get_random_bytes/extract_entropy)"
+    },
+    {
+     "key": "wasted_work",
+     "value": "On low memory the ARC paid for an expensive random selection of a zero-sized list, then discovered it had nothing to evict"
+    },
+    {
+     "key": "fix",
+     "value": "Filed as ZFS issue #6531; the first fix made arc_reclaim_thread bail out earlier when ZFS was not in use, before list selection"
+    },
+    {
+     "key": "prior_known_cause",
+     "value": "The previously known cause of arc_reclaim_thread CPU burn was a tiny record size such as 512 bytes, against a 128-Kbyte default and an 8-Kbyte practical floor"
+    }
+   ],
+   "target_words": 700,
+   "has_human": true,
+   "source_doc": "gregg-zfs-eating-my-cpu",
+   "human_first_words": "A microservice team asked me for help with a mysterious issue. They",
+   "human_last_words": "since had many changes, and I haven't heard of this issue again.",
+   "human_words": 1196,
+   "human_span_words": 1196
+  },
+  "questions": [
+   {
+    "id": "perf_analysis-03-q1",
+    "brief_id": "perf_analysis-03",
+    "q": "What percentage of CPU time did Atlas show in sys for the affected instances, and why was that notable?",
+    "answer": "38% of CPU time in sys, highly unusual for Netflix cloud workloads",
+    "accept": [
+     "38% sys",
+     "38 percent in system time, unusual for Netflix workloads",
+     "about 38% sys time"
+    ]
+   },
+   {
+    "id": "perf_analysis-03-q2",
+    "brief_id": "perf_analysis-03",
+    "q": "What were the two kernel towers visible in the flame graph, and what was suspected about their relationship?",
+    "answer": "arc_reclaim_thread on the left and spl_kmem_cache_reap_now() on the right, probably contending on the same locks",
+    "accept": [
+     "arc_reclaim_thread and spl_kmem_cache_reap_now, likely contending on the same locks",
+     "left tower arc_reclaim_thread, right tower spl_kmem_cache_reap_now(), both ZFS memory-freeing paths contending on locks"
+    ]
+   },
+   {
+    "id": "perf_analysis-03-q3",
+    "brief_id": "perf_analysis-03",
+    "q": "What did /proc/spl/kstat/zfs/arcstats show, and what did that prove?",
+    "answer": "Every counter was zero, including hits and misses, proving ZFS had never been used",
+    "accept": [
+     "all counters at zero, hits 0 and misses 0, so ZFS was never used",
+     "zeroes across the board, proving no ZFS usage at all"
+    ]
+   },
+   {
+    "id": "perf_analysis-03-q4",
+    "brief_id": "perf_analysis-03",
+    "q": "What was the root cause: what change had been made to the ARC lists, and what expensive mechanism was used to pick a list for eviction?",
+    "answer": "A multilist feature split the ARC lists one per CPU to reduce lock contention, and eviction selected a list at random using a cryptographically-secure random number generator (get_random_bytes/extract_entropy)",
+    "accept": [
+     "ARC lists were split one-per-CPU by a multilist feature, and eviction picked a list with a cryptographically secure RNG (get_random_bytes/extract_entropy)",
+     "per-CPU multilists plus random list selection via a crypto-secure RNG"
+    ]
+   },
+   {
+    "id": "perf_analysis-03-q5",
+    "brief_id": "perf_analysis-03",
+    "q": "Under what ZFS issue number was this filed, and what did the first fix change?",
+    "answer": "ZFS issue #6531; the first fix made arc_reclaim_thread bail out earlier when ZFS was not in use",
+    "accept": [
+     "#6531",
+     "issue 6531, fix had arc_reclaim_thread return early when ZFS was unused",
+     "ZFS #6531; bail out before the expensive list selection when ZFS is not in use"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "perf_analysis-04",
+   "prompt": "A short Netflix debugging story. A colleague, Vadim, spotted something odd in a CPU flame graph of a TensorFlow workload: an unusual orange kernel tower amounting to 10% of total CPU time in page faults. Context on why that matters: at Netflix, 10% of CPU time somewhere unexpected is a large, costly issue across thousands of server instances, and flame graphs get used to chase down even 1% items. The stack traces showed the faults came from __memcpy_avx_unaligned(), memcpy faulting in data segment mappings. That makes sense early in a process's life when segments and heap are fresh and unmapped, but this process had been up for hours and RSS page-fault growth should have dwindled. Processes sometimes fault heavily because they call mmap()/munmap() to add and remove memory; eBPF tracing with mmapsnoop.py showed no such activity. Searching the flame graph for madvise showed 0.8% of CPU, and madvise() was calling zap_page_range(), which was causing the faults. Reading kernel mm/advise.c confirmed madvise() calls zap_page_range() for the MADV_DONTNEED flag (kprobes/tracepoints on sys_madvise() flags would have worked too). Diagnosis: a premature optimization gone bad, the allocator calling dontneed on pages it actually did need, dropping the virtual-to-physical mapping, which a page fault then had to restore. The allocator was jemalloc, selected by a configure option. Vadim rebuilt with glibc and the problem was fixed. Initial testing showed only a 3% win, verifiable in the new flame graph, against a hoped-for 10%. Write the case-study post for an engineering blog read by systems and performance engineers.",
+   "facts": [
+    {
+     "key": "symptom",
+     "value": "A CPU flame graph of a TensorFlow workload showed an unusual orange kernel tower: 10% of total CPU time in page faults"
+    },
+    {
+     "key": "why_it_matters",
+     "value": "At Netflix 10% of CPU in an unexpected place is costly across thousands of instances, and flame graphs are used to chase down even 1% items"
+    },
+    {
+     "key": "fault_source",
+     "value": "The faulting stacks came from __memcpy_avx_unaligned(), memcpy faulting in data segment mappings"
+    },
+    {
+     "key": "anomaly",
+     "value": "The process had been running for hours, so segments and heap should already be faulted in and page-fault growth of RSS should have dwindled"
+    },
+    {
+     "key": "ruled_out",
+     "value": "eBPF tracing with mmapsnoop.py showed no mmap()/munmap() activity, so the faults were not from adding and removing memory"
+    },
+    {
+     "key": "madvise_evidence",
+     "value": "Searching the flame graph for madvise showed 0.8% of CPU, with madvise() calling zap_page_range() and causing the faults"
+    },
+    {
+     "key": "kernel_confirmation",
+     "value": "Reading mm/advise.c confirmed madvise() calls zap_page_range() for the MADV_DONTNEED flag"
+    },
+    {
+     "key": "root_cause",
+     "value": "The allocator was calling dontneed on pages it did in fact need, dropping the virtual-to-physical mapping so a page fault had to restore it"
+    },
+    {
+     "key": "fix",
+     "value": "The allocator was jemalloc, chosen by a configure option; rebuilding with glibc fixed the problem"
+    },
+    {
+     "key": "outcome_vs_expectation",
+     "value": "Initial testing showed only a 3% win against a hoped-for 10%, verifiable in the fixed flame graph"
+    }
+   ],
+   "target_words": 500,
+   "has_human": true,
+   "source_doc": "gregg-tensorflow-library-performance",
+   "human_first_words": "A while ago I helped a colleague, Vadim, debug a performance issue",
+   "human_last_words": "(can be verified by the flame graphs). We were hoping for 10%!",
+   "human_words": 435,
+   "human_span_words": 435
+  },
+  "questions": [
+   {
+    "id": "perf_analysis-04-q1",
+    "brief_id": "perf_analysis-04",
+    "q": "What fraction of total CPU time was the TensorFlow workload spending in page faults, and how was it first noticed?",
+    "answer": "10% of total CPU time, spotted as an unusual orange kernel tower in a CPU flame graph",
+    "accept": [
+     "10%",
+     "ten percent of CPU in page faults, seen as an orange kernel tower in a flame graph",
+     "about 10% of total CPU"
+    ]
+   },
+   {
+    "id": "perf_analysis-04-q2",
+    "brief_id": "perf_analysis-04",
+    "q": "Which function did the faulting stack traces come from, and why was the page-fault volume surprising for this particular process?",
+    "answer": "__memcpy_avx_unaligned() \u2014 memcpy faulting in data segment mappings; surprising because the process had been up for hours, so page-fault growth of RSS should have dwindled",
+    "accept": [
+     "__memcpy_avx_unaligned; surprising because the process had run for hours and its segments/heap should already be faulted in",
+     "memcpy (avx unaligned) faulting data segment mappings, odd for a process running hours"
+    ]
+   },
+   {
+    "id": "perf_analysis-04-q3",
+    "brief_id": "perf_analysis-04",
+    "q": "Which eBPF tool was used to rule out mmap()/munmap() activity as the cause?",
+    "answer": "mmapsnoop.py",
+    "accept": [
+     "mmapsnoop",
+     "mmapsnoop.py from the eBPF tools"
+    ]
+   },
+   {
+    "id": "perf_analysis-04-q4",
+    "brief_id": "perf_analysis-04",
+    "q": "How much CPU did madvise show in the flame graph search, and which kernel function was it calling to cause the faults?",
+    "answer": "0.8% of CPU, calling zap_page_range()",
+    "accept": [
+     "0.8%, zap_page_range",
+     "0.8 percent, via zap_page_range() for MADV_DONTNEED",
+     "under 1% \u2014 0.8% \u2014 calling zap_page_range()"
+    ]
+   },
+   {
+    "id": "perf_analysis-04-q5",
+    "brief_id": "perf_analysis-04",
+    "q": "Which allocator was responsible, what was it replaced with, and what performance win did initial testing show versus what was hoped for?",
+    "answer": "jemalloc was replaced with glibc; initial testing showed only a 3% win against a hoped-for 10%",
+    "accept": [
+     "jemalloc swapped for glibc; 3% win instead of the hoped 10%",
+     "rebuilt with glibc instead of jemalloc, giving about 3% not 10%"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "perf_analysis-05",
+   "prompt": "Netflix, December 2018, kernel 4.4.0-1072-aws, 16-CPU instance. A service team hit a performance issue that coincided with a high rate of paging. The microservice managed and processed large files, encrypting them and storing them on S3. Files around 100 Gbytes took hours to upload; files as large as 40 Gbytes took only minutes. Atlas, the cloud-wide monitoring tool, showed a high rate of pageins during the large uploads; pageins are disk I/O where a page of memory is read in from disk, and are normal for many workloads. Investigation began with the 60-second performance checklist. iostat -xz 1 during a large upload: device xvdb at roughly 734 to 750 r/s, about 91,656 to 92,152 rkB/s, avgrq-sz about 246 to 250, avgqu-sz about 25, r_await about 33 to 34 ms, %util pegged at 100%; CPU showed roughly 14.8% user and 24 to 30% iowait. Read requests are the ones apps wait on; writes may not be, due to write-back caching. An r_await of 33 ms is highish and looks like queueing, and the I/O are largeish at about 128 Kbytes (rkB/s divided by r/s). Next, biolatency -m from bcc, an eBPF tool giving a latency histogram, in case averages hid device-level outliers: 8,139 I/O in the 32-63 ms bucket, 1,620 in 16-31 ms, 176 in 64-127 ms, 95 in 128-255 ms, 61 in 256-511 ms, 93 in 512-1023 ms, 83 in 0-1 ms. Most I/O between 16 and 127 ms with some outliers reaching 0.5 to 1.0 s, but the earlier queueing explains it: not a device issue, a workload issue. Then bitesize from bcc to check I/O sizes for anything odd: process name java, 1,682 I/O in the 128-255 Kbyte bucket and only tens elsewhere, matching iostat. Write the opening diagnosis section of a rough case-study post for systems and performance engineers.",
+   "facts": [
+    {
+     "key": "symptom",
+     "value": "100-Gbyte file uploads took hours while files as large as 40 Gbytes took only minutes, coinciding with a high rate of paging"
+    },
+    {
+     "key": "workload",
+     "value": "A microservice that managed and processed large files, encrypting them and storing them on S3"
+    },
+    {
+     "key": "monitoring_signal",
+     "value": "Atlas showed a high rate of pageins during the large uploads; pageins are disk I/O reading a page of memory in from disk and are normal for many workloads"
+    },
+    {
+     "key": "iostat_reads",
+     "value": "iostat -xz 1 showed xvdb sustaining about 734 to 750 reads/s and roughly 92,000 rkB/s with %util at 100%"
+    },
+    {
+     "key": "latency_and_queueing",
+     "value": "r_await was about 33 to 34 ms with avgqu-sz around 25, so the latency was attributable to queueing rather than a slow device"
+    },
+    {
+     "key": "io_size",
+     "value": "I/O size was about 128 Kbytes, derived by dividing rkB/s by r/s, and confirmed by bitesize's 128-255 Kbyte bucket"
+    },
+    {
+     "key": "why_reads_matter",
+     "value": "Reads are what applications wait on; writes may not be, because of write-back caching"
+    },
+    {
+     "key": "biolatency_distribution",
+     "value": "biolatency -m put most I/O between 16 and 127 ms (8,139 in the 32-63 ms bucket) with outliers reaching the 0.5 to 1.0 second range"
+    },
+    {
+     "key": "device_vs_workload",
+     "value": "The histogram plus the queueing seen in iostat ruled out a device problem and pointed at the workload"
+    },
+    {
+     "key": "bitesize_result",
+     "value": "bitesize showed process java with 1,682 I/O in the 128-255 Kbyte bucket and nothing odd in the size distribution"
+    }
+   ],
+   "target_words": 650,
+   "has_human": true,
+   "source_doc": "gregg-high-rate-of-paging",
+   "human_first_words": "A service team was debugging a performance issue and noticed it coincided",
+   "human_last_words": "255 Kbyte bucket, as expected from the iostat(1) output. Nothing odd here.",
+   "human_words": 769,
+   "human_span_words": 769
+  },
+  "questions": [
+   {
+    "id": "perf_analysis-05-q1",
+    "brief_id": "perf_analysis-05",
+    "q": "What was the contrast in upload times between the large and smaller files for this microservice?",
+    "answer": "Files around 100 Gbytes took hours to upload, while files as large as 40 Gbytes took only minutes",
+    "accept": [
+     "100 GB files took hours, 40 GB files took minutes",
+     "~100 Gbyte uploads ran for hours; up to 40 Gbyte uploads finished in minutes"
+    ]
+   },
+   {
+    "id": "perf_analysis-05-q2",
+    "brief_id": "perf_analysis-05",
+    "q": "During a large upload, what read rate and read throughput did iostat -xz 1 show on device xvdb, and what was %util?",
+    "answer": "About 734 to 750 reads/s at roughly 92,000 rkB/s (about 91,656 to 92,152), with %util pegged at 100%",
+    "accept": [
+     "~750 r/s, ~92 MB/s read, 100% util",
+     "734-750 reads per second, about 91,656-92,152 rkB/s, %util 100",
+     "around 740 r/s and 92,000 kB/s read with util at 100 percent"
+    ]
+   },
+   {
+    "id": "perf_analysis-05-q3",
+    "brief_id": "perf_analysis-05",
+    "q": "What was the r_await and average queue size on the device, and what did that combination indicate about whether the device itself was the problem?",
+    "answer": "r_await about 33 to 34 ms with avgqu-sz around 25, indicating queueing rather than a slow device \u2014 a workload issue, not a device issue",
+    "accept": [
+     "~33ms r_await, queue depth ~25, so queueing not a bad disk",
+     "33-34 ms read await with avgqu-sz about 25; the latency was queueing, pointing at the workload"
+    ]
+   },
+   {
+    "id": "perf_analysis-05-q4",
+    "brief_id": "perf_analysis-05",
+    "q": "How was the I/O size of roughly 128 Kbytes derived from iostat, and which tool later confirmed it?",
+    "answer": "By dividing rkB/s by r/s; bitesize confirmed it with 1,682 I/O in the 128-255 Kbyte bucket for process java",
+    "accept": [
+     "rkB/s divided by r/s gave ~128 KB; bitesize confirmed with the 128-255 KB bucket",
+     "divide read kilobytes per second by reads per second; the bcc bitesize tool confirmed"
+    ]
+   },
+   {
+    "id": "perf_analysis-05-q5",
+    "brief_id": "perf_analysis-05",
+    "q": "In the biolatency -m histogram, which bucket held the most I/O and with what count, and how far out did the outliers reach?",
+    "answer": "The 32-63 ms bucket with 8,139 I/O; outliers reached the 512-1023 ms range, i.e. 0.5 to 1.0 seconds",
+    "accept": [
+     "32-63 ms, 8,139 I/O; outliers up to 0.5-1.0 s",
+     "8139 in the 32-63ms bucket, with outliers reaching 512-1023 ms",
+     "most I/O in 32-63 ms (8,139), outliers approaching one second"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "perf_analysis-06",
+   "prompt": "Second half of a Netflix case study on a file-processing microservice whose 100-Gbyte S3 uploads took hours while 40-Gbyte ones took minutes. Memory evidence: free -m on the problem instance showed total 64,414 MB, used 15,421, free 349, buff/cache 48,643, available 48,409, swap 0. So a 64-Gbyte memory system with 48 Gbytes sitting in the page cache and only 349 MB free. That plus the file sizes suggested a theory: 100-Gbyte files bust the page cache while 40-Gbyte files fit. Confirmation came from cachestat, an experimental tool written for Ftrace and since ported to bcc/eBPF, which reports page cache statistics. On the 100-Gbyte upload, cachestat showed hit ratios of 74.1%, 9.7%, 6.5%, 12.0%, 34.5%, 7.0%, 11.1% per second, with misses running from 632 up to 23,341, BUFFERS_MB 17 and CACHE_MB about 48,000. Ratios in the upper 90s are what you want to see; this is cache busting, because the 100-Gbyte file does not fit in 48 Gbytes of page cache, so misses turn into disk I/O. Control test on a 32-Gbyte file upload: cachestat showed 100.0% hit ratio with 0 misses across every second sampled (hits 33,424 to 65,158), BUFFERS_MB 41, CACHE_MB about 33,680; free -m showed used 18,421, free 11,218, buff/cache 34,773; iostat showed almost no disk I/O. The smaller file is processed entirely from memory however many passes it takes, without re-reading from disk. Recommended fixes: quickest is a larger-memory instance that fits the 100-Gbyte files; developers can also rework the code with the memory constraint in mind, for example processing parts of the file rather than making multiple passes over the whole thing. Closing context: cachestat was the killer tool but is still experimental, built under the constraints of low overhead and Ftrace function-profiler only. At the LSFMMBPF 2019 keynote in Puerto Rico, with Linux mm kernel engineers present, the argument was made that these statistics are commonly enough needed that they belong in /proc; the engineers pointed out real challenges in providing them properly, and page cache counters are hot-path so adding them is not free. Write the diagnosis-and-recommendation section of a rough case-study post for systems and performance engineers.",
+   "facts": [
+    {
+     "key": "memory_state",
+     "value": "free -m showed a 64-Gbyte system with 48,643 MB in buff/cache and only 349 MB free"
+    },
+    {
+     "key": "theory",
+     "value": "The 100-Gbyte files bust the 48-Gbyte page cache while 40-Gbyte files fit inside it"
+    },
+    {
+     "key": "cachestat_bad_case",
+     "value": "During the 100-Gbyte upload the page cache hit ratio swung between 6.5% and 74.1%, with misses up to 23,341 per second"
+    },
+    {
+     "key": "target_ratio",
+     "value": "A healthy page cache hit ratio is in the upper 90s; these numbers are cache busting, turning misses into disk I/O"
+    },
+    {
+     "key": "control_test",
+     "value": "A 32-Gbyte file upload showed a 100.0% hit ratio with zero misses every second sampled, confirming the file fit in cache"
+    },
+    {
+     "key": "control_corroboration",
+     "value": "On the 32-Gbyte test free -m showed 11,218 MB free with 34,773 MB in buff/cache, and iostat showed almost no disk I/O"
+    },
+    {
+     "key": "why_it_helps",
+     "value": "A file that fits lets the service make however many passes it needs entirely from memory, without re-reading from disk"
+    },
+    {
+     "key": "quick_fix",
+     "value": "The quickest fix is moving to a larger-memory instance that fits the 100-Gbyte files"
+    },
+    {
+     "key": "code_fix",
+     "value": "Developers can also rework the code for the memory constraint, for example processing parts of the file instead of making multiple passes over the whole file"
+    },
+    {
+     "key": "tool_status",
+     "value": "cachestat is experimental, written for Ftrace under low-overhead and function-profiler-only constraints and since ported to bcc/eBPF, and needs frequent maintenance"
+    },
+    {
+     "key": "upstream_argument",
+     "value": "At LSFMMBPF 2019 the case was made that page cache statistics belong in /proc; mm engineers noted real challenges, and the counters sit on hot paths so they are not free"
+    }
+   ],
+   "target_words": 600,
+   "has_human": true,
+   "source_doc": "gregg-high-rate-of-paging",
+   "human_first_words": "There's not much memory left, 349 Mbytes, but more interesting is the",
+   "human_last_words": "cachestat tool, even if it does require frequent maintenance to keep working.",
+   "human_words": 712,
+   "human_span_words": 712
+  },
+  "questions": [
+   {
+    "id": "perf_analysis-06-q1",
+    "brief_id": "perf_analysis-06",
+    "q": "On the problem instance, what did free -m show for total memory, buff/cache, and free memory?",
+    "answer": "64,414 MB total, 48,643 MB in buff/cache, and only 349 MB free",
+    "accept": [
+     "64 GB total, ~48 GB cache, 349 MB free",
+     "total 64,414 used 15,421 free 349 buff/cache 48,643",
+     "a 64-Gbyte system with about 48 Gbytes of page cache and 349 MB free"
+    ]
+   },
+   {
+    "id": "perf_analysis-06-q2",
+    "brief_id": "perf_analysis-06",
+    "q": "During the 100-Gbyte upload, what range did the page cache hit ratio swing between, and how high did per-second misses get?",
+    "answer": "Between 6.5% and 74.1%, with misses running up to 23,341 per second",
+    "accept": [
+     "6.5% to 74.1%, misses up to 23,341",
+     "hit ratio from about 6.5 to 74 percent, misses from 632 up to 23,341",
+     "ratios in the single digits up to 74.1%, peak misses 23,341"
+    ]
+   },
+   {
+    "id": "perf_analysis-06-q3",
+    "brief_id": "perf_analysis-06",
+    "q": "What hit ratio and miss count did the control test on a smaller file show, and what size was that file?",
+    "answer": "A 32-Gbyte file showed a 100.0% hit ratio with zero misses every second sampled",
+    "accept": [
+     "32 GB file, 100% hit ratio, 0 misses",
+     "100.0% hits and no misses on the 32-Gbyte upload"
+    ]
+   },
+   {
+    "id": "perf_analysis-06-q4",
+    "brief_id": "perf_analysis-06",
+    "q": "On the 32-Gbyte control test, what did free -m and iostat show that corroborated the theory?",
+    "answer": "free -m showed 11,218 MB free with 34,773 MB in buff/cache, and iostat showed almost no disk I/O",
+    "accept": [
+     "about 11 GB free, ~34.7 GB in cache, and almost no disk I/O",
+     "free 11,218 buff/cache 34,773, iostat nearly idle"
+    ]
+   },
+   {
+    "id": "perf_analysis-06-q5",
+    "brief_id": "perf_analysis-06",
+    "q": "What two fixes were recommended, and which was described as quickest?",
+    "answer": "The quickest fix is moving to a larger-memory instance that fits the 100-Gbyte files; developers can also rework the code for the memory constraint, e.g. processing parts of the file instead of multiple passes over the whole file",
+    "accept": [
+     "bigger-memory instance (quickest) or rewrite the code to process the file in parts rather than multiple whole-file passes",
+     "larger instance so the file fits in cache; alternatively process parts of the file instead of repeated full passes"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "perf_analysis-07",
+   "prompt": "A 20-year history piece on frame pointers, written in March 2024. The x86-64 ABI defines %rbp as a base pointer to a stack frame, the frame pointer, and external profilers and debuggers (Linux perf, eBPF) walk stacks with it, feeding flame graphs. But the ABI has a footnote calling the use optional: %rsp can index into the frame instead, saving two instructions in the prologue and epilogue and freeing one general-purpose register. In 2004 gcc developer Roger Sayle patched the i386 backend to default to the equivalent of -fomit-frame-pointer -ffixed-ebp on 32-bit targets. i386 had only four general-purpose registers, so freeing %ebp took it from four to five; Sayle also cited wanting to beat Intel's icc compiler and a belief that debuggers of the day were unaffected since they had other stack-walking techniques. The change was then applied to x86-64 as well, which had over a dozen registers. Eric Schrock, then at Sun, wrote in November 2004 that adding a 17th general-purpose register on amd64 opens no new world of compiler optimizations, that you are only saving a highly-optimized pushl/movl sequence, that leaf routines never establish a frame anyway, and that given the cost in lost debuggability it hardly seemed worth it, concluding that it gets out of control when people start compiling /usr/bin without frame pointers. That is what happened on Linux: /usr/bin, /usr/lib, and application code. Consequence: stack walking stops at the libc layer, producing partial stacks missing application frames that group together on the left of a flame graph, 15% of samples in one example. Off-CPU flame graphs suffer worse, being dominated by libc read/write and mutex functions. In 2014, joining Netflix, the author found Java's lack of frame pointer support broke all application stacks, developed a JVM c2 compiler fix that Oracle reworked into -XX:+PreserveFramePointer in JDK8u60, then compiled his own libc with frame pointers for production and worked with Canonical on a prebuilt libc6-prof. Write the historical narrative section of a technical blog post for systems and performance engineers.",
+   "facts": [
+    {
+     "key": "mechanism",
+     "value": "The x86-64 ABI defines %rbp as the frame pointer, and perf, eBPF and other external profilers walk stacks with it to build flame graphs"
+    },
+    {
+     "key": "abi_footnote",
+     "value": "The ABI marks this use optional: indexing via %rsp saves two instructions in the prologue and epilogue and frees %rbp as a general-purpose register"
+    },
+    {
+     "key": "the_2004_change",
+     "value": "In 2004 gcc developer Roger Sayle made the i386 backend default to the equivalent of -fomit-frame-pointer -ffixed-ebp on 32-bit targets"
+    },
+    {
+     "key": "i386_justification",
+     "value": "i386 had only four general-purpose registers, so freeing %ebp took it from four to five; Sayle also cited competing with Intel's icc and a belief debuggers were unaffected"
+    },
+    {
+     "key": "the_mistake",
+     "value": "The change was extended to x86-64, which had over a dozen registers and gained little from freeing one more"
+    },
+    {
+     "key": "schrock_objection",
+     "value": "Eric Schrock argued in November 2004 that a 17th register opens no new optimizations on amd64, that leaf routines never establish a frame, and that the lost debuggability was not worth it"
+    },
+    {
+     "key": "schrock_scope_point",
+     "value": "Schrock's point was that it gets out of control once people start compiling /usr/bin without frame pointers, which is exactly what Linux did, including /usr/lib and application code"
+    },
+    {
+     "key": "observable_damage",
+     "value": "Stack walking stops at the libc layer and produces partial stacks missing application frames, grouped on the left of the flame graph, 15% of samples in one example"
+    },
+    {
+     "key": "off_cpu_worse",
+     "value": "Off-CPU flame graphs are hit harder because they are dominated by libc read/write and mutex functions"
+    },
+    {
+     "key": "java_fix",
+     "value": "A JVM c2 compiler fix developed in 2014 was reworked by Oracle into -XX:+PreserveFramePointer, shipped in JDK8u60"
+    },
+    {
+     "key": "libc_workaround",
+     "value": "Production ran a self-compiled libc with frame pointers, and Canonical later supplied a prebuilt libc6-prof"
+    }
+   ],
+   "target_words": 800,
+   "has_human": true,
+   "source_doc": "gregg-return-of-the-frame-pointers",
+   "human_first_words": "In 2004 a compiler developer, Roger Sayle, changed gcc to stop generating",
+   "human_last_words": "promoting the use of Canonical's libc6-prof, which was libc6 with frame pointers.",
+   "human_words": 508,
+   "human_span_words": 508
+  },
+  "questions": [
+   {
+    "id": "perf_analysis-07-q1",
+    "brief_id": "perf_analysis-07",
+    "q": "Which register does the x86-64 ABI define as the frame pointer, and what two savings does the ABI footnote cite for omitting its use?",
+    "answer": "%rbp; indexing via %rsp instead saves two instructions in the prologue and epilogue and frees one general-purpose register",
+    "accept": [
+     "%rbp (rbp); saves two instructions in prologue/epilogue and frees a general-purpose register",
+     "the base pointer %rbp; two fewer instructions per function entry/exit and one extra GP register"
+    ]
+   },
+   {
+    "id": "perf_analysis-07-q2",
+    "brief_id": "perf_analysis-07",
+    "q": "Who made the 2004 gcc change that defaulted to omitting the frame pointer, and what was the stated justification for doing it on i386?",
+    "answer": "Roger Sayle; i386 had only four general-purpose registers so freeing %ebp took it from four to five, plus a desire to beat Intel's icc compiler and a belief that debuggers of the day were unaffected",
+    "accept": [
+     "Roger Sayle; i386's four GP registers became five, competition with icc, and a belief debuggers had other stack-walking techniques",
+     "gcc developer Roger Sayle, because i386 only had 4 general purpose registers (going to 5), to compete with Intel icc, and because debuggers were thought unaffected"
+    ]
+   },
+   {
+    "id": "perf_analysis-07-q3",
+    "brief_id": "perf_analysis-07",
+    "q": "What did Eric Schrock argue in November 2004 about applying the same change to amd64, and what specific scope did he warn it would get out of control at?",
+    "answer": "That a 17th general-purpose register opens no new world of compiler optimizations on amd64, you only save a highly-optimized pushl/movl sequence, and leaf routines never establish a frame anyway; he warned it gets out of control once people start compiling /usr/bin without frame pointers",
+    "accept": [
+     "adding a 17th register buys nothing, you only skip a pushl/movl pair, leaf routines never make frames; it gets out of control when /usr/bin is compiled without frame pointers",
+     "Schrock said the debuggability cost outweighed the gain and that compiling /usr/bin without frame pointers is where it gets out of control"
+    ]
+   },
+   {
+    "id": "perf_analysis-07-q4",
+    "brief_id": "perf_analysis-07",
+    "q": "What is the observable damage to stack traces, and what proportion of samples did the example cite?",
+    "answer": "Stack walking stops at the libc layer, producing partial stacks missing application frames that group together on the left of the flame graph \u2014 15% of samples in one example",
+    "accept": [
+     "partial stacks truncated at libc, grouped on the left of the flame graph, 15% of samples",
+     "15%",
+     "stacks break at libc and lose application frames; 15 percent of samples in the example"
+    ]
+   },
+   {
+    "id": "perf_analysis-07-q5",
+    "brief_id": "perf_analysis-07",
+    "q": "What JVM option came out of the 2014 work, in which JDK release did it ship, and who reworked the original fix?",
+    "answer": "-XX:+PreserveFramePointer, shipped in JDK8u60, reworked by Oracle from a JVM c2 compiler fix",
+    "accept": [
+     "-XX:+PreserveFramePointer in JDK8u60, reworked by Oracle",
+     "PreserveFramePointer, JDK 8u60, Oracle reworked the c2 compiler fix"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "perf_analysis-08",
+   "prompt": "Material on the measured cost of enabling frame pointers, from production rollout work at Netflix between roughly 2015 and 2020, plus the case made to Fedora. Overhead of adding frame pointers to everything (libc and Java) was usually less than 1%, with one exception at 10%. That 10% outlier was an unusual microservice generating stack traces over 1000 frames deep via Groovy, over 3000 deep before inlining, deep enough to break Linux's perf profiler, whose prior limit was 128 frames; Arnaldo Carvalho de Melo of Red Hat added the kernel.perf_event_max_stack sysctl specifically for that Netflix workload. It was also a virtual machine without low-level hardware profiling, so no cycle analysis could confirm the 10% was frame-pointer-caused. Other attributes of that microservice: over 1 Gbyte of instruction text, possibly flying close to the edge of hardware cache warmth. Its developers ran a flame graph canary instance at first, then enabled frame pointers across the whole microservice because the wins outweighed the 10%. Others have reported around 1% and around 2%. Microbenchmarks are worst-case, hitting 10%, because they run a small function in a loop and extra prologue instructions can spill it out of L1 cache warmth or across a cache line. The Python scimark_sparse_mat_mult benchmark reached 10%; Andrii Nakryiko of Meta found the cause was a large function where gcc switched from %rsp offsets to %rbp-relative offsets, which took more bytes to store, since fixed, letting Python re-enable frame pointers by default. Against those costs: frame pointers have found performance wins ranging from 5% to 500%. The BPF Performance Tools book, page 40, records that the gain from frame pointer omission in production was usually under one percent and often too close to zero to measure. Recommended method for judging regressions: PEBS-based cycle analysis, or active benchmarking, because degrading a single hot function will happen to the next developer who adds code anyway, so the change gets unfairly blamed. Write the overhead-analysis section of a technical blog post for systems and performance engineers.",
+   "facts": [
+    {
+     "key": "typical_cost",
+     "value": "Adding frame pointers to everything (libc and Java) usually cost less than 1%, often too close to zero to measure"
+    },
+    {
+     "key": "benefit_range",
+     "value": "Frame pointers have found performance wins ranging from 5% to 500%, which easily justifies a 1 to 2% cost"
+    },
+    {
+     "key": "the_outlier",
+     "value": "One Netflix microservice lost 10% with Java frame pointers enabled, the only production regression above 1% seen"
+    },
+    {
+     "key": "outlier_stack_depth",
+     "value": "That microservice produced stacks over 1000 frames deep after inlining and over 3000 deep without, breaking perf whose prior limit was 128 frames"
+    },
+    {
+     "key": "sysctl_origin",
+     "value": "Arnaldo Carvalho de Melo (Red Hat) added the kernel.perf_event_max_stack sysctl specifically so Netflix could profile that workload"
+    },
+    {
+     "key": "unconfirmed_attribution",
+     "value": "The instance was a VM without low-level hardware profiling, so no cycle analysis could confirm the 10% was entirely frame-pointer-caused"
+    },
+    {
+     "key": "outlier_second_theory",
+     "value": "The same microservice had over 1 Gbyte of instruction text and may have been at the edge of hardware cache warmth"
+    },
+    {
+     "key": "outlier_decision",
+     "value": "Its developers started with a flame graph canary instance and then enabled frame pointers service-wide, choosing to eat the 10% because the wins were worth more"
+    },
+    {
+     "key": "microbenchmark_mechanism",
+     "value": "Microbenchmarks hit 10% because they hammer one small function in a loop, and extra prologue instructions can push it across a cache line or out of L1 cache warmth"
+    },
+    {
+     "key": "scimark_case",
+     "value": "Python's scimark_sparse_mat_mult reached 10%; Andrii Nakryiko (Meta) traced it to gcc switching a large function from %rsp offsets to %rbp-relative offsets, which take more bytes to store, since fixed"
+    },
+    {
+     "key": "method_for_regressions",
+     "value": "Judging a regression requires PEBS-based cycle analysis (active benchmarking), since a hot function degraded by a prologue would be degraded by the next developer's code anyway"
+    }
+   ],
+   "target_words": 700,
+   "has_human": true,
+   "source_doc": "gregg-return-of-the-frame-pointers",
+   "human_first_words": "As part of production rollout I did many performance overhead tests, which",
+   "human_last_words": "frame pointers are the most practical way to find performance wins today.",
+   "human_words": 323,
+   "human_span_words": 323
+  },
+  "questions": [
+   {
+    "id": "perf_analysis-08-q1",
+    "brief_id": "perf_analysis-08",
+    "q": "What was the typical measured overhead of enabling frame pointers everywhere (libc and Java) in Netflix production, and what range of performance wins is set against that cost?",
+    "answer": "Usually less than 1%, often too close to zero to measure, against wins ranging from 5% to 500%",
+    "accept": [
+     "under 1% cost versus 5%-500% wins",
+     "typically <1% (sometimes unmeasurable), with wins from 5 to 500 percent",
+     "less than one percent; the wins found range 5% to 500%"
+    ]
+   },
+   {
+    "id": "perf_analysis-08-q2",
+    "brief_id": "perf_analysis-08",
+    "q": "The one production regression above 1% was 10%. What was unusual about that microservice's stack traces, and what numeric limit did they break?",
+    "answer": "It generated stacks over 1000 frames deep via Groovy (over 3000 before inlining), breaking Linux perf whose prior limit was 128 frames",
+    "accept": [
+     "over 1000 frames deep after inlining, 3000+ before, versus perf's 128-frame limit",
+     "stacks 1000+ deep (3000+ pre-inlining) exceeded perf's 128 frame cap"
+    ]
+   },
+   {
+    "id": "perf_analysis-08-q3",
+    "brief_id": "perf_analysis-08",
+    "q": "Who added the kernel.perf_event_max_stack sysctl and why?",
+    "answer": "Arnaldo Carvalho de Melo of Red Hat, added specifically for that deep-stack Netflix workload",
+    "accept": [
+     "Arnaldo Carvalho de Melo (Red Hat), for the Netflix deep-stack microservice",
+     "Arnaldo Carvalho de Melo added it so Netflix could profile that workload"
+    ]
+   },
+   {
+    "id": "perf_analysis-08-q4",
+    "brief_id": "perf_analysis-08",
+    "q": "Why could the 10% regression not be definitively attributed to frame pointers, and what alternative explanation was offered for that service?",
+    "answer": "It ran on a virtual machine without low-level hardware profiling, so no cycle analysis was possible; the service also had over 1 Gbyte of instruction text and may have been at the edge of hardware cache warmth",
+    "accept": [
+     "a VM with no hardware profiling meant no cycle analysis; and it had >1 GB of instruction text, possibly near the limit of cache warmth",
+     "no PEBS/cycle analysis available on the VM, plus over 1 Gbyte of instruction text flying close to cache-warmth limits"
+    ]
+   },
+   {
+    "id": "perf_analysis-08-q5",
+    "brief_id": "perf_analysis-08",
+    "q": "Which Python benchmark reached 10% overhead, who diagnosed it, and what was the compiler-level cause?",
+    "answer": "scimark_sparse_mat_mult; Andrii Nakryiko of Meta found gcc had switched a large function from %rsp offsets to %rbp-relative offsets, which take more bytes to store \u2014 since fixed",
+    "accept": [
+     "scimark_sparse_mat_mult, diagnosed by Andrii Nakryiko (Meta): gcc switched a large function from rsp offsets to rbp-relative offsets that take more bytes",
+     "the sparse matrix multiply scimark benchmark; Nakryiko of Meta traced it to gcc using %rbp-relative offsets instead of %rsp offsets in a large function"
+    ]
+   }
+  ]
+ }
+]

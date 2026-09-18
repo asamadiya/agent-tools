@@ -1,0 +1,943 @@
+[
+ {
+  "brief": {
+   "id": "rfc-01",
+   "prompt": "Raw material for a Kubernetes enhancement proposal on in-place pod resource updates. Today Pod.Spec.Containers[i].Resources is immutable, so any change to CPU or memory requests or limits forces the pod to be recreated. Three things drive a change: load rose and the allocation is short; load fell and the allocation sits idle; the values were simply set wrong. Stateless replicas usually survive recreation; low-replica services, stateful workloads and batch jobs pay in availability or cost. Core idea: the spec resources become desired state, and PodStatus is extended to report the resources actually applied. Three CRI gaps also need fixing: UpdateContainerResources takes a Linux-shaped resources parameter that does not fit Windows or future runtimes; there is no CRI call letting kubelet read back the CPU and memory limits a runtime has applied; and the behavior expected of a runtime handling a resource update is not documented. Goals: resize without necessarily restarting the container; let whoever initiated the resize (user, VPA, StatefulSet, JobController) choose what happens when in-place is impossible; let users mark which containers are safe to resize. Non-goals: QoS class change, non-restartable init containers, evicting lower-priority pods to make room, resource types other than CPU and memory, CPU/memory manager policies other than 'None', and resolving scheduler races. Write the motivation and scope section of this KEP for SIG Node reviewers.",
+   "facts": [
+    {
+     "key": "current_constraint",
+     "value": "Container resources in the PodSpec are immutable today, so changing CPU or memory requires recreating the Pod"
+    },
+    {
+     "key": "why_resources_change",
+     "value": "Three triggers: load increased beyond current resources, load decreased leaving resources unused, or resources were set improperly"
+    },
+    {
+     "key": "who_is_hurt",
+     "value": "Stateless workloads mostly tolerate recreation; low-replica services, stateful workloads and batch jobs suffer lower availability or higher cost"
+    },
+    {
+     "key": "core_api_idea",
+     "value": "PodSpec resources become a declaration of desired state; PodStatus is extended to report actual resources applied to the pod and its containers"
+    },
+    {
+     "key": "cri_gap_platform",
+     "value": "UpdateContainerResources takes a parameter describing Linux container resources, which does not work for Windows or other future non-Linux runtimes"
+    },
+    {
+     "key": "cri_gap_readback",
+     "value": "No CRI mechanism exists for the kubelet to query the CPU and memory limits a runtime currently has configured on a container"
+    },
+    {
+     "key": "cri_gap_contract",
+     "value": "The behavior expected of a runtime that handles UpdateContainerResources is not well defined or documented"
+    },
+    {
+     "key": "primary_goal",
+     "value": "Allow container resource requests and limits to change without necessarily restarting the container"
+    },
+    {
+     "key": "secondary_goals",
+     "value": "Let actors (users, VPA, StatefulSet, JobController) decide how to proceed when in-place resize is not possible, and let users declare which containers can be resized without restart"
+    },
+    {
+     "key": "lifecycle_non_goal",
+     "value": "The KEP explicitly does not control the full lifecycle of a pod whose in-place resize failed; that belongs to whoever initiated the resize"
+    },
+    {
+     "key": "scope_limits",
+     "value": "Non-goals include changing pod QoS class, resizing non-restartable init containers, evicting lower-priority pods, resource types beyond CPU and memory, non-default CPU/memory manager policies, and resolving scheduler race conditions"
+    },
+    {
+     "key": "runtime_spec_depth",
+     "value": "Defining runtime behavior is intended as a high-level guide; implementation specifics are left to each runtime"
+    }
+   ],
+   "target_words": 550,
+   "has_human": true,
+   "source_doc": "kep-1287-in-place-update-pod-resources",
+   "human_first_words": "Resources allocated to a Pod's Container(s) can require a change for various",
+   "human_last_words": "specifics are left to the runtime, within the\nbounds of expected behavior.",
+   "human_words": 508,
+   "human_span_words": 508
+  },
+  "questions": [
+   {
+    "id": "rfc-01-q1",
+    "brief_id": "rfc-01",
+    "q": "Which part of the Pod API is extended to report the resources that have actually been applied to a pod and its containers?",
+    "answer": "PodStatus",
+    "accept": [
+     "PodStatus",
+     "Pod status",
+     "pod.status",
+     "the status field of the Pod",
+     "PodStatus (pod and container status)"
+    ]
+   },
+   {
+    "id": "rfc-01-q2",
+    "brief_id": "rfc-01",
+    "q": "The proposal lists three circumstances in which a running pod's resource allocation needs to change. What are they?",
+    "answer": "Load increased beyond the current allocation, load decreased leaving resources unused, or the resources were set improperly to begin with",
+    "accept": [
+     "load went up, load went down, resources set wrong",
+     "increased load; decreased load; incorrectly set resources",
+     "load rose and allocation is short; load fell and allocation sits idle; values were set incorrectly",
+     "under-provisioned due to more load, over-provisioned due to less load, misconfigured originally"
+    ]
+   },
+   {
+    "id": "rfc-01-q3",
+    "brief_id": "rfc-01",
+    "q": "Why does the existing CRI UpdateContainerResources call fail to serve Windows and other non-Linux runtimes?",
+    "answer": "Its resources parameter is Linux-shaped \u2014 it describes Linux container resources specifically",
+    "accept": [
+     "the parameter describes Linux container resources",
+     "it takes a Linux-specific resources struct/parameter",
+     "because the API argument is Linux-only and does not fit Windows or other runtimes"
+    ]
+   },
+   {
+    "id": "rfc-01-q4",
+    "brief_id": "rfc-01",
+    "q": "Which CPU manager and memory manager policy is the only one this proposal supports?",
+    "answer": "The 'None' policy",
+    "accept": [
+     "None",
+     "the None policy",
+     "policy None (the default)",
+     "only the default None policy; other policies are non-goals"
+    ]
+   },
+   {
+    "id": "rfc-01-q5",
+    "brief_id": "rfc-01",
+    "q": "When an in-place resize turns out to be impossible, who decides what happens to the pod next?",
+    "answer": "Whoever initiated the resize \u2014 the user, VPA, StatefulSet controller, or JobController",
+    "accept": [
+     "the actor that initiated the resize",
+     "the initiator (user, VPA, StatefulSet, JobController)",
+     "the resize initiator, e.g. VPA or JobController, not the KEP itself",
+     "the entity that requested the resize decides; full lifecycle handling is a non-goal"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "rfc-02",
+   "prompt": "Raw material for a design-details subsection of the in-place pod resize KEP, covering how the kubelet actuates a resize and what happens when a memory limit goes down. The resources the kubelet asks for are not necessarily what the container ends up running with: the Linux kernel enforces minimums on CPU shares and quota, the systemd cgroup driver rounds CPU quota up to the nearest 10ms, and NRI plugins can rewrite the configuration. So a level-triggered comparison of desired against actual cannot decide whether a resize is needed. The kubelet therefore keeps a per-container set of 'actuated' resources: the configuration it handed to the runtime via CreateContainer or UpdateContainerResources and got a success back for. Actuated resources are checkpointed next to allocated resources so they survive a restart; because a badly timed restart can repeat a request, UpdateContainerResources must be idempotent. After a successful CRI resize the pod is marked for resync; if actual does not match desired, that shows up in pod status but is not otherwise acted on. A failed resize is retried on every subsequent pod sync until it succeeds or the container terminates. Lowering a memory limit below current usage: with cgroups v1 the kernel rejects it, with cgroups v2 it triggers an oom-kill. With resize restart policy NotRequired the kubelet reads container memory usage via the StatsProvider and skips the resize for that container when usage exceeds the desired limit; PodResizeInProgress stays with reason Error and a message giving usage and desired limit. This is best-effort: a TOCTOU race remains. The same check runs at pod level before lowering the pod cgroup memory limit. Nodes at v1.33 and earlier check only pod-level usage. Write this design section for kubelet maintainers reviewing the KEP.",
+   "facts": [
+    {
+     "key": "why_not_level_triggered",
+     "value": "Kubelet cannot compare desired against actual resources to decide whether to resize, because the actual configuration can legitimately differ from what was requested"
+    },
+    {
+     "key": "divergence_causes",
+     "value": "Linux kernel minimums for CPU shares and quota, the systemd cgroup driver rounding CPU quota up to the nearest 10ms, and NRI plugins changing resource configuration"
+    },
+    {
+     "key": "actuated_definition",
+     "value": "Actuated resources are the configuration passed to the runtime (via CreateContainer or UpdateContainerResources) that received a successful response"
+    },
+    {
+     "key": "checkpointing",
+     "value": "Actuated resources are checkpointed alongside allocated resources so they persist across kubelet restarts"
+    },
+    {
+     "key": "idempotency_reason",
+     "value": "A poorly timed restart can cause a resize request to be repeated, so UpdateContainerResources must be idempotent"
+    },
+    {
+     "key": "post_success_behavior",
+     "value": "After a successful CRI resize the pod is marked for resync; a mismatch between actual and desired is reflected in pod status but not otherwise acted upon"
+    },
+    {
+     "key": "retry_policy",
+     "value": "A failed resize is retried on every subsequent pod sync until it succeeds or the container terminates"
+    },
+    {
+     "key": "memory_shrink_cgroupv1",
+     "value": "With cgroups v1, lowering a memory limit below usage when the kernel cannot reclaim enough memory is rejected by the kernel"
+    },
+    {
+     "key": "memory_shrink_cgroupv2",
+     "value": "With cgroups v2 the same situation triggers an oom-kill"
+    },
+    {
+     "key": "oom_prevention",
+     "value": "Under the NotRequired resize restart policy the kubelet reads container memory usage via the StatsProvider and skips the resize when usage exceeds the desired limit"
+    },
+    {
+     "key": "condition_on_skip",
+     "value": "PodResizeInProgress remains with reason Error and a message reporting current usage and desired limit"
+    },
+    {
+     "key": "best_effort_caveat",
+     "value": "The check is best-effort because of a TOCTOU race; the same check is also performed at pod level, and v1.33 and earlier nodes check only pod-level usage"
+    }
+   ],
+   "target_words": 600,
+   "has_human": true,
+   "source_doc": "kep-1287-in-place-update-pod-resources",
+   "human_first_words": "The resources specified by the Kubelet are not guaranteed to be the",
+   "human_last_words": "note:_ Kubernetes v1.33 (and earlier) nodes only check the pod-level memory usage.",
+   "human_words": 401,
+   "human_span_words": 401
+  },
+  "questions": [
+   {
+    "id": "rfc-02-q1",
+    "brief_id": "rfc-02",
+    "q": "What does the kubelet mean by a container's 'actuated' resources?",
+    "answer": "The resource configuration the kubelet passed to the runtime via CreateContainer or UpdateContainerResources and got a successful response for",
+    "accept": [
+     "the config sent to the runtime that returned success",
+     "resources successfully passed to the runtime through CreateContainer/UpdateContainerResources",
+     "the last configuration the runtime accepted (successful CRI response)"
+    ]
+   },
+   {
+    "id": "rfc-02-q2",
+    "brief_id": "rfc-02",
+    "q": "When the systemd cgroup driver is used, how is a container's CPU quota adjusted relative to what the kubelet asked for?",
+    "answer": "It is rounded up to the nearest 10ms",
+    "accept": [
+     "rounded up to nearest 10ms",
+     "rounded up to the next 10 millisecond boundary",
+     "10ms",
+     "10 ms rounding up"
+    ]
+   },
+   {
+    "id": "rfc-02-q3",
+    "brief_id": "rfc-02",
+    "q": "Why must the CRI UpdateContainerResources call be idempotent in this design?",
+    "answer": "Because actuated resources are checkpointed and a badly timed kubelet restart can cause the same resize request to be sent again",
+    "accept": [
+     "a poorly timed restart can repeat a resize request",
+     "restart can replay the request, so repeating it must be harmless",
+     "checkpoint/restart timing can duplicate the call"
+    ]
+   },
+   {
+    "id": "rfc-02-q4",
+    "brief_id": "rfc-02",
+    "q": "What happens when a memory limit is lowered below a container's current usage, on cgroups v1 versus cgroups v2?",
+    "answer": "On cgroups v1 the kernel rejects the change; on cgroups v2 it triggers an oom-kill",
+    "accept": [
+     "v1: rejected by the kernel; v2: OOM kill",
+     "cgroup v1 refuses the write, cgroup v2 OOM-kills the container",
+     "v1 rejection, v2 oom kill"
+    ]
+   },
+   {
+    "id": "rfc-02-q5",
+    "brief_id": "rfc-02",
+    "q": "Under the NotRequired resize restart policy, what does the kubelet do if a container's measured memory usage exceeds the desired new memory limit, and what does it report?",
+    "answer": "It skips the resize for that container and leaves PodResizeInProgress with reason Error, with a message giving the current usage and the desired limit",
+    "accept": [
+     "skips the resize; PodResizeInProgress stays with reason Error",
+     "does not apply the shrink and keeps PodResizeInProgress condition, reason Error, message with usage and desired limit",
+     "refuses the resize for that container and surfaces reason Error on PodResizeInProgress"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "rfc-03",
+   "prompt": "Raw material for the version-skew section of the in-place pod resize KEP. Timeline: the CRI changes merged in v1.25 so runtimes could implement support; containerd added support in 1.6.9. Older clients that do not know the ResizePolicy fields send them as nil, and the API server copies the non-nil values from the old pod forward. The skew problem: before v1.31, with InPlacePodVerticalScaling off, the kubelet read a resource mutation as a change to the container definition and restarted the container with the new values, which can over-subscribe the node. From v1.31 the kubelet no longer treats a resource change as a definition change and does not restart; the new value then takes effect only if the container restarts for some unrelated reason, so the change is nondeterministic and never reflected in the API. Both outcomes are bad, so the API server must reject a resize when the kubelet handling that pod lacks the feature. There is no direct signal, so the proxy is .status.containerStatuses[*].resources, which the kubelet sets on running containers if and only if the feature is enabled; note it is set to an empty {} even when the container declares no requests. Decision logic: feature gate off means reject; otherwise look at the first running container and allow only if its status resources are non-nil; with no running containers, allow. An unscheduled pod may be resized, with the new values used at scheduling and start. A scheduled pod with no running containers gives no signal, so resize is allowed and the node may end up over-provisioned. A race exists where a resize on a non-running container is admitted while the kubelet starts it: before v1.31 the container restarts with the new values, after v1.31 it keeps the old ones. Write the version-skew section for KEP reviewers.",
+   "facts": [
+    {
+     "key": "cri_timeline",
+     "value": "CRI changes merged in v1.25 to let runtimes implement support; containerd added support in 1.6.9"
+    },
+    {
+     "key": "old_client_handling",
+     "value": "Clients unaware of the ResizePolicy fields set them to nil, and the API server copies non-nil values from the old pod into the update"
+    },
+    {
+     "key": "pre_1_31_behavior",
+     "value": "Before v1.31 with InPlacePodVerticalScaling disabled, the kubelet treated a resource mutation as a container definition change and restarted the container, risking node resource over-subscription"
+    },
+    {
+     "key": "v1_31_behavior",
+     "value": "From v1.31 the kubelet does not restart on resource change, so the new value applies only if the container restarts for another reason, making the change nondeterministic and unreflected in the API"
+    },
+    {
+     "key": "decision",
+     "value": "Because both skew behaviors are undesirable, the API server rejects a resize request when the kubelet running the pod does not support the feature"
+    },
+    {
+     "key": "skew_proxy_signal",
+     "value": ".status.containerStatuses[*].resources is set by the kubelet on running containers if and only if the feature is enabled, so it serves as the proxy for kubelet support"
+    },
+    {
+     "key": "empty_value_note",
+     "value": "The status resources field is set to the non-nil empty value {} even when a container specifies no resource requests"
+    },
+    {
+     "key": "admission_logic",
+     "value": "If the feature gate is off, reject; otherwise inspect the first running container and allow only if its status resources are non-nil; if no containers are running, allow"
+    },
+    {
+     "key": "unscheduled_pods",
+     "value": "A pod not yet scheduled may be resized, and the new values are used when scheduling and starting it"
+    },
+    {
+     "key": "scheduled_no_running",
+     "value": "A scheduled pod with no running containers gives no signal about node support, so resize is allowed and the node may end up over-provisioned"
+    },
+    {
+     "key": "accepted_race",
+     "value": "A resize admitted on a non-running container while the kubelet starts it yields the new values before v1.31 and the old values after v1.31; this is accepted as a known issue confined to enablement skew"
+    }
+   ],
+   "target_words": 550,
+   "has_human": true,
+   "source_doc": "kep-1287-in-place-update-pod-resources",
+   "human_first_words": "CRI changes were merged in v1.25 in order to enable runtimes to",
+   "human_last_words": "exists during enablement skew,\nwe choose to accept it as a known-issue.",
+   "human_words": 448,
+   "human_span_words": 448
+  },
+  "questions": [
+   {
+    "id": "rfc-03-q1",
+    "brief_id": "rfc-03",
+    "q": "Which containerd release first shipped support for the CRI changes this feature depends on?",
+    "answer": "containerd 1.6.9",
+    "accept": [
+     "1.6.9",
+     "containerd v1.6.9"
+    ]
+   },
+   {
+    "id": "rfc-03-q2",
+    "brief_id": "rfc-03",
+    "q": "Since there is no direct signal for whether a node's kubelet supports in-place resize, what field does the API server use as a proxy?",
+    "answer": ".status.containerStatuses[*].resources \u2014 the kubelet sets it on running containers only when the feature is enabled",
+    "accept": [
+     ".status.containerStatuses[*].resources",
+     "the resources field in container statuses",
+     "status.containerStatuses[].resources",
+     "container status resources field"
+    ]
+   },
+   {
+    "id": "rfc-03-q3",
+    "brief_id": "rfc-03",
+    "q": "Before v1.31, with the feature gate disabled, what did the kubelet do when a pod's container resources were mutated, and what was the danger?",
+    "answer": "It treated the change as a container definition change and restarted the container with the new values, which can over-subscribe the node's resources",
+    "accept": [
+     "restarted the container using the new values, risking node over-subscription",
+     "killed and restarted the container with new resources; node could be over-subscribed",
+     "container restart with new values, potentially over-committing the node"
+    ]
+   },
+   {
+    "id": "rfc-03-q4",
+    "brief_id": "rfc-03",
+    "q": "What is the admission decision for a resize request on a pod that has no running containers?",
+    "answer": "The resize is allowed, accepting that the node may end up over-provisioned",
+    "accept": [
+     "allowed",
+     "allow the resize",
+     "permitted (no signal available, node may be over-provisioned)",
+     "allowed, since there is no signal to check"
+    ]
+   },
+   {
+    "id": "rfc-03-q5",
+    "brief_id": "rfc-03",
+    "q": "What value does the kubelet write into the status resources field for a running container that declares no resource requests at all?",
+    "answer": "The non-nil empty value {}",
+    "accept": [
+     "{}",
+     "an empty but non-nil object",
+     "empty map/struct {} rather than nil",
+     "non-nil empty value"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "rfc-04",
+   "prompt": "Raw material for the motivation and scope section of a Kubernetes enhancement proposal on node memory swap support. Two constituencies want swap, and they overlap: node administrators tuning node-level performance and stability and reducing noisy-neighbour effects, and application developers whose programs benefit from swap memory. Three scenarios describe how swap could be used on a node: (1) swap enabled on the host but the kubelet does not let Kubernetes workloads touch it; (2) swap enabled at node level, with the kubelet permitting workloads scheduled there to use some configured quantity; (3) swap set per workload, with the kubelet setting a limit for each one. Scenario 1 is a prerequisite for the rest. This proposal covers 1 and 2 only; 3 goes to a follow-up KEP, and the enablement work here is what that follow-up needs. Goals: on Linux, kubelet can start when swap is provisioned and available; a configuration knob sets how much swap is available to workloads, defaulting to zero; cluster administrators configure this per node; swap works with cgroups v2. Non-goals: non-Linux operating systems, provisioning the swap itself, setting swappiness (already settable system-wide), per-workload allocation with accounting or APIs for customizing how limits are computed (so swap is an overcommitted resource here), zram, zswap, SGX EPC, cgroups v1, pod-level swap API, scheduling that targets swap-enabled nodes, and making the eviction manager swap-aware \u2014 the existing QoS-tier eviction hierarchy is kept as is. Write the motivation, scenarios, goals and non-goals section of this KEP for SIG Node reviewers.",
+   "facts": [
+    {
+     "key": "two_user_types",
+     "value": "Two overlapping constituencies: node administrators wanting node-level performance tuning, stability and fewer noisy-neighbour issues, and application developers whose applications benefit from swap"
+    },
+    {
+     "key": "scenario_1",
+     "value": "Swap enabled on the host system while the kubelet forbids Kubernetes workloads from using it; this is a prerequisite for the other scenarios"
+    },
+    {
+     "key": "scenario_2",
+     "value": "Swap enabled at node level, with the kubelet permitting workloads scheduled on the node to use some configured quantity of swap"
+    },
+    {
+     "key": "scenario_3",
+     "value": "Swap set per workload, with the kubelet setting swap limits for each individual workload"
+    },
+    {
+     "key": "scope_decision",
+     "value": "The KEP covers scenarios 1 and 2 only; scenario 3 is deferred to a follow-up KEP, and the enablement work here is a prerequisite for it"
+    },
+    {
+     "key": "goal_startup",
+     "value": "On Linux, when swap is provisioned and available, the kubelet can start up with swap on"
+    },
+    {
+     "key": "goal_default_zero",
+     "value": "Kubelet configuration sets how much swap utilization is available to Kubernetes workloads, defaulting to 0 swap, and is configurable per node by cluster administrators"
+    },
+    {
+     "key": "goal_cgroupsv2",
+     "value": "Swap support targets cgroups v2"
+    },
+    {
+     "key": "non_goal_provisioning",
+     "value": "Provisioning swap is out of scope \u2014 swap must already be available on the system \u2014 as is setting swappiness, which can already be set system-wide"
+    },
+    {
+     "key": "non_goal_accounting",
+     "value": "Per-workload swap allocation with accounting and APIs to customize how limits are computed are deferred, so within this KEP swap is an overcommitted resource"
+    },
+    {
+     "key": "non_goal_memory_types",
+     "value": "zram, zswap and other memory types such as SGX EPC are out of scope, as is cgroups v1 and non-Linux operating systems"
+    },
+    {
+     "key": "non_goal_eviction_scheduling",
+     "value": "No pod-level swap API, no scheduling toward swap-enabled nodes, and no swap-aware eviction manager; the existing QoS-tier eviction hierarchy is preserved so node-pressure eviction behavior does not fundamentally change"
+    }
+   ],
+   "target_words": 550,
+   "has_human": true,
+   "source_doc": "kep-2400-node-swap",
+   "human_first_words": "There are two distinct types of user for swap, who may overlap:",
+   "human_last_words": "introduction of swap does not fundamentally\nchange how Kubernetes handles node-pressure eviction.",
+   "human_words": 427,
+   "human_span_words": 427
+  },
+  "questions": [
+   {
+    "id": "rfc-04-q1",
+    "brief_id": "rfc-04",
+    "q": "Of the three swap usage scenarios described, which ones does this KEP actually cover and which is deferred?",
+    "answer": "It covers scenarios 1 and 2 (swap on the host with workloads forbidden, and node-level swap available to workloads); per-workload swap limits, scenario 3, is deferred to a follow-up KEP",
+    "accept": [
+     "1 and 2; scenario 3 deferred",
+     "scenarios 1 and 2 only, per-workload swap goes to a later KEP",
+     "covers host-enabled and node-level swap; per-workload swap is future work"
+    ]
+   },
+   {
+    "id": "rfc-04-q2",
+    "brief_id": "rfc-04",
+    "q": "How much swap is available to Kubernetes workloads by default under the new kubelet configuration knob?",
+    "answer": "Zero",
+    "accept": [
+     "0",
+     "0 swap",
+     "none by default",
+     "defaults to zero swap"
+    ]
+   },
+   {
+    "id": "rfc-04-q3",
+    "brief_id": "rfc-04",
+    "q": "Which cgroups version does this swap support target, and what is the status of the other one?",
+    "answer": "cgroups v2 is targeted; cgroups v1 is an explicit non-goal",
+    "accept": [
+     "cgroups v2; v1 out of scope",
+     "v2 only, cgroup v1 excluded",
+     "cgroup v2, with cgroup v1 a non-goal"
+    ]
+   },
+   {
+    "id": "rfc-04-q4",
+    "brief_id": "rfc-04",
+    "q": "What does the proposal say about making the eviction manager aware of swap?",
+    "answer": "It is a non-goal \u2014 the existing QoS-tier eviction hierarchy is kept as is, so node-pressure eviction behavior does not fundamentally change",
+    "accept": [
+     "non-goal; eviction stays as is",
+     "no swap-aware eviction; QoS-based eviction hierarchy preserved",
+     "eviction manager is not changed",
+     "out of scope, existing eviction hierarchy retained"
+    ]
+   },
+   {
+    "id": "rfc-04-q5",
+    "brief_id": "rfc-04",
+    "q": "Why is setting swappiness listed as a non-goal?",
+    "answer": "Because swappiness can already be set system-wide today",
+    "accept": [
+     "it is already settable system-wide",
+     "already configurable at the system level",
+     "because the OS already exposes it globally"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "rfc-05",
+   "prompt": "Raw material for the section of the node-swap KEP that specifies how a container's swap limit is computed. Swap access is granted only to Burstable QoS pods, and the values are computed automatically rather than entered by the user. Two steps. First, take the container's memory request divided by the node's total physical memory; call that ContainerMemoryProportion. If a container has memory requests equal to memory limits, its proportion is defined as zero, so its swap limit works out to zero. Second, multiply that proportion by TotalPodsSwapAvailable, which is the total swap on the system minus the system-reserved memory \u2014 the residue that keeps swap available to system-critical daemons, since the kernel has no memory.swap.min to reserve with. Worked example: a Burstable pod with container A requesting 20 GB and container B requesting 10 GB, on a node with 40 GB of physical memory and 40 GB of swap, with system-reserved memory configured at 2 GB. Proportions come out at 0.5 and 0.25; TotalPodsSwapAvailable is 38 GB; A gets a 19 GB swap limit and B gets 9.5 GB. The scheme ties each container's share of swap to its memory request and rescales it against whatever swap the system actually has. Write this calculation section of the KEP for reviewers who will implement and test it.",
+   "facts": [
+    {
+     "key": "proportion_formula",
+     "value": "ContainerMemoryProportion is the container's memory request divided by the node's total physical memory"
+    },
+    {
+     "key": "equal_request_limit_rule",
+     "value": "If a container's memory requests equal its memory limits, its ContainerMemoryProportion is defined as 0, so its swap limit is 0"
+    },
+    {
+     "key": "swap_limit_formula",
+     "value": "A container's swap limit is ContainerMemoryProportion multiplied by TotalPodsSwapAvailable"
+    },
+    {
+     "key": "total_pods_swap_available",
+     "value": "TotalPodsSwapAvailable is total system swap minus the system-reserved memory, which indirectly leaves swap for system-critical daemons because the kernel provides no memory.swap.min"
+    },
+    {
+     "key": "example_inputs",
+     "value": "Example: container A requests 20 GB and container B requests 10 GB in one Burstable pod; the node has 40 GB physical memory and 40 GB swap; system reserved memory is 2 GB"
+    },
+    {
+     "key": "example_proportions",
+     "value": "Container A's proportion is 20G/40G = 0.5 and container B's is 10G/40G = 0.25"
+    },
+    {
+     "key": "example_pool",
+     "value": "TotalPodsSwapAvailable in the example is 38 GB (40 GB swap minus 2 GB system reserve)"
+    },
+    {
+     "key": "example_results",
+     "value": "Container A's swap limit is 0.5 x 38G = 19 GB and container B's is 0.25 x 38G = 9.5 GB"
+    },
+    {
+     "key": "qos_restriction",
+     "value": "Only Burstable QoS pods are granted swap access, and the limits are calculated automatically instead of being supplied by the user"
+    },
+    {
+     "key": "intent",
+     "value": "Allocating by memory request and rescaling against available swap is meant to give each container a fair share of swap space"
+    }
+   ],
+   "target_words": 500,
+   "has_human": true,
+   "source_doc": "kep-2400-node-swap",
+   "human_first_words": "1. **Calculate the container's memory proportionate to the node's memory:**\n  - Divide the",
+   "human_last_words": "fair share of the swap space and helps maintain resource allocation efficiency.",
+   "human_words": 251,
+   "human_span_words": 251
+  },
+  "questions": [
+   {
+    "id": "rfc-05-q1",
+    "brief_id": "rfc-05",
+    "q": "How is ContainerMemoryProportion calculated?",
+    "answer": "The container's memory request divided by the node's total physical memory",
+    "accept": [
+     "memory request / total physical memory of the node",
+     "container memory request divided by node physical memory",
+     "request over node memory"
+    ]
+   },
+   {
+    "id": "rfc-05-q2",
+    "brief_id": "rfc-05",
+    "q": "What proportion, and therefore what swap limit, is assigned to a container whose memory requests equal its memory limits?",
+    "answer": "Its proportion is defined as 0, so its swap limit is 0",
+    "accept": [
+     "0 proportion and 0 swap",
+     "zero, no swap",
+     "proportion = 0, swap limit = 0",
+     "no swap is granted"
+    ]
+   },
+   {
+    "id": "rfc-05-q3",
+    "brief_id": "rfc-05",
+    "q": "How is TotalPodsSwapAvailable derived, and why is anything subtracted?",
+    "answer": "Total system swap minus the system-reserved memory, which indirectly leaves swap available to system-critical daemons because the kernel provides no memory.swap.min",
+    "accept": [
+     "total swap minus system reserved memory; reserves swap for system daemons",
+     "system swap - system-reserved memory, since there is no memory.swap.min to reserve with",
+     "total swap less the system reserve, to protect system-critical daemons"
+    ]
+   },
+   {
+    "id": "rfc-05-q4",
+    "brief_id": "rfc-05",
+    "q": "In the worked example, what swap limits do containers A and B end up with?",
+    "answer": "Container A gets 19 GB and container B gets 9.5 GB",
+    "accept": [
+     "19G and 9.5G",
+     "A: 19 GB, B: 9.5 GB",
+     "19 GiB / 9.5 GiB",
+     "0.5 x 38G = 19G and 0.25 x 38G = 9.5G"
+    ]
+   },
+   {
+    "id": "rfc-05-q5",
+    "brief_id": "rfc-05",
+    "q": "Which QoS class of pods is granted swap access under this scheme, and who supplies the swap values?",
+    "answer": "Only Burstable QoS pods; the values are calculated automatically rather than supplied by the user",
+    "accept": [
+     "Burstable only, computed automatically",
+     "Burstable pods; limits are auto-calculated, not user-specified",
+     "only Burstable QoS; not a user-facing knob"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "rfc-06",
+   "prompt": "Raw material for the risks section of the node-swap KEP, covering four risks and what was done about each. Resource exhaustion: earlier releases offered an UnlimitedSwap option for workloads, which let a workload consume all the swap on a node and push the node unhealthy; UnlimitedSwap was dropped from the API in beta2. Security: swap on an unencrypted disk can put critical information, including Kubernetes secrets, onto disk where anyone with disk access can read it; the mitigation is encrypted swap, but handling encryption is a general OS configuration concern outside the kubelet's remit, so the answer is documentation that warns users. Cgroups v1: supporting it was an early goal, but sig-node concluded that swap on cgroup v1 would be very difficult, so the feature is limited to cgroups v2; cgroup v1 is expected to be deprecated eventually, which blunts the inconvenience. Memory-backed volumes: Kubernetes guarantees some volumes never reside on disk \u2014 secrets, memory-backed emptyDirs \u2014 and the kubelet mounts them as tmpfs on the host. When --fail-swap-on=false, the tmpfs noswap option is used to keep those pages off disk. That option needs kernel 6.4 or newer, though distributions may backport it, so the kubelet uses it when the kernel is at least 6.4, otherwise tries mounting a dummy volume with noswap to detect a backport, and otherwise warns that the option is unsupported. Once support is widespread this probe can go away. Write this risks-and-mitigations section for KEP reviewers.",
+   "facts": [
+    {
+     "key": "unlimitedswap_problem",
+     "value": "The earlier UnlimitedSwap option let workloads use up all swap on a node, which can make the node go unhealthy"
+    },
+    {
+     "key": "unlimitedswap_decision",
+     "value": "UnlimitedSwap was dropped from the API in beta2 to avoid exhausting node swap"
+    },
+    {
+     "key": "security_exposure",
+     "value": "Enabling swap without encryption can write critical information such as Kubernetes secrets to disk, where someone with disk access could obtain them"
+    },
+    {
+     "key": "security_mitigation",
+     "value": "Encrypted swap is the recommended mitigation, but encryption is a general OS configuration concern outside the kubelet's scope, so the KEP relies on documentation warning users"
+    },
+    {
+     "key": "cgroupv1_history",
+     "value": "Supporting cgroup v1 was an early goal, but sig-node found swap on cgroup v1 very difficult, so the feature is limited to cgroups v2"
+    },
+    {
+     "key": "cgroupv1_justification",
+     "value": "Restricting to cgroups v2 is considered acceptable because the broader goal is to deprecate cgroup v1 eventually"
+    },
+    {
+     "key": "memory_backed_guarantee",
+     "value": "Kubernetes guarantees some volumes' memory never resides on disk (secrets, memory-backed emptyDirs); the kubelet mounts them as tmpfs on the host"
+    },
+    {
+     "key": "noswap_mitigation",
+     "value": "When --fail-swap-on=false, the tmpfs noswap option is used to stop those volumes' pages from swapping to disk"
+    },
+    {
+     "key": "kernel_requirement",
+     "value": "The tmpfs noswap option requires kernel 6.4 or newer, though Linux distributions may backport it to older kernels"
+    },
+    {
+     "key": "detection_ladder",
+     "value": "On kernels at or above 6.4 the option is used; otherwise the kubelet mounts a dummy volume with noswap to test for a backport; if that fails it raises a warning about the unsupported option and the risk"
+    },
+    {
+     "key": "future_cleanup",
+     "value": "Once the noswap option is widely supported the detection logic can be dropped"
+    }
+   ],
+   "target_words": 550,
+   "has_human": true,
+   "source_doc": "kep-2400-node-swap",
+   "human_first_words": "In previous releases of Swap, we had an `UnlimitedSwap` option for workloads.",
+   "human_last_words": "would no longer be a concern, hence this logic\ncould be dropped.",
+   "human_words": 542,
+   "human_span_words": 542
+  },
+  "questions": [
+   {
+    "id": "rfc-06-q1",
+    "brief_id": "rfc-06",
+    "q": "Which swap API option was removed in beta2, and what problem did it cause?",
+    "answer": "UnlimitedSwap \u2014 it let a single workload consume all the swap on a node and drive the node unhealthy",
+    "accept": [
+     "UnlimitedSwap; workloads could exhaust all node swap",
+     "the UnlimitedSwap setting, because it allowed resource exhaustion of the node",
+     "UnlimitedSwap, removed to prevent a workload using up all swap"
+    ]
+   },
+   {
+    "id": "rfc-06-q2",
+    "brief_id": "rfc-06",
+    "q": "Encrypted swap is named as the mitigation for the security risk, so why doesn't the KEP implement it?",
+    "answer": "Because handling encryption is general OS-level configuration outside the kubelet's scope; the KEP relies on documentation warning users instead",
+    "accept": [
+     "it is an OS configuration concern, not the kubelet's responsibility; mitigated by docs",
+     "outside kubelet scope, so warn in documentation",
+     "encryption is a general OS-level concern; the answer is documentation"
+    ]
+   },
+   {
+    "id": "rfc-06-q3",
+    "brief_id": "rfc-06",
+    "q": "What minimum Linux kernel version does the tmpfs noswap option require?",
+    "answer": "Kernel 6.4 or newer",
+    "accept": [
+     "6.4",
+     "kernel >= 6.4",
+     "Linux 6.4+",
+     "6.4 or later (distros may backport)"
+    ]
+   },
+   {
+    "id": "rfc-06-q4",
+    "brief_id": "rfc-06",
+    "q": "What does the kubelet do when the running kernel is older than the version that introduced tmpfs noswap?",
+    "answer": "It tries mounting a dummy volume with the noswap option to detect a distribution backport, and if that fails it raises a warning that the option is unsupported and flags the risk",
+    "accept": [
+     "mounts a dummy volume with noswap to probe for a backport, otherwise warns",
+     "test-mounts a throwaway tmpfs with noswap; if it fails, emit a warning",
+     "probes with a dummy mount, then warns if unsupported"
+    ]
+   },
+   {
+    "id": "rfc-06-q5",
+    "brief_id": "rfc-06",
+    "q": "Why was cgroup v1 support abandoned, and why was that judged acceptable?",
+    "answer": "sig-node concluded swap on cgroup v1 would be very difficult; it is acceptable because cgroup v1 is expected to be deprecated anyway",
+    "accept": [
+     "too difficult per sig-node; cgroup v1 is being deprecated",
+     "sig-node found it very hard to implement, and v1 is going away",
+     "difficulty of v1 implementation, offset by planned v1 deprecation"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "rfc-07",
+   "prompt": "Raw material for the motivation and goals section of a Kubernetes enhancement proposal on pod scheduling readiness. Today a pod is treated as ready for scheduling the moment it is created, and the scheduler keeps trying to place every pending pod. In practice some pods sit for long stretches missing an essential resource, and the repeated attempts churn the scheduler and the downstream integrators that watch it, such as Cluster Autoscaler. Without a way to flag a pod as paused, those cycles are spent retrying pods already known to be unschedulable, which delays other pods and lowers overall scheduling throughput; it also constrains vendors who want to build features such as hierarchical quota natively. A constraint on any solution: the condition {type:PodScheduled, reason:Unschedulable} is the canonical signal the scheduler publishes so integrators such as Cluster Autoscaler know to add cluster resources, and that contract must not break. What the proposal wants: an API to mark pods scheduling-paused or scheduling-ready; a new Enqueue extension point so queueing behavior can be customized; paused pods must not be marked Unschedulable through the PodScheduled condition; and a default enqueue plugin that honors the new API's semantics. Out of scope: forcing pod conditions to expose more context about paused pods, and focusing on in-house uses of the Enqueue extension point. Noted as future work: permission control on individual scheduling gates, which depends on a fine-grained permissions design. Write the motivation, goals and non-goals section of this KEP for SIG Scheduling reviewers.",
+   "facts": [
+    {
+     "key": "current_behavior",
+     "value": "Pods are considered ready for scheduling as soon as they are created, and the scheduler tries to place every pending pod"
+    },
+    {
+     "key": "observed_problem",
+     "value": "Some pods stay in a missing-essential-resources state for long periods and churn the scheduler and downstream integrators such as Cluster Autoscaler"
+    },
+    {
+     "key": "cost_of_no_knob",
+     "value": "Without a knob to pause pods, scheduling cycles are wasted retrying pods already determined to be unschedulable, delaying other pods and lowering overall scheduling throughput"
+    },
+    {
+     "key": "vendor_impact",
+     "value": "The gap restricts vendors from natively developing in-house features such as hierarchical quota"
+    },
+    {
+     "key": "contract_to_preserve",
+     "value": "The condition {type:PodScheduled, reason:Unschedulable} is canonical information the scheduler exposes to guide integrators like Cluster Autoscaler to supplement cluster resources, and the solution must not break it"
+    },
+    {
+     "key": "goal_api",
+     "value": "Define an API to mark pods as scheduling-paused or scheduling-ready"
+    },
+    {
+     "key": "goal_extension_point",
+     "value": "Design a new Enqueue extension point so pod queueing behavior can be customized"
+    },
+    {
+     "key": "goal_condition_handling",
+     "value": "Scheduling-paused pods must not be marked Unschedulable by updating their PodScheduled condition"
+    },
+    {
+     "key": "goal_default_plugin",
+     "value": "Provide a default enqueue plugin that honors the new API's semantics"
+    },
+    {
+     "key": "non_goals",
+     "value": "Not enforcing richer pod conditions for scheduling-paused pods, and not focusing on in-house use cases of the Enqueue extension point"
+    },
+    {
+     "key": "future_work",
+     "value": "Permission control on individual scheduling gates, dependent on a fine-grained permissions mechanism"
+    }
+   ],
+   "target_words": 500,
+   "has_human": true,
+   "source_doc": "kep-3521-pod-scheduling-readiness",
+   "human_first_words": "Pods are currently considered ready for scheduling once created. Kubernetes scheduler does",
+   "human_last_words": "scheduling-paused Pods.\n- Focus on in-house use-cases of the Enqueue extension point.",
+   "human_words": 275,
+   "human_span_words": 275
+  },
+  "questions": [
+   {
+    "id": "rfc-07-q1",
+    "brief_id": "rfc-07",
+    "q": "Which existing pod condition must the solution avoid breaking, and who consumes it?",
+    "answer": "{type: PodScheduled, reason: Unschedulable}, which integrators such as Cluster Autoscaler rely on to know they should add cluster resources",
+    "accept": [
+     "PodScheduled with reason Unschedulable; used by Cluster Autoscaler",
+     "the PodScheduled/Unschedulable condition, consumed by autoscaling integrators",
+     "type PodScheduled, reason Unschedulable"
+    ]
+   },
+   {
+    "id": "rfc-07-q2",
+    "brief_id": "rfc-07",
+    "q": "What new scheduler framework extension point does the proposal introduce, and what is it for?",
+    "answer": "A new Enqueue (PreEnqueue) extension point, so that pod queueing behavior can be customized",
+    "accept": [
+     "the Enqueue extension point",
+     "a new Enqueue/PreEnqueue extension point for customizing queueing",
+     "Enqueue extension point to customize how pods are queued"
+    ]
+   },
+   {
+    "id": "rfc-07-q3",
+    "brief_id": "rfc-07",
+    "q": "What is the required handling of the PodScheduled condition for pods that are scheduling-paused?",
+    "answer": "They must not be marked Unschedulable \u2014 the scheduler must not update their PodScheduled condition to Unschedulable",
+    "accept": [
+     "do not set Unschedulable on them",
+     "paused pods should not get an Unschedulable PodScheduled condition",
+     "the condition must be left alone, not marked Unschedulable"
+    ]
+   },
+   {
+    "id": "rfc-07-q4",
+    "brief_id": "rfc-07",
+    "q": "What in-house feature does the proposal cite as something vendors are currently blocked from building natively?",
+    "answer": "Hierarchical quota",
+    "accept": [
+     "hierarchical quota",
+     "hierarchical quotas",
+     "native hierarchical quota support"
+    ]
+   },
+   {
+    "id": "rfc-07-q5",
+    "brief_id": "rfc-07",
+    "q": "What is named as future work beyond this proposal, and what does it depend on?",
+    "answer": "Permission control on individual scheduling gates, which depends on a fine-grained permissions mechanism being designed",
+    "accept": [
+     "per-gate permission control, blocked on fine-grained permissions",
+     "permission/RBAC control on individual scheduling gates",
+     "controlling who may remove a specific gate, pending a fine-grained permission design"
+    ]
+   }
+  ]
+ },
+ {
+  "brief": {
+   "id": "rfc-08",
+   "prompt": "Raw material for the constraints-and-caveats section of the pod scheduling readiness KEP, about the new .spec.schedulingGates field. State transitions are deliberately restricted. The field can only be initialized when the pod is created, either by the client or by a mutating admission webhook. After creation, gates may be removed in any order, but adding a new gate is not allowed. A scheduled pod must always carry empty scheduling gates, which means a client \u2014 administrator or custom controller \u2014 cannot create a pod that has schedulingGates populated and also specifies spec.nodeName; the API server returns a validation error. Stated as a matrix: for an unscheduled pod with nil nodeName, create with non-nil gates is allowed and update is not, while nil gates allow both; for a scheduled pod with non-nil nodeName, neither create nor update with non-nil gates is allowed, and nil gates allow both. Feature-gating is not uniform across the three parts of the feature: (a) the pod spec field plus feature gate and associated bits, (b) the SchedulingGates scheduler plugin, and (c) the underlying scheduler framework change, the new PreEnqueue extension point. Disabling the feature turns off a and b but leaves c on, so a plugin developer can use c alone to build their own equivalents of a and b. Separately, kubectl gets a new phase literal, SchedulingPaused, in the phase column of kubectl get pod, to show whether a pod is scheduling-paused. Write this notes and constraints section of the KEP for API and scheduler reviewers.",
+   "facts": [
+    {
+     "key": "initialization_window",
+     "value": "schedulingGates can be initialized only when a pod is created, either by the client or by mutation during admission"
+    },
+    {
+     "key": "removal_rule",
+     "value": "After creation each scheduling gate can be removed in arbitrary order, but adding a new gate is disallowed"
+    },
+    {
+     "key": "scheduled_pod_invariant",
+     "value": "A scheduled pod must always have empty schedulingGates"
+    },
+    {
+     "key": "nodename_conflict",
+     "value": "A pod cannot be created with schedulingGates populated if it also specifies spec.nodeName; the API server returns a validation error"
+    },
+    {
+     "key": "transition_matrix",
+     "value": "Unscheduled pod (nil nodeName): create allowed and update disallowed with non-nil gates, both allowed with nil gates. Scheduled pod (non-nil nodeName): neither create nor update allowed with non-nil gates, both allowed with nil gates"
+    },
+    {
+     "key": "feature_parts",
+     "value": "The feature has three parts: (a) the pod spec field, feature gate and misc bits, (b) the SchedulingGates scheduler plugin, and (c) the scheduler framework's new PreEnqueue extension point"
+    },
+    {
+     "key": "partial_gating",
+     "value": "Disabling the feature disables parts a and b but leaves part c enabled regardless"
+    },
+    {
+     "key": "why_partial_gating_matters",
+     "value": "Because the PreEnqueue extension point stays enabled, a scheduler plugin developer can use it alone to build their own equivalents of the field and the plugin"
+    },
+    {
+     "key": "kubectl_ux",
+     "value": "A new phase literal SchedulingPaused is added to the phase column of kubectl get pod to indicate whether a pod is scheduling-paused"
+    }
+   ],
+   "target_words": 500,
+   "has_human": true,
+   "source_doc": "kep-3521-pod-scheduling-readiness",
+   "human_first_words": "- **Restricted state transition:** The `schedulingGates` field can be initialized only when",
+   "human_last_words": "`kubectl get pod`. This new literal indicates whether it's\nscheduling-paused or not.",
+   "human_words": 254,
+   "human_span_words": 254
+  },
+  "questions": [
+   {
+    "id": "rfc-08-q1",
+    "brief_id": "rfc-08",
+    "q": "At what point in a pod's life can .spec.schedulingGates be populated?",
+    "answer": "Only at pod creation \u2014 set by the client or injected by a mutating admission webhook",
+    "accept": [
+     "only on create, by the client or by admission mutation",
+     "at creation time only",
+     "during pod creation, including via a mutating webhook"
+    ]
+   },
+   {
+    "id": "rfc-08-q2",
+    "brief_id": "rfc-08",
+    "q": "After creation, what mutations to the scheduling gates list are permitted?",
+    "answer": "Gates may be removed, in arbitrary order, but new gates may not be added",
+    "accept": [
+     "removal only, any order; adding is disallowed",
+     "you can delete gates in any order but cannot add one",
+     "removals allowed, additions rejected"
+    ]
+   },
+   {
+    "id": "rfc-08-q3",
+    "brief_id": "rfc-08",
+    "q": "What happens if a client tries to create a pod that has both schedulingGates populated and spec.nodeName set?",
+    "answer": "The API server rejects it with a validation error, because a scheduled pod must always have empty scheduling gates",
+    "accept": [
+     "rejected \u2014 validation error from the API server",
+     "the request fails validation",
+     "API server returns a validation error"
+    ]
+   },
+   {
+    "id": "rfc-08-q4",
+    "brief_id": "rfc-08",
+    "q": "When the feature is disabled, which of the three parts of the feature remains enabled, and what does that allow?",
+    "answer": "The scheduler framework change \u2014 the new PreEnqueue extension point \u2014 stays on, letting a plugin developer build their own equivalents of the spec field and the SchedulingGates plugin",
+    "accept": [
+     "part c, the PreEnqueue extension point, remains enabled",
+     "the PreEnqueue extension point stays on so developers can build their own gating plugin",
+     "the framework-level extension point is not gated"
+    ]
+   },
+   {
+    "id": "rfc-08-q5",
+    "brief_id": "rfc-08",
+    "q": "What change does kubectl get pod show for this feature?",
+    "answer": "A new phase literal, SchedulingPaused, in the phase column",
+    "accept": [
+     "SchedulingPaused",
+     "a SchedulingPaused phase value in the PHASE column",
+     "new phase literal SchedulingPaused"
+    ]
+   }
+  ]
+ }
+]
