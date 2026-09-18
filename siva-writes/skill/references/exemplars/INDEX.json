@@ -1,0 +1,64 @@
+{
+  "note": "SKILL.md loads the two exemplars matching the document type at write time. status_update is empty: no public exemplar family exists for it in either split, so that genre tests whether the rules transfer without an exemplar to imitate.",
+  "by_genre": {
+    "design_doc": [
+      {
+        "file": "aws-timeouts-retries-backoff-jitter.txt",
+        "words": 2249,
+        "why": "Mechanism carried almost entirely without numbers: 0.22 numbers per 100 words, mechanism:evaluative 3.00, and 0.7% of sentences over 30 words. The counter-example to the idea that good technical prose is dense with figures."
+      },
+      {
+        "file": "aws-workload-isolation-shuffle-sharding.txt",
+        "words": 1773,
+        "why": "One idea, built from a worked combinatorial example the reader can redo. 1,773 words, claim-first 0.895."
+      },
+      {
+        "file": "sre-book-ch03-embracing-risk.txt",
+        "words": 3752,
+        "why": "Argues a policy position from quantities without becoming a spreadsheet. Claim-first 0.878, hedges 1.39 per 100 words, all of them load-bearing."
+      }
+    ],
+    "rfc": [
+      {
+        "file": "pep-0572-assignment-expressions.txt",
+        "words": 4485,
+        "why": "A proposal that spends most of its length on the objections to itself. Mechanism:evaluative 4.00, claim-first 0.917."
+      },
+      {
+        "file": "rust-rfc-2229-capture-disjoint-fields.txt",
+        "words": 879,
+        "why": "879 words for a language change. Mechanism:evaluative 7.00. The shortest thing in the corpus that fully carries a design decision."
+      }
+    ],
+    "postmortem": [
+      {
+        "file": "gcp-incident-ow5i3PPK96RduMcb1SsW.txt",
+        "words": 4093,
+        "why": "Claim-first 0.950 and 3.32 numbers per 100 words with mechanism:evaluative 5.20 - the combination the other incident reports miss, because most of them narrate status without ever saying why."
+      },
+      {
+        "file": "danluu-postmortem-lessons.txt",
+        "words": 2320,
+        "why": "Mechanism:evaluative 7.40, the highest in the corpus. Reads postmortems against each other rather than summarising them."
+      },
+      {
+        "file": "sre-book-ch15-postmortem-culture.txt",
+        "words": 1581,
+        "why": "Claim-first 1.000 across 22 paragraphs, 8.6% of sentences over 30 words. The cleanest paragraph discipline measured."
+      }
+    ],
+    "perf_analysis": [
+      {
+        "file": "danluu-latency-pitfalls.txt",
+        "words": 2839,
+        "why": "50% of sentences run over 30 words and it is still easy to read, because each long sentence resolves clause by clause. The document that refutes a sentence-length cap."
+      },
+      {
+        "file": "danluu-perf-opt.txt",
+        "words": 4818,
+        "why": "Sustains an argument over 4,818 words on one carried example. Mechanism:evaluative 2.60, hedges 2.18 per 100 words."
+      }
+    ],
+    "status_update": []
+  }
+}

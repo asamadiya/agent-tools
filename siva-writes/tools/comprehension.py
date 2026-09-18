@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+"""Metric 2: comprehension. A weaker model from a different family reads only the candidate
+write-up and answers five factual questions per brief.
+
+The reader is gemini-3.5-flash, driven through the copilot CLI. Two properties are required and
+both are structural rather than stylistic.
+
+Different family. The writer is Claude. A Claude judge prefers Claude prose, and the same is true
+across families; using a non-Claude reader removes that particular thumb from the scale.
+
+Weaker. A strong reader reconstructs the answer from domain knowledge and scores well on prose that
+never transmitted it, which collapses the difference between conditions. The metric needs a reader
+that will only get the answer if the writing actually handed it over.
+
+The reader is given the write-up and the questions, and never the brief. Grading is deterministic
+first - normalised match against the answer and its accept list - and every non-match is written to
+a file for adjudication rather than silently scored zero, because a deterministic grader marking a
+correct paraphrase wrong is the failure mode that makes this metric look noisier than it is.
+"""
+from __future__ import annotations
+
+import argparse
+import collections
+import json
+import pathlib
+import re
+import subprocess
+import sys
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+
+ROOT = pathlib.Path(__file__).resolve().parent.parent
+READER_MODEL = "gemini-3.5-flash"
+
+
+def normalise(s: str) -> str:
+    s = s.lower().replace("’", "'").replace("—", "-").replace("–", "-")
+    s = re.sub(r"[^\w\s.%/-]", " ", s)
+    return re.sub(r"\s+", " ", s).strip()
+
+
+def numbers_in(s: str) -> set[str]:
+    return {n.rstrip(".").replace(",", "") for n in re.findall(r"\d[\d,]*(?:\.\d+)?", s)}
+
+
+def graded_correct(reply: str, answer: str, accept: list[str]) -> tuple[bool, str]:
+    r = normalise(reply)
+    for candidate in [answer, *accept]:
+        c = normalise(candidate)
+        if not c:
+            continue
+        if c in r:
+            return True, f"substring:{candidate[:40]}"
+        # A numeric answer is correct when its numbers are present, even if the wording differs.
+        cn = numbers_in(c)
+        if cn and cn <= numbers_in(r):
+            return True, f"numeric:{sorted(cn)}"
+        # Otherwise require most content words of a short key to be present.
+        words = [w for w in c.split() if len(w) > 3]
+        if words and sum(1 for w in words if w in r) / len(words) >= 0.8:
+            return True, f"lexical:{candidate[:40]}"
+    return False, "no match"
+
+
+def ask_reader(write_up: str, questions: list[dict]) -> list[str]:
+    numbered = "\n".join(f"{i}. {q['q']}" for i, q in enumerate(questions, 1))
+    prompt = (
+        "Below is a technical document. Read it and answer the questions using ONLY what the "
+        "document says. If the document does not contain the answer, reply exactly: NOT STATED.\n"
+        "Answer each question on its own line, prefixed with its number and nothing else. Be brief.\n\n"
+        f"=== DOCUMENT ===\n{write_up}\n=== END DOCUMENT ===\n\n=== QUESTIONS ===\n{numbered}\n"
+    )
+    proc = subprocess.run(
+        ["copilot", "--model", READER_MODEL, "--reasoning-effort", "low",
+         "--session-id", str(uuid.uuid4()), "--allow-all-tools", "--silent", "-p", prompt],
+        capture_output=True, text=True, timeout=420,
+    )
+    out = proc.stdout or ""
+    answers = [""] * len(questions)
+    for line in out.splitlines():
+        m = re.match(r"\s*(\d{1,2})[.)]\s*(.+)", line)
+        if m:
+            idx = int(m.group(1)) - 1
+            if 0 <= idx < len(answers):
+                answers[idx] = m.group(2).strip()
+    return answers
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--outputs", default=str(ROOT / "eval" / "outputs"))
+    parser.add_argument("--out", default=str(ROOT / "eval" / "results-metric2.json"))
+    parser.add_argument("--workers", type=int, default=6)
+    parser.add_argument("--conditions", nargs="*", default=None)
+    args = parser.parse_args()
+
+    questions = collections.defaultdict(list)
+    for line in (ROOT / "eval" / "questions.jsonl").read_text().splitlines():
+        q = json.loads(line)
+        questions[q["brief_id"]].append(q)
+
+    root = pathlib.Path(args.outputs)
+    conditions = args.conditions or sorted(p.name for p in root.iterdir() if p.is_dir())
+
+    jobs = []
+    for condition in conditions:
+        for path in sorted((root / condition).glob("*.txt")):
+            bid = path.stem
+            if bid in questions:
+                jobs.append((condition, bid, path))
+
+    results, unmatched = [], []
+
+    def run(job):
+        condition, bid, path = job
+        qs = questions[bid]
+        try:
+            replies = ask_reader(path.read_text(encoding="utf-8", errors="replace"), qs)
+        except subprocess.TimeoutExpired:
+            return {"condition": condition, "brief_id": bid, "error": "reader timeout", "correct": 0, "n": len(qs)}
+        row = {"condition": condition, "brief_id": bid, "n": len(qs), "correct": 0, "items": []}
+        for q, reply in zip(qs, replies):
+            ok, how = graded_correct(reply, q["answer"], q.get("accept", []))
+            row["correct"] += ok
+            row["items"].append({"id": q["id"], "reply": reply, "correct": ok, "how": how})
+            if not ok:
+                unmatched.append({"condition": condition, "id": q["id"], "q": q["q"],
+                                  "expected": q["answer"], "accept": q.get("accept", []), "reply": reply})
+        return row
+
+    with ThreadPoolExecutor(max_workers=args.workers) as pool:
+        for i, row in enumerate(pool.map(run, jobs), 1):
+            results.append(row)
+            print(f'[{i}/{len(jobs)}] {row["condition"]:10s} {row["brief_id"]:20s} '
+                  f'{row["correct"]}/{row["n"]}{"  " + row["error"] if row.get("error") else ""}',
+                  file=sys.stderr, flush=True)
+
+    by_condition = {}
+    for condition in conditions:
+        rows = [r for r in results if r["condition"] == condition]
+        correct = sum(r["correct"] for r in rows)
+        total = sum(r["n"] for r in rows)
+        # Wilson 95% interval, the same instrument the pairwise metric uses.
+        if total:
+            p, z = correct / total, 1.959963985
+            d = 1 + z * z / total
+            centre = (p + z * z / (2 * total)) / d
+            half = z * ((p * (1 - p) / total + z * z / (4 * total * total)) ** 0.5) / d
+            ci = [round(100 * (centre - half), 2), round(100 * (centre + half), 2)]
+        else:
+            ci = [0.0, 0.0]
+        by_condition[condition] = {
+            "documents": len(rows), "items": total, "correct": correct,
+            "accuracy_pct": round(100 * correct / total, 2) if total else 0.0,
+            "wilson95_pct": ci,
+            "reader_errors": sum(1 for r in rows if r.get("error")),
+        }
+
+    (pathlib.Path(args.out)).write_text(json.dumps({
+        "reader_model": READER_MODEL,
+        "reader_sees": "candidate write-up and questions only, never the brief",
+        "grading": "deterministic normalised match; non-matches recorded in results-metric2-unmatched.json for adjudication",
+        "by_condition": by_condition, "rows": results}, indent=2))
+    (ROOT / "eval" / "results-metric2-unmatched.json").write_text(json.dumps(unmatched, indent=2))
+
+    print(f'\n{"condition":12s}{"docs":>6s}{"items":>7s}{"correct":>9s}{"acc%":>8s}{"wilson95":>18s}')
+    for c, r in by_condition.items():
+        print(f'{c:12s}{r["documents"]:6d}{r["items"]:7d}{r["correct"]:9d}{r["accuracy_pct"]:8.2f}'
+              f'   [{r["wilson95_pct"][0]:.1f}, {r["wilson95_pct"][1]:.1f}]')
+    print(f'\nunmatched for adjudication: {len(unmatched)} -> eval/results-metric2-unmatched.json')
+
+
+if __name__ == "__main__":
+    main()
