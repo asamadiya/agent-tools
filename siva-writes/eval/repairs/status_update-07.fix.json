@@ -1,0 +1,10 @@
+{
+ "brief_id": "status_update-07",
+ "repairs": [],
+ "unrepaired": [
+  {
+   "target": "status_update-07-q5",
+   "why": "Deliberately left as the first pass set it. The verify pass called this mild over-tightening and I confirmed it: all four keys now require 11.6, so two replies that are complete against the stem - 'GPU bin-packing accounts for $7.0M of the savings and is blocked on a scheduler change owned by another org with no committed date.' and the same answer written with $7M - scored CORRECT before the repair and fail after it. That is a false negative, not a widened key, so it is the opposite of what this pass was sent to fix, and correcting it by re-loosening a key the verify pass just endorsed is the move most likely to reintroduce the bare-7 cheat ('GPU bin-packing is worth $7M and is blocked on another org.', which the old accept[0] scored on the single number 7). A partial remedy exists and is measured: a key with the number set {7.0} plus a long lexical list would readmit the $7.0M rendering while still rejecting the bare-$7M cheat, because normalise keeps the decimal and {7.0} is not a subset of {7}. It would not readmit the $7M spelling of the same complete answer. Whoever takes this should decide first whether the stem's 'of the remaining savings' makes the $11.6M base part of a complete answer; the key follows from that ruling, and I did not want to settle it silently inside a repair."
+  }
+ ]
+}

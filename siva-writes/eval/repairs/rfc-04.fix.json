@@ -1,0 +1,21 @@
+{
+ "brief_id": "rfc-04",
+ "repairs": [
+  {
+   "target": "rfc-04-q2",
+   "defect_class": "unmatchable_key",
+   "after": "{\"q\": \"Which two groups of users does the KEP name as wanting swap, and what does each want out of it?\", \"answer\": \"Node administrators, who want swap for node-level performance tuning and stability and to reduce noisy-neighbour problems, and application developers whose applications would benefit from using swap memory; the two groups may overlap\", \"accept\": [\"node admin tuning, application developer swap\", \"node admin, app developer\", \"node operator, app developer\", \"node administrators wanting performance tuning and stability, and application developers whose applications benefit from swap memory\"]}",
+   "rationale": "The target is right -- two_user_types is verbatim in the brief prompt and is the opening of the human span (kep-2400 lines 153-157) -- and the old 'none by default' key really was free. The problem was the key: four long prose strings against a 0.8 bar, and the verify pass measured a near-verbatim correct answer at 11/14 = 0.786, a miss by one word, with no numeric route to rescue it. The fix keeps the target and rebuilds the key as short conjunctions on inflection-proof stems. accept[0] normalises to ['node','admin','tuning','application','developer','swap'], six words needing five, so a full answer can lose one word and still score; accept[1] is ['node','admin','developer'] needing 3/3, which catches the terse rendering 'Node admins and app developers'; accept[2] is the same shape for 'operator'. 'admin' matches 'admins' and 'administrators'; 'developer' matches 'developers'. Verified: the exact reply the verify pass reported failing now passes, as does the human span's own sentence and three other renderings. Naming only one group still fails -- 'Node administrators who want performance tuning and stability.' and 'Developers who want their applications to use swap memory.' both score under the bar, as do 'Cluster administrators.', a stem echo and NOT STATED. Deliberate residual: a reply naming both groups without their motivations passes accept[1]. I chose that over a key that requires the motivations and fails the correct answers, because the motivations are near-tautological once the groups are named (admins tune nodes, developers write applications) and carry little discriminating signal; the groups are the fact."
+  }
+ ],
+ "unrepaired": [
+  {
+   "target": "rfc-04 facts[goal_cgroupsv2]",
+   "why": "The verify pass flagged this as coverage the q3 repair silently dropped. Leaving it ungraded is the right call, for two independent reasons. First, the verify pass itself established the fact is cold-recoverable -- NodeSwap being cgroup-v2-only is documented on kubernetes.io -- so grading it reinstates the world-knowledge defect the q3 repair closed. Second, it cannot be graded safely under this matcher at all: any accept string spelling 'cgroups v2' yields numbers_in {'2'}, the numeric branch runs before the lexical branch, and every reply containing a 2 scores. That is the exact failure repaired in rfc-02-q2 and rfc-06-q5 in this same batch. This is not the dd-03 situation, where two retargets left a distinctive non-recoverable mechanism ungraded; here the vacated fact carries no comprehension signal."
+  },
+  {
+   "target": "rfc-04 facts[goal_default_zero]",
+   "why": "A second, unflagged drop from the same pass: the old q2 graded 'defaults to zero swap' and the retarget vacated it. Same judgement -- a safe default of zero is the guess any model makes, which is why the first pass called the old item free. Its one non-guessable half (the knob is configured per node by cluster administrators) is not worth an item slot on its own and would collide with q2's vocabulary."
+  }
+ ]
+}

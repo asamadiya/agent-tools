@@ -1,0 +1,12 @@
+{
+ "brief_id": "perf_analysis-06",
+ "repairs": [
+  {
+   "target": "perf_analysis-06-q5",
+   "defect_class": "world_knowledge",
+   "after": "{\"q\": \"The write-up ends by arguing that these page cache statistics do not belong in an experimental tool. What was proposed instead at the LSFMMBPF 2019 keynote, and what did the Linux mm engineers say against it?\", \"answer\": \"That the statistics are needed often enough to belong in /proc rather than in cachestat; the mm engineers pointed out real challenges in providing them properly, and the counters sit on hot paths, so adding them is not free\", \"accept\": [\"put them in /proc; the mm engineers raised real implementation challenges and noted the counters are hot-path\", \"kernel support in /proc instead of an experimental tool; the engineers said doing it properly is hard and hot-path counters are not free\", \"argued for /proc page cache statistics; mm engineers pushed back on the difficulty and on the hot-path cost\", \"they should ship in /proc; the objection was that the counters are on hot paths and hard to do right\"]}",
+   "rationale": "The old item asked for the two recommended fixes, which the brief's own premise (a 100 GB file, a 48 GB page cache) forces: buy memory, or stop making whole-file passes. Nothing in the answer was specific to this incident. Retargeted at the closing upstream argument, which is a named venue plus a stated position plus a stated counter-argument, all present in the brief and inside the 712-word human span ('As I mentioned in my LSFMMBPF 2019 keynote in Puerto Rico ... they should be in /proc ... They pointed out challenges ... they are hot-path, so adding counters isn't free'). It cannot be answered from the premise or from general knowledge of page cache behaviour, and the hot-path objection in particular exists nowhere but in this material. The stem names the subject (page cache statistics, the 2019 keynote) without supplying either the proposal or the objection. The quick_fix and code_fix facts go ungraded, which is correct: they are derivable and therefore carry no comprehension signal."
+  }
+ ],
+ "unrepaired": []
+}

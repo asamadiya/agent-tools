@@ -1,0 +1,17 @@
+{
+ "brief_id": "rfc-02",
+ "repairs": [
+  {
+   "target": "rfc-02-q2",
+   "defect_class": "free_numeric_key",
+   "after": "{\"q\": \"The kubelet cannot decide whether a resize is needed by comparing desired resources against the container's actual configuration. What three causes of legitimate divergence does the design give?\", \"answer\": \"Linux kernel enforced minimums for CPU shares and quota, the systemd cgroup driver rounding CPU quota up to the nearest ten milliseconds, and NRI plugins changing the resource configuration\", \"accept\": [\"kernel minimum, systemd round, plugin config\", \"kernel, systemd, NRI plugin\", \"kernel enforced minimums for CPU shares and quota; systemd cgroup driver quota rounding; NRI plugins changing resource configuration\"]}",
+   "rationale": "The verify pass was right and the first repair's claim was wrong. The matcher tries numeric before lexical, per candidate, so a single accept string containing '10ms' sets numbers_in to {'10'} and any reply containing a 10 scores. I reproduced it: the bare recallable fact 'The systemd cgroup driver rounds CPU quota up to the nearest 10ms.' scored CORRECT under the first repair's key, which is exactly the world-knowledge hole the retarget was supposed to close, and the three-item enumeration was never enforced. The fix removes every digit from the canonical and from every accept string, which disables the numeric branch outright (numbers_in is empty, so the branch is skipped) and forces grading through substring and lexical. The canonical keeps the fact by spelling the granularity out: 'up to the nearest ten milliseconds'. The keys are then built as balanced conjunctions so that dropping any one of the three causes fails. accept[0] normalises to six words, two per cause -- ['kernel','minimum','systemd','round','plugin','config'] -- and needs five, so one inflection may be missed but a whole cause may not; accept[1] is the three head nouns ['kernel','systemd','plugin'] and needs 3/3. Stems are chosen to survive inflection: 'round' matches 'rounds'/'rounding', 'plugin' matches 'plugins', 'config' matches 'configuration', 'minimum' matches 'minimums'. Verified: the 10ms-only reply, the bare string '10ms', 'There are 10 causes.', a two-of-three answer and an NRI-only answer all fail; four correct renderings pass, including one that says 'floors' instead of 'minimums' and one that names only the three sources."
+  }
+ ],
+ "unrepaired": [
+  {
+   "target": "rfc-02 facts[memory_shrink_cgroupv1] / facts[memory_shrink_cgroupv2]",
+   "why": "Vacated by the first pass when q4 moved to retry_policy, and deliberately left vacant. The verify pass classified that repair discharged because v1-rejects / v2-OOM-kills is documented kernel behaviour and was recallable cold, so regrading it would reintroduce the world-knowledge defect. It is also unsafe to grade under this matcher for the reason repaired above: any key spelling 'cgroups v1' or 'v2' collapses to numbers_in {'1'} or {'2'} and scores on any reply containing that digit."
+  }
+ ]
+}

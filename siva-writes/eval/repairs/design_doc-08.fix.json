@@ -1,0 +1,25 @@
+{
+  "brief_id": "design_doc-08",
+  "repairs": [
+    {
+      "target": "design_doc-08-q4",
+      "defect_class": "idiom_leak",
+      "after": "{\"q\": \"Under the hypothesis, why does that ordering invert over the long run?\", \"answer\": \"The website's feedback loop needs a human, and human feedback is slow and inconsistent; the storage engine has a simple specification covering API, safety properties and liveness properties, so iteration can proceed without a human.\", \"accept\": [\"the website needs human feedback; the engine has a specification\", \"the website's loop needs a slow, squishy, inconsistent human, while the engine's loop has a simple specification of API, safety and liveness\", \"human-dependent feedback against a machine-checkable specification of API, safety and liveness\", \"the storage engine can iterate without a human because its specification covers API, safety and liveness\", \"one needs a person in the loop, the other has a spec of API, safety and liveness\", \"the website cannot be judged without a human; the engine can be judged against its specification\"]}",
+      "rationale": "Same failure as dd-06-q3 and the same resolution. The first repair took 'slow, squishy, inconsistent' out of every accept string but left 'squishy' in the dd-08 brief prompt, and it is verified present in dd-08's human span (brooker-whats-easy-whats-hard.txt:45). The brief-echoing reply - the rendering every condition produces, because the brief hands the phrasing over - scored 12/15 = 0.8 CORRECT under the old key and 8/14 under the new one, so the repair converted a mild H advantage into an item all five conditions fail. Since the phrase is in H's span, H produces it whatever the brief says, so the key has to accept it; and since an accept list is a disjunction, accepting the idiomatic rendering does not require it. The original defect was that every string demanded the author's three adjectives, which made voice-copying the only route to a point; that is closed by the neutral strings, which now pass on their own. Six strings, each tested individually rather than assumed: the neutral 'needs human feedback / has a specification' short form, the idiomatic squishy form, the machine-checkable form, the 'iterates without a human' form, the elliptical 'one needs a person in the loop, the other has a spec' form (which names neither artefact and would otherwise fail every draft I tried), and a 'judged without a human / judged against its specification' form, which shares only four content words with the neutral rendering and therefore needed its own string rather than a loosened shared one. Verified against a replica of tools/comprehension.py: six correct renderings pass; nine lazy or wrong replies fail, including both half answers ('The website needs a human.', 'The engine has a specification.'), 'One needs a person in the loop.', 'Feedback loops matter.', 'The website is harder in the long run.', 'A website and an engine are compared.' and 'NOT STATED'. I deliberately did not loosen the short string to the four bare nouns (website, human, engine, specification), which would have caught every rendering in one string but also passed a reply that merely names the four things without asserting the asymmetry."
+    }
+  ],
+  "unrepaired": [
+    {
+      "target": "design_doc-08 (brief prompt) still contains 'slow, squishy, inconsistent feedback providers'",
+      "why": "Not touched, same reasoning as dd-06. Stripping the idiom from the brief cannot rescue the key, because the phrase is in dd-08's human span and H will produce it regardless; the key must accept it either way, and once it does, the brief edit changes nothing for Metric 2. Whether a brief should hand every condition a distinctive authorial phrase at all is a real question for the style metrics, but it is a brief-level voice decision across the family and the dd-08 prompt is not one of my targets."
+    },
+    {
+      "target": "design_doc-08-q2 ('know it when I see it')",
+      "why": "Carried over from the first pass's unrepaired list and I agree with its reasoning: it is a stock English idiom rather than distinctive authorial voice, and it is how the brief itself characterises architecture feedback, so a neutral paraphrase would lose the meaning rather than launder the voice. No repair warranted."
+    },
+    {
+      "target": "design_doc-08 prompt lift (23-word hypothesis span)",
+      "why": "Recorded by the first pass as a measurement disagreement with the audit (28.3% against a reported 22.1%) and not a listed defect. Unchanged by anything I did here; my edits to this brief are confined to q4's grading key, which is not shown to candidates and cannot affect a lift measurement."
+    }
+  ]
+}

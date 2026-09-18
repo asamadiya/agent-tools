@@ -1,0 +1,18 @@
+{
+ "brief_id": "status_update-02",
+ "repairs": [],
+ "unrepaired": [
+  {
+   "target": "status_update-02-q1",
+   "why": "Out of scope for this pass and not repair-induced - the first pass only tightened this item (accept[0]'s word list went from ['canary','control'] to empty, the canonical's from three words to four) and my before/after sweep confirms nothing here got easier. But the lexical branch is still a sieve, and I measured it: the canonical reduces to ['canary','against','control','under'], four words all supplied by ordinary prose, so 'The canary was measured against the control and stayed under the SLO.' scores CORRECT; accept[3] reduces to the two-word key ['against','breaching'], so 'The canary is breaching the SLO measured against the control fleet.' scores CORRECT. Both replies contain no numbers at all on a question whose entire content is three latencies (311 / 184 / 250 ms). Fixing it means making every key either numeric-only or long, as was done for status_update-01-q2 and status_update-04-q1 in this pass."
+  },
+  {
+   "target": "status_update-02-q3",
+   "why": "Same class, untouched by any repair. accept[0] '71% vs 99.6%' reduces to the single lexical token ['99.6%'], so 'It is 99.6% now.' scores CORRECT while giving only the pre-release figure and not the 71% the canary actually achieved - the number the question exists to test. Measured."
+  },
+  {
+   "target": "status_update-02-q4",
+   "why": "Same class, untouched by any repair. accept[3] '0.9 ms vs 94 ms - recompilation of schemas' reduces to ['recompilation','schemas'], so 'The cost is recompilation of schemas.' scores CORRECT without either latency. Measured."
+  }
+ ]
+}

@@ -1,0 +1,12 @@
+{
+ "brief_id": "rfc-05",
+ "repairs": [
+  {
+   "target": "rfc-05-q1",
+   "defect_class": "key_admits_wrong_answer",
+   "after": "{\"q\": \"ContainerMemoryProportion is a ratio of one container-level quantity to one node-level quantity. Name both precisely.\", \"answer\": \"The container's memory request divided by the node's total physical memory: the memory request is the container-level quantity, total physical memory the node-level one\", \"accept\": [\"memory request, physical memory\", \"the container's memory request over the node's total physical memory\", \"memory request over node physical memory\"]}",
+   "rationale": "The first repair wrote its discriminator as a negative parenthetical -- '(not its allocatable memory)' -- which put 'allocatable' into the canonical's own lexical key, so the one answer the repair existed to reject started scoring. I reproduced the verify pass's result: 'The container's memory request divided by the node's allocatable memory.' scored 8/10 = 0.8 CORRECT. The fix states the discriminator positively and never names the wrong quantity anywhere in the key. The working key is accept[0], which normalises to exactly four words ['memory','request','physical','memory']; four words means the 0.8 bar rounds to 4/4, so every word is mandatory and no single substitution survives. Losing 'physical' fails the allocatable answer; losing 'request' fails the limit answer. I also had to fix a second hole the same length argument creates: any accept string of five or more words lets one word be missed, and the wrong answers here differ from the right one by exactly one word, so a long readable string such as 'container memory request divided by total physical memory of the node' scores the limit answer at 7/8 and passes. Every string in the new list is either four words or has at least two words the wrong answers lack, and the canonical repeats 'memory request' and 'total physical memory' so the limit answer misses two. Verified: six correct renderings pass, including the terse 'memory request / node physical memory' that the first repair broke and the source's own 'Divide the container's memory request by the total node's physical memory' (kep-2400 line 292). Both allocatable renderings, both limit renderings, an under-specified 'divided by the node's memory', a stem echo and NOT STATED all fail."
+  }
+ ],
+ "unrepaired": []
+}

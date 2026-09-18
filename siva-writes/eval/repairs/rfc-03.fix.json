@@ -1,0 +1,12 @@
+{
+ "brief_id": "rfc-03",
+ "repairs": [
+  {
+   "target": "rfc-03-q4",
+   "defect_class": "key_admits_wrong_answer",
+   "after": "{\"q\": \"What is the admission decision for a resize request on a pod that has no running containers?\", \"answer\": \"The resize is allowed, accepting that the node may end up over-provisioned\", \"accept\": [\"allowed; the node may be over provisioned\", \"allowed; the node may be overprovisioned\", \"permitted; the node may be over provisioned\", \"allowed, since there is no signal to check against\"]}",
+   "rationale": "Not on the assigned list and not introduced by the first repair pass -- found by sweeping every key in the rfc bundle for the two failure modes this batch is about, trivially satisfiable numeric sets and one-word lexical keys. accept[0] was the single word 'allowed', and the matcher's substring test is unanchored, so 'allowed' matches inside 'disallowed' and inside 'not allowed'. I verified that the exact opposite of the correct answer scores: 'No, it is not allowed.' and 'It is disallowed.' both graded CORRECT, as did any reply containing the word. A binary item that scores both of its two possible answers measures nothing, which is the same defect the instruction describes for design_doc-02-q1, arrived at from the other direction. The fix requires the consequence alongside the decision: each key pairs the affirmative verb with the over-provisioning cost, in four words needing 4/4, so the decision word alone cannot carry it. 'over provisioned' and 'overprovisioned' get separate strings because the matcher tokenises on whitespace. Verified: four correct renderings pass, and the two negations, an API-server-rejects answer, a stem echo, NOT STATED and the bare word 'Allowed.' all fail. Reporting it rather than leaving it because the rest of this pass certifies the rfc bundle's keys, and certifying around a known inverted key would be worse than the rigidity it looks like."
+  }
+ ],
+ "unrepaired": []
+}

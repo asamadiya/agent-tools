@@ -43,23 +43,60 @@ def numbers_in(s: str) -> set[str]:
     return {n.rstrip(".").replace(",", "") for n in re.findall(r"\d[\d,]*(?:\.\d+)?", s)}
 
 
-def graded_correct(reply: str, answer: str, accept: list[str]) -> tuple[bool, str]:
+def graded_correct(reply: str, answer: str, accept: list[str]) -> tuple[bool | None, str]:
+    """Returns True, False, or None for "a human or a different-family model has to look".
+
+    No purely lexical grader is both precise and complete. "Little's law ties it to concurrency of
+    busy threads" is a correct answer to a key phrased "the same fraction of busy threads is
+    occupied", and it shares half the content words. Lowering the threshold until that case passes
+    is fitting the instrument to one hand-written example, and it admits replies that share words
+    with the key while saying something else.
+
+    So the middle band is not scored. It is routed to adjudication, and the count of adjudicated
+    items is reported beside the accuracy, because a metric that silently marks correct paraphrases
+    wrong reads as noise in the conditions that paraphrase most.
+    """
     r = normalise(reply)
+    best = 0.0
     for candidate in [answer, *accept]:
         c = normalise(candidate)
         if not c:
             continue
         if c in r:
             return True, f"substring:{candidate[:40]}"
-        # A numeric answer is correct when its numbers are present, even if the wording differs.
         cn = numbers_in(c)
-        if cn and cn <= numbers_in(r):
-            return True, f"numeric:{sorted(cn)}"
-        # Otherwise require most content words of a short key to be present.
+        numbers_present = bool(cn) and cn <= numbers_in(r)
+        distinctive = any(len(n) > 1 or "." in n for n in cn)
         words = [w for w in c.split() if len(w) > 3]
-        if words and sum(1 for w in words if w in r) / len(words) >= 0.8:
+        lexical = sum(1 for w in words if w in r) / len(words) if words else 0.0
+        best = max(best, lexical)
+        if numbers_present and distinctive:
+            return True, f"numeric:{sorted(cn)}"
+        if numbers_present and lexical >= 0.5:
+            return True, f"numeric+lexical:{sorted(cn)} {lexical:.2f}"
+        if lexical >= 0.8:
             return True, f"lexical:{candidate[:40]}"
-    return False, "no match"
+    if 0.4 <= best < 0.8:
+        return None, f"adjudicate:lexical {best:.2f}"
+    return False, f"no match:lexical {best:.2f}"
+
+
+def adjudicate(question: str, expected: str, accept: list[str], reply: str) -> bool:
+    """Semantic equivalence, judged by a different family from the writer."""
+    prompt = (
+        "Does the REPLY convey the same fact as the EXPECTED answer? Wording may differ entirely; "
+        "what matters is whether the same quantity, mechanism, or decision is stated. Answer with "
+        "exactly one word: YES or NO.\n\n"
+        f"QUESTION: {question}\nEXPECTED: {expected}\n"
+        f"ALSO ACCEPTABLE: {'; '.join(accept[:6])}\nREPLY: {reply}\n")
+    try:
+        proc = subprocess.run(
+            ["copilot", "--model", READER_MODEL, "--reasoning-effort", "low",
+             "--session-id", str(uuid.uuid4()), "--allow-all-tools", "--silent", "-p", prompt],
+            capture_output=True, text=True, timeout=300)
+        return "YES" in (proc.stdout or "").upper()[:200]
+    except subprocess.TimeoutExpired:
+        return False
 
 
 def ask_reader(write_up: str, questions: list[dict]) -> list[str]:
@@ -118,14 +155,20 @@ def main() -> None:
             replies = ask_reader(path.read_text(encoding="utf-8", errors="replace"), qs)
         except subprocess.TimeoutExpired:
             return {"condition": condition, "brief_id": bid, "error": "reader timeout", "correct": 0, "n": len(qs)}
-        row = {"condition": condition, "brief_id": bid, "n": len(qs), "correct": 0, "items": []}
+        row = {"condition": condition, "brief_id": bid, "n": len(qs), "correct": 0,
+               "adjudicated": 0, "items": []}
         for q, reply in zip(qs, replies):
             ok, how = graded_correct(reply, q["answer"], q.get("accept", []))
-            row["correct"] += ok
-            row["items"].append({"id": q["id"], "reply": reply, "correct": ok, "how": how})
+            if ok is None:
+                ok = adjudicate(q["q"], q["answer"], q.get("accept", []), reply)
+                how = f"{how} -> {'YES' if ok else 'NO'}"
+                row["adjudicated"] += 1
+            row["correct"] += bool(ok)
+            row["items"].append({"id": q["id"], "reply": reply, "correct": bool(ok), "how": how})
             if not ok:
                 unmatched.append({"condition": condition, "id": q["id"], "q": q["q"],
-                                  "expected": q["answer"], "accept": q.get("accept", []), "reply": reply})
+                                  "expected": q["answer"], "accept": q.get("accept", []),
+                                  "reply": reply, "how": how})
         return row
 
     with ThreadPoolExecutor(max_workers=args.workers) as pool:
@@ -153,6 +196,7 @@ def main() -> None:
             "documents": len(rows), "items": total, "correct": correct,
             "accuracy_pct": round(100 * correct / total, 2) if total else 0.0,
             "wilson95_pct": ci,
+            "adjudicated": sum(r.get("adjudicated", 0) for r in rows),
             "reader_errors": sum(1 for r in rows if r.get("error")),
         }
 

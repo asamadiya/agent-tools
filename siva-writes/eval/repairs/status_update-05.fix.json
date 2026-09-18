@@ -1,0 +1,10 @@
+{
+ "brief_id": "status_update-05",
+ "repairs": [],
+ "unrepaired": [
+  {
+   "target": "status_update-05-q3",
+   "why": "Out of scope for this pass and not repair-induced. accept[3] reduces to the two-token lexical key ['gpu-hours/day','against'], so 'GPU-hours/day went up against the baseline.' scores CORRECT with no numbers, on a question that asks for the cost rise and the latency change (4,100 vs 3,130 GPU-hours/day, p99 57 ms). Measured. Same remedy as status_update-01-q2: numeric-only or long keys, never two generic words."
+  }
+ ]
+}

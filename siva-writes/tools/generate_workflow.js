@@ -30,9 +30,13 @@ const results = await parallel(jobs.map((job) => () => {
   const b = job.brief
 
   const exemplarBlock = c.exemplars && b.exemplars.length
-    ? `\n\n=== EXEMPLARS ===\nTwo documents of this type, written by expert engineers. They outrank
-any rule you have been given: a rule is a compression of what these do, and the compression loses.
-Match how they carry a claim, not their subject matter.\n\n${b.exemplars.map((e, i) => `--- EXEMPLAR ${i + 1}: ${e.file} ---\n${e.text}`).join('\n\n')}\n=== END EXEMPLARS ===`
+    ? `\n\nBEFORE WRITING, read these two documents in full:
+${b.exemplars.map((f) => `  ${ROOT}/skill/references/exemplars/${f}`).join('\n')}
+
+They are ${b.genre.replace('_', ' ')} documents by expert engineers, and they outrank any rule you
+have been given: a rule is a compression of what these do, and the compression loses. Match how they
+carry a claim - where the claim sits in a paragraph, how a number arrives, when they hedge and when
+they do not. Do not match their subject matter.`
     : ''
 
   const stageBlock = c.stages

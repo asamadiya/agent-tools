@@ -1,5 +1,6 @@
 {
-  "frozen_note": "Built before any Phase 3 skill tuning, by agents that never read the skill. Any change to these files after this point invalidates comparison with prior rounds.",
+  "frozen": true,
+  "note": "Built by agents that never read the skill, then rechecked, repaired and verified. Any change to prompts.jsonl or questions.jsonl after this point invalidates comparison with results produced against these hashes.",
   "n_briefs": 40,
   "n_questions": 200,
   "genres": {
@@ -9,7 +10,6 @@
     "rfc": 8,
     "status_update": 8
   },
-  "n_with_human": 32,
   "human_by_genre": {
     "design_doc": 8,
     "perf_analysis": 8,
@@ -17,86 +17,14 @@
     "rfc": 8,
     "status_update": 0
   },
-  "demoted_from_human": [],
-  "questions_flagged_leaky": [
-    {
-      "brief_id": "status_update-08",
-      "n": 2,
-      "q": "Of the endpoints still open, how many sit in services with no registered owner, and how many are in systems already declared end-of-life?",
-      "answer": "61 have no registered owner; 12 are in end-of-life systems",
-      "leaked": [
-        "registered",
-        "owner",
-        "systems"
-      ]
-    },
-    {
-      "brief_id": "design_doc-02",
-      "n": 3,
-      "q": "For the fitted recovery-time example with median 30 minutes and a p99 of 600 minutes, what MTTR and what customer-experienced mean result?",
-      "answer": "MTTR just over 1 hour; customer-experienced mean near 6 hours",
-      "leaked": [
-        "customer",
-        "experienced"
-      ]
-    },
-    {
-      "brief_id": "design_doc-04",
-      "n": 1,
-      "q": "At approximately what rate does packing multiple workloads onto one machine reduce the peak-to-average load ratio, and which earlier paper made the same argument?",
-      "answer": "Approximately sqrt(number of loads); the Firecracker paper made the same argument",
-      "leaked": [
-        "approximately",
-        "loads",
-        "paper",
-        "argument"
-      ]
-    },
-    {
-      "brief_id": "rfc-01",
-      "n": 4,
-      "q": "Which CPU manager and memory manager policy is the only one this proposal supports?",
-      "answer": "The 'None' policy",
-      "leaked": [
-        "policy"
-      ]
-    },
-    {
-      "brief_id": "rfc-05",
-      "n": 2,
-      "q": "What proportion, and therefore what swap limit, is assigned to a container whose memory requests equal its memory limits?",
-      "answer": "Its proportion is defined as 0, so its swap limit is 0",
-      "leaked": [
-        "proportion",
-        "limit"
-      ]
-    },
-    {
-      "brief_id": "rfc-05",
-      "n": 4,
-      "q": "In the worked example, what swap limits do containers A and B end up with?",
-      "answer": "Container A gets 19 GB and container B gets 9.5 GB",
-      "leaked": [
-        "container",
-        "container"
-      ]
-    },
-    {
-      "brief_id": "perf_analysis-01",
-      "n": 2,
-      "q": "What percentage of CPU did os::javaTimeMillis() account for in total on the Ubuntu flame graph, and what single block in the middle of the graph first drew attention?",
-      "answer": "32.1% total, with a 30.14% block in the middle of the graph",
-      "leaked": [
-        "total",
-        "block",
-        "middle",
-        "graph"
-      ]
-    }
-  ],
   "sha256": {
-    "prompts.jsonl": "0b4aea809f739ab3283db236e5c923b907a601ba6986081b44a5179a8b43102b",
-    "questions.jsonl": "969c3880ed9f943854dd0f6ce25ea2ed686179020f401b97d5d295ccc08c930a",
+    "prompts.jsonl": "68063c2be0f8ab78a69785045e2dafda927fc5bab4a1991990cf1948131e45b1",
+    "questions.jsonl": "fe72dd750a77376b7c615b7ca19851dc22d7c97cfaf02e6c956c04706457b681",
     "judge-prompt.md": "490339a593587aab017aa776b2e6699f1b45cf0e7d275c76cc8928af4f1b1dc3"
-  }
+  },
+  "repair_history": [
+    "reports/eval-critic.md",
+    "reports/eval-repair-verify.md",
+    "reports/eval-repairs-applied.json"
+  ]
 }

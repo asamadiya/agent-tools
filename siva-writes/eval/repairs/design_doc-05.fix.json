@@ -1,0 +1,21 @@
+{
+  "brief_id": "design_doc-05",
+  "repairs": [
+    {
+      "target": "design_doc-05-q1",
+      "defect_class": "key_rejects_brief_wording",
+      "after": "{\"q\": \"What client-to-client effect is named as a major driver of tail latency at scale, and in which kind of database does it show up?\", \"answer\": \"Performance cross talk between clients, in applications backed by a pessimistic relational database.\", \"accept\": [\"performance cross talk on a pessimistic relational database\", \"cross talk between client and client on a lock-based relational engine\", \"client-to-client performance cross talk, in applications sitting on a pessimistic relational engine\"]}",
+      "rationale": "Two independent breakages, both closed. First, a cross-repair collision inside the same batch: the dd-05 brief rewrite changed 'pessimistic relational databases' to 'a pessimistic relational engine', singular, while every accept string demanded 'databases' or 'engines'. The lexical branch is a substring test in one direction only - key word in reply - so the plural key 'databases' cannot match the singular 'database', and a candidate echoing the rewritten brief's own vocabulary scored 6/8 = 0.75 and failed. Every key token is now a singular stem ('database', 'engine', 'client'), which matches both numbers, and the three strings between them cover the 'pessimistic' and the 'lock-based' renderings and the 'engine' and 'database' nouns. Second, the canonical contained the word 'brief' ('the brief locates it in...'), a token no candidate reply will ever contain, padding the key with a guaranteed miss; the canonical no longer mentions any document and neither does the stem, which previously said 'does the brief name'. The reader is given the write-up and the questions and never the brief, so a stem that refers to the brief is asking about something the reader cannot see. Verified against a replica of tools/comprehension.py. Passing: the rewritten brief's own sentence verbatim ('Client-to-client performance cross talk, a large driver of tail latency whenever an application sits on a pessimistic relational engine.'), the old plural rendering, 'cross talk between clients on lock-based relational engines', an 'apps running on' paraphrase, a hyphenated terse form, and a reordered version. Failing: 'Performance cross talk.' (the name with no scope), 'Clients block each other in pessimistic databases.' (the OCC textbook answer that was the original cold defect), 'Lock contention causes tail latency.', 'Relational databases have tail latency problems.', 'Garbage collection pauses while holding a write lock.' (q2's old content) and 'NOT STATED'. Both halves - the named effect and its stated scope - are still required, so the repair did not widen the key into a free pass while making it matchable."
+    }
+  ],
+  "unrepaired": [
+    {
+      "target": "design_doc-05 (brief prompt) 'engine' singular vs the rest of the key set",
+      "why": "Fixed on the key side rather than by re-editing the brief. The brief rewrite was verified clean on its own terms - 0.00% lifted at n>=5, longest surviving span 4 words, all five graded facts present - so reverting its wording to make an accept list match would trade a measured improvement for a grading convenience. Keys should tolerate the brief's vocabulary, not dictate it. I checked the other four dd-05 items for the same singular/plural collision against the rewritten prompt and found none: q2 grades figure 6, q3 lock contention and metastability, q4 the four areas of advance (whose accept list already includes the rewritten brief's own phrasing), q5 misbehaving clients and client code."
+    },
+    {
+      "target": "design_doc-05-q2 numeric key is {6} alone",
+      "why": "Noted by the verify pass as a weakness of a repair it discharged, not as one of my targets. It is the same class of hole I repaired at dd-02-q1: 'figure 6' normalises to numbers_in={'6'}, so any reply containing a 6 scores. The fix would be the same - strip digits from every accept string so the numeric branch is skipped, and require 'figure' plus SELECT/UPDATE plus the multi-region scope lexically. Not done because it is not on my list and an unrequested key change is indistinguishable from a real one at the next round. Recording it so the next round can take it deliberately."
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+ "brief_id": "rfc-07",
+ "repairs": [],
+ "unrepaired": [
+  {
+   "target": "rfc-07 facts[contract_to_preserve]",
+   "why": "This is the rfc analogue of the dd-03 coverage drop the verify pass flagged, and after checking it I am deliberately leaving it ungraded rather than restoring it. The old q1 asked which pod condition the solution must not break and who consumes it, and its accept[0] was the cold answer verbatim: {type:PodScheduled, reason:Unschedulable} is published API surface and Cluster Autoscaler is its published consumer, so the item scored without the write-up transmitting anything. Restoring it anywhere in rfc-07 reinstates exactly that. This is not the dd-03 situation. There, two retargets moved away from periodic hash perturbation, a mechanism the source states and nothing else grades, so the coverage loss was pure loss. Here the vacated fact carries no comprehension signal in the first place. The adjacent fact that does carry signal is goal_condition_handling -- that a scheduling-paused pod must not be marked Unschedulable by updating its PodScheduled condition, which is this KEP's own design commitment rather than existing API surface -- but taking it would mean displacing one of the five items the verify pass classified discharged, and adding a sixth item to rfc-07 alone would make this brief weigh more than its siblings in the Metric 2 accuracy pool. Neither price is worth paying for a fact the brief already covers obliquely through q1's consequences."
+  },
+  {
+   "target": "rfc-07 facts[goal_extension_point]",
+   "why": "A second, unflagged drop from the same pass: the old q2 graded the new Enqueue/PreEnqueue extension point and the retarget moved to goal_default_plugin. Same judgement. The repair's reason holds -- PreEnqueue is documented scheduler-framework surface, and 'enqueue' matched inside 'preenqueue' by substring, so the old item scored cold. The mechanism is still graded once in the corpus, at rfc-08-q4, where it is bound to this KEP's specific partial-gating decision rather than asked for by name."
+  }
+ ]
+}

@@ -35,6 +35,10 @@ def parse_target(target: str):
     m = re.match(r"^([a-z_]+-\d+)\s*facts\[(.+?)\]", t)
     if m:
         return m.group(1), "facts", m.group(2)
+    # Agents wrote the same target both ways; accepting only one silently drops the other.
+    m = re.match(r"^([a-z_]+-\d+)\.facts\.([A-Za-z0-9_]+)", t)
+    if m:
+        return m.group(1), "facts", m.group(2)
     m = re.match(r"^([a-z_]+-\d+)-q(\d+)$", t)
     if m:
         return m.group(1), "question", int(m.group(2))

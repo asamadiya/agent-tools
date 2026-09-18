@@ -1,0 +1,18 @@
+{
+  "brief_id": "perf_analysis-01",
+  "repairs": [
+    {
+      "target": "perf_analysis-01-q1",
+      "defect_class": "other",
+      "after": "{\"q\": \"What came back from asking colleagues and searching the internet about this problem, and which search terms were tried?\", \"answer\": \"Nothing useful: none of the colleagues asked had hit the issue, and searches on os::javaTimeMillis, clocksource, tracesys(), Ubuntu, EC2 and Xen turned up nothing in 2014\", \"accept\": [\"nothing - colleagues had not hit it and searches on os::javaTimeMillis, clocksource, tracesys, Ubuntu, EC2, Xen came up empty\", \"no prior art in 2014; terms tried were os::javaTimeMillis, clocksource, tracesys(), Ubuntu, EC2, Xen\", \"colleagues had not seen it and the internet had nothing for those terms (os::javaTimeMillis, clocksource, tracesys, Ubuntu, EC2, Xen)\", \"nothing found; searched os::javaTimeMillis, clocksource, tracesys, Ubuntu and EC2/Xen\", \"neither colleagues nor web searches had anything on it\"]}",
+      "rationale": "Old stem graded the over-30% write-latency/CPU rise, which sits in the source paragraph before the human span (span opens at 'The Cassandra systems were EC2 virtual machine (Xen) instances'), so the H condition could not answer it. Retargeted onto the prior-art step, which is inside the span (source: 'Others I asked hadn't hit this issue, and the Internet at the time had nothing using the search terms...') and is carried by the brief's no_prior_art fact and prompt. The search-term list is specific to this investigation and not recoverable without reading the write-up. Accept strings allow partial term lists and the bare 'nothing found' result so a correct answer is not failed on enumeration order."
+    },
+    {
+      "target": "perf_analysis-01-q3",
+      "defect_class": "world_knowledge",
+      "after": "{\"q\": \"Studying the flame graph left two competing explanations for the CPU time in the syscall path. What were the two, and which one did the frame widths point to?\", \"answer\": \"Either syscall tracing had been turned on in Ubuntu (auditing or apparmor), or fetching the time itself had become slower through a library or kernel/clocksource change; the frame widths made the syscall-tracing theory the more likely one, though not conclusively\", \"accept\": [\"(A) syscall tracing enabled on Ubuntu (auditing/apparmor), (B) time fetching itself slower via a library or kernel/clocksource change; frame widths favoured A\", \"syscall tracing being on versus the time call itself being slower; the widths pointed at tracing\", \"tracing enabled in Ubuntu (audit or apparmor) or a slower clocksource/library; A looked more likely from the frame widths\", \"theory A tracing, theory B slower time fetch; A was favoured but not certain\"]}",
+      "rationale": "Old stem mapped 'rogue service' and 'short-lived processes' one-to-one onto top(1) and execsnoop(8), the canonical answers, so it scored full credit with no reading. Retargeted onto the two hypotheses and the stated reason for preferring one - material that exists only in this write-up (brief fact two_theories; source section 3, inside the human span). Accepts enumerate short forms and drop the parenthetical tool names so a correct answer is not failed on formatting."
+    }
+  ],
+  "unrepaired": []
+}
