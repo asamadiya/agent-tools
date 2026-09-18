@@ -1,0 +1,145 @@
+{
+ "repairs": [
+  {
+   "target": "rfc-01-q1",
+   "defect_class": "world_knowledge",
+   "before": "Which part of the Pod API is extended to report the resources that have actually been applied to a pod and its containers? (answer: PodStatus)",
+   "after": "{\"id\": \"rfc-01-q1\", \"brief_id\": \"rfc-01\", \"q\": \"Which kinds of workloads does the proposal say bear the real cost of today's recreate-to-resize behaviour, and which kind mostly tolerates it?\", \"answer\": \"Low-replica services, stateful workloads and batch jobs pay in lower availability or higher cost; stateless workloads are generally designed to withstand the disruption\", \"accept\": [\"stateful, batch and low-replica workloads suffer; stateless ones tolerate recreation\", \"low replica count services, stateful workloads, batch jobs; stateless workloads mostly cope\", \"stateless survives recreation, but stateful/batch/low-replica pay in availability or cost\", \"sensitive ones are low-replica, stateful and batch; many stateless workloads withstand it\"]}",
+   "rationale": "The old question was answerable two ways with nothing read (spec=desired/status=observed is a published API convention, and status.containerStatuses[].resources is public surface). Replaced with the brief's who_is_hurt fact, which names a specific three-way population split (low-replica services, stateful, batch) against stateless -- a distinction stated in this brief's material, not derivable from the Kubernetes API convention. Verified against corpus/text/kep-1287-in-place-update-pod-resources.txt lines 173-177. The core_api_idea (PodStatus) fact is now uncovered by design; it was the free one."
+  },
+  {
+   "target": "rfc-01-q3",
+   "defect_class": "self_answering",
+   "before": "Why does the existing CRI UpdateContainerResources call fail to serve Windows and other non-Linux runtimes?",
+   "after": "{\"id\": \"rfc-01-q3\", \"brief_id\": \"rfc-01\", \"q\": \"The proposal wants the expected behaviour of a container runtime handling a resource update written down. How prescriptive does it intend that definition to be?\", \"answer\": \"Only a high-level guide -- defining a detailed or specific way to implement these functions is an explicit non-goal, and implementation specifics are left to each runtime within the bounds of the expected behaviour\", \"accept\": [\"a high level guide only; implementation details left to each runtime\", \"high-level guidance, not a detailed implementation spec\", \"it is a non-goal to specify how to implement it; runtimes decide the specifics\", \"broad expected behaviour, with the how left to the runtime\"]}",
+   "rationale": "The old question stated the failure in its own premise ('fail to serve Windows and other non-Linux runtimes') and the accept list restated the premise as a because-clause. Replaced with the brief's runtime_spec_depth fact -- the depth-of-specification decision and its consequence. This is a decision the KEP takes, not a property of CRI a model can recall: nothing in the question implies whether the answer is 'a detailed conformance spec' or 'a high-level guide'. Verified at kep-1287 lines 227-230."
+  },
+  {
+   "target": "rfc-01-q4",
+   "defect_class": "world_knowledge",
+   "before": "Which CPU manager and memory manager policy is the only one this proposal supports? (answer: None)",
+   "after": "{\"id\": \"rfc-01-q4\", \"brief_id\": \"rfc-01\", \"q\": \"Name the CRI gap this proposal fixes that concerns what the kubelet can find out from the runtime.\", \"answer\": \"There is no CRI mechanism letting the kubelet query and discover the CPU and memory limits a runtime currently has configured on a container, so the proposal adds one\", \"accept\": [\"kubelet cannot query the runtime for the CPU and memory limits currently configured on a container\", \"no CRI call to read back the applied CPU/memory limits from the runtime\", \"no way to discover a container's current resource configuration from the runtime; CRI gains one\", \"missing read-back of currently configured CPU and memory limits\"]}",
+   "rationale": "The old question was a two-way guess on a public namespace (cpu manager none|static, memory manager None|Static), so priors alone win it. Replaced with the brief's cri_gap_readback fact, which requires reading the brief's enumeration of the three CRI gaps and picking out the one about discovery. The answer names a specific missing capability (read back CPU and memory limits currently configured) rather than selecting from a two-item public set. Verified at kep-1287 lines 188-189 and 204-208."
+  },
+  {
+   "target": "rfc-02-q2",
+   "defect_class": "world_knowledge",
+   "before": "When the systemd cgroup driver is used, how is a container's CPU quota adjusted relative to what the kubelet asked for? (answer: rounded up to the nearest 10ms)",
+   "after": "{\"id\": \"rfc-02-q2\", \"brief_id\": \"rfc-02\", \"q\": \"The kubelet cannot decide whether a resize is needed by comparing desired resources against the container's actual configuration. What three causes of legitimate divergence does the design give?\", \"answer\": \"Linux kernel enforced minimums for CPU shares and quota, the systemd cgroup driver rounding CPU quota up to the nearest 10ms, and NRI plugins changing the resource configuration\", \"accept\": [\"kernel minimums on CPU shares/quota, systemd rounding CPU quota up to 10ms, NRI plugins rewriting the config\", \"Linux kernel minimums; systemd cgroup driver quota rounding; NRI plugin changes\", \"kernel-enforced minimums, systemd cgroup driver rounding, NRI plugins\", \"kernel floors for shares and quota, systemd quota rounding, and NRI plugins altering resources\"]}",
+   "rationale": "The bare 10ms rounding is a systemd property a model recalls without reading. Rewritten so the unit of credit is the three-item enumeration this brief gives for why a level-triggered comparison is unsound; the 10ms survives only as one member of a list whose other members (kernel-enforced minimums on shares and quota, NRI plugins) are this document's specific claim -- no accept string scores on the number alone. Verified at kep-1287 lines 842-849. No overlap with q1, which asks what 'actuated' means rather than why the kubelet needs it."
+  },
+  {
+   "target": "rfc-02-q4",
+   "defect_class": "world_knowledge",
+   "before": "What happens when a memory limit is lowered below a container's current usage, on cgroups v1 versus cgroups v2?",
+   "after": "{\"id\": \"rfc-02-q4\", \"brief_id\": \"rfc-02\", \"q\": \"A resize request that the runtime does not accept -- how often does the kubelet retry it, and when does it stop?\", \"answer\": \"It retries on every subsequent pod sync, until the resize succeeds or the container is terminated\", \"accept\": [\"retried on every following pod sync until success or container termination\", \"every pod sync, until it succeeds or the container terminates\", \"kubelet keeps retrying each sync; stops on success or when the container is gone\", \"on each subsequent sync, indefinitely, until success or the container goes away\"]}",
+   "rationale": "Documented kernel behaviour (v1 rejects the write, v2 OOM-kills) is recallable cold, as the critic's own cold answer shows. Replaced with the brief's retry_policy fact: the retry cadence (every subsequent pod sync) and both termination conditions are kubelet design choices stated only in this material -- a model has no prior telling it whether the retry is backed off, bounded, or per-sync. Verified at kep-1287 lines 862-863. No sibling question covers retry."
+  },
+  {
+   "target": "rfc-03-q1",
+   "defect_class": "world_knowledge",
+   "before": "Which containerd release first shipped support for the CRI changes this feature depends on? (answer: containerd 1.6.9)",
+   "after": "{\"id\": \"rfc-03-q1\", \"brief_id\": \"rfc-03\", \"q\": \"An older client that knows nothing about the ResizePolicy fields sends a pod update. What does it put in those fields, and what does the API server do about it?\", \"answer\": \"It sets them to nil, and the API server mutates the update by copying the non-nil values from the old pod into the current one\", \"accept\": [\"nil fields; API server copies non-nil values forward from the old pod\", \"sets ResizePolicy to nil, and the API server carries the old pod's non-nil values over\", \"they arrive nil and are back-filled from the existing pod by the API server\", \"nil on the wire; existing non-nil values are preserved by API server mutation\"]}",
+   "rationale": "A version literal from a heavily indexed public document is pure recall. Replaced with the brief's old_client_handling fact, which requires two specific behaviours to be read: the client writes nil, and the API server repairs the update by copying non-nil values forward from the old pod. Neither half is guessable -- the alternative designs (reject the update, or accept the nil as a clear) are equally plausible priors. Verified at kep-1287 lines 1438-1440. Distinct from q2 (proxy signal), q3 (pre-1.31 restart), q4 (admission with no running containers) and q5 (empty {})."
+  },
+  {
+   "target": "rfc-04-q2",
+   "defect_class": "world_knowledge",
+   "before": "How much swap is available to Kubernetes workloads by default under the new kubelet configuration knob? (answer: Zero)",
+   "after": "{\"id\": \"rfc-04-q2\", \"brief_id\": \"rfc-04\", \"q\": \"Which two groups of users does the KEP name as wanting swap, and what does each want out of it?\", \"answer\": \"Node administrators, who want swap for node-level performance tuning, stability and reduced noisy-neighbour problems, and application developers whose applications benefit from using swap memory; the two groups may overlap\", \"accept\": [\"node admins (node-level tuning, stability, noisy neighbours) and application developers whose apps benefit from swap\", \"administrators tuning nodes and developers writing applications that use swap; they can overlap\", \"node administrators for performance/stability, app developers for applications that want swap\", \"two overlapping groups: node operators tuning the node, and app authors whose programs want swap\"]}",
+   "rationale": "Both recall (NoSwap default) and the obvious safe-default guess land on zero, so the old question measured nothing. Replaced with the brief's two_user_types fact: the two constituencies, each one's stated reason, and the noted overlap. The reasons (node-level performance tuning, stability, noisy-neighbour reduction) are this document's framing, and the accept list requires both groups with their motivations rather than the bare pair of labels. Verified at kep-2400 lines 152-156."
+  },
+  {
+   "target": "rfc-04-q3",
+   "defect_class": "world_knowledge",
+   "before": "Which cgroups version does this swap support target, and what is the status of the other one?",
+   "after": "{\"id\": \"rfc-04-q3\", \"brief_id\": \"rfc-04\", \"q\": \"Beyond cgroups v1 and non-Linux operating systems, which memory technologies does the KEP place out of scope?\", \"answer\": \"zram, zswap, and other memory types such as SGX EPC\", \"accept\": [\"zram, zswap and other memory types like SGX EPC\", \"zram and zswap, plus memory types such as SGX EPC\", \"zram/zswap/SGX EPC\", \"zram, zswap, SGX EPC and similar memory types\"]}",
+   "rationale": "NodeSwap being cgroup-v2-only is documented on kubernetes.io, so the old question scored cold. Replaced with the brief's non_goal_memory_types fact. The specific exclusion list -- and in particular SGX EPC sitting alongside zram and zswap -- is this KEP's own enumeration; no general prior about swap support produces it. Verified at kep-2400 line 200. Distinct from q5, which now takes the accounting/overcommit non-goal."
+  },
+  {
+   "target": "rfc-04-q5",
+   "defect_class": "world_knowledge",
+   "before": "Why is setting swappiness listed as a non-goal?",
+   "after": "{\"id\": \"rfc-04-q5\", \"brief_id\": \"rfc-04\", \"q\": \"Per-workload swap allocation with accounting is deferred to a follow-up KEP. What does that deferral make swap, within the scope of this one?\", \"answer\": \"An overcommitted resource -- nothing accounts for swap per workload here, and there is no API for controlling how limits are computed\", \"accept\": [\"an overcommitted resource\", \"swap is overcommitted in this KEP\", \"overcommitted, since nothing accounts for it per workload\", \"it becomes an overcommitted resource for the scope of this proposal\"]}",
+   "rationale": "vm.swappiness is a global sysctl, so 'it is already settable system-wide' is free; the question's own shape left no other answer. Replaced with the brief's non_goal_accounting fact, whose payload is the consequence the KEP draws from its own deferral -- that swap is an overcommitted resource here. That consequence is a stated conclusion, not a property of Linux: a model with no access to this material has no basis to say whether swap is overcommitted, reserved, or simply unavailable. Verified at kep-2400 lines 193-198."
+  },
+  {
+   "target": "rfc-05-q1",
+   "defect_class": "self_answering",
+   "before": "How is ContainerMemoryProportion calculated? (accept included the loose 'request over node memory')",
+   "after": "{\"id\": \"rfc-05-q1\", \"brief_id\": \"rfc-05\", \"q\": \"ContainerMemoryProportion is a ratio of one container-level quantity to one node-level quantity. Name both precisely.\", \"answer\": \"The container's memory request, divided by the node's total physical memory (not its allocatable memory)\", \"accept\": [\"container memory request / node total physical memory\", \"the memory request of the container over the node's total physical memory\", \"request (not limit) divided by the node's physical memory total\", \"memory request divided by total physical memory of the node\"]}",
+   "rationale": "The variable name decomposes to the formula, so the old accept[2] 'request over node memory' was free. The two discriminators that require reading are request-not-limit and total-physical-not-allocatable -- allocatable is the value every other kubelet calculation uses, so a cold model that guesses from the name lands on the wrong denominator. The question now demands both quantities precisely and the accept list no longer sanctions the vague form. Verified at kep-2400 line 292. Question shape deliberately avoids offering the alternatives, which would turn it into a four-way multiple choice."
+  },
+  {
+   "target": "rfc-05-q4",
+   "defect_class": "other",
+   "before": "accept: [\"19G and 9.5G\", \"A: 19 GB, B: 9.5 GB\", \"19 GiB / 9.5 GiB\", \"0.5 x 38G = 19G and 0.25 x 38G = 9.5G\"]",
+   "after": "{\"id\": \"rfc-05-q4\", \"brief_id\": \"rfc-05\", \"q\": \"In the worked example, what swap limits do containers A and B end up with?\", \"answer\": \"Container A gets 19 GB and container B gets 9.5 GB\", \"accept\": [\"19G and 9.5G\", \"A: 19 GB, B: 9.5 GB\", \"19 GB and 9.5 GB\", \"0.5 x 38G = 19G and 0.25 x 38G = 9.5G\"]}",
+   "rationale": "Grading-key unit slip only; the arithmetic is right and untouched. 19 GiB = 19 * 1024^3 / 1e9 = 20.401 GB, which is 7.37% larger than the 19 GB the brief derives, so accept[2] '19 GiB / 9.5 GiB' sanctioned a numerically different answer as correct. The brief states 40 GB memory, 40 GB swap, 2 GB system-reserved, and the source states `0.5 * 38G` = `19G` (kep-2400 lines 305-312) -- all GB. Replaced the GiB variant with a plain-GB variant; question and canonical answer unchanged."
+  },
+  {
+   "target": "rfc-06-q2",
+   "defect_class": "self_answering",
+   "before": "Encrypted swap is named as the mitigation for the security risk, so why doesn't the KEP implement it?",
+   "after": "{\"id\": \"rfc-06-q2\", \"brief_id\": \"rfc-06\", \"q\": \"Which volumes does Kubernetes guarantee will never have their memory land on disk, and what does the kubelet do to keep that guarantee once swap is permitted on the node?\", \"answer\": \"Secrets and memory-backed emptyDirs, which the kubelet mounts as tmpfs on the host; when --fail-swap-on=false it uses the tmpfs noswap option so those pages cannot swap out\", \"accept\": [\"Secrets and memory-backed emptyDirs; mounted as tmpfs with the noswap option when --fail-swap-on=false\", \"secret volumes and memory-backed emptyDir; kubelet uses tmpfs noswap to keep their pages off disk\", \"tmpfs-mounted volumes such as Secrets and memory-backed emptyDirs, protected with the tmpfs noswap mount option\", \"Secrets and memory-backed emptyDirs, mounted tmpfs and given noswap so they never reach disk\"]}",
+   "rationale": "The old question handed over the mitigation and asked why a kubelet KEP does not implement an OS-level thing -- scope is the only answer shape available, so it graded question-reading rather than comprehension. Replaced with the brief's memory_backed_guarantee and noswap_mitigation facts. The required answer pairs a named guarantee (Secrets, memory-backed emptyDirs) with the specific mechanism and its precondition (tmpfs mount, noswap option, gated on --fail-swap-on=false); the mechanism half cannot be produced from the question. Verified at kep-2400 lines 507-511. Distinct from q3 (when the detection is retired) and q4 (what happens on an old kernel)."
+  },
+  {
+   "target": "rfc-06-q3",
+   "defect_class": "world_knowledge",
+   "before": "What minimum Linux kernel version does the tmpfs noswap option require? (answer: kernel 6.4 or newer)",
+   "after": "{\"id\": \"rfc-06-q3\", \"brief_id\": \"rfc-06\", \"q\": \"The kubelet's detection of whether the tmpfs noswap option is available is described as temporary. What would let that logic be removed?\", \"answer\": \"Once the noswap option is very widely supported, the concern goes away and the detection logic can simply be dropped\", \"accept\": [\"when noswap support is widespread the detection can be dropped\", \"once the option is widely available everywhere, remove the probe\", \"wide kernel support makes the check unnecessary, so it goes away\", \"in the longer term, when support is universal, the logic is deleted\"]}",
+   "rationale": "Kernel-version trivia: the accept list was '6.4' in four spellings and a cold model scores full marks. Replaced with the brief's future_cleanup fact -- the KEP's stated intention that the probe is transitional and the condition that retires it. That intention exists only in this document; a model reasoning from the kernel version alone has no way to know whether the ladder is permanent. Verified at kep-2400 lines 520-521. Phrased self-contained so it does not depend on q4 having been asked, and it does not reveal q4's dummy-mount mechanism."
+  },
+  {
+   "target": "rfc-06-q5",
+   "defect_class": "world_knowledge",
+   "before": "Why was cgroup v1 support abandoned, and why was that judged acceptable?",
+   "after": "{\"id\": \"rfc-06-q5\", \"brief_id\": \"rfc-06\", \"q\": \"Cgroup v1 swap support started out as a goal of this feature. Who concluded it should be abandoned, on what grounds, and what makes the resulting cgroups-v2-only restriction tolerable?\", \"answer\": \"sig-node, having found that supporting swap on cgroup v1 would be very difficult; the restriction is tolerable because cgroup v1 is expected to be deprecated eventually, so it should not be a major inconvenience\", \"accept\": [\"sig-node found it very difficult; acceptable because cgroup v1 is to be deprecated\", \"sig-node decided v1 swap was too hard, and v1 is going away anyway\", \"abandoned by sig-node on difficulty grounds, offset by the planned deprecation of cgroup v1\", \"sig-node judged v1 swap impractical; the eventual deprecation of cgroup v1 blunts the cost\"]}",
+   "rationale": "Minor: the deprecation half is free ecosystem knowledge and the difficulty half was gradeable without the one source-specific token. The question now asks who concluded it, and every accept string names sig-node, so the free half can no longer carry an answer on its own. The history (it was an early goal, later dropped) is also now required by the question's framing. Verified at kep-2400 lines 502-503. Minimal edit -- fact kept, grading tightened to the discriminating token."
+  },
+  {
+   "target": "rfc-07-q1",
+   "defect_class": "world_knowledge",
+   "before": "Which existing pod condition must the solution avoid breaking, and who consumes it?",
+   "after": "{\"id\": \"rfc-07-q1\", \"brief_id\": \"rfc-07\", \"q\": \"What two consequences does the KEP attribute to the scheduler spending cycles retrying pods that have already been determined unschedulable?\", \"answer\": \"It delays the scheduling of other pods, and it lowers overall scheduling throughput\", \"accept\": [\"other pods are delayed and overall scheduling throughput drops\", \"delays scheduling of other pods; lowers scheduling throughput\", \"slower scheduling for everything else, and reduced throughput overall\", \"it holds up other pending pods and cuts total scheduling throughput\"]}",
+   "rationale": "Both halves of the old question were standard ecosystem knowledge -- PodScheduled/Unschedulable is public API surface and Cluster Autoscaler's pending-pod trigger predates this KEP -- so accept[0] was the cold answer verbatim. Replaced with the brief's cost_of_no_knob fact, and the accept list requires both named consequences rather than one, which also discharges the compound-item flaw the critic noted on this question's old accept[2]. Verified at kep-3521 lines 198-201. Distinct from q4 (hierarchical quota) and q5 (future work)."
+  },
+  {
+   "target": "rfc-07-q2",
+   "defect_class": "world_knowledge",
+   "before": "What new scheduler framework extension point does the proposal introduce, and what is it for?",
+   "after": "{\"id\": \"rfc-07-q2\", \"brief_id\": \"rfc-07\", \"q\": \"The goals include a piece of software shipped with the scheduler so the new API takes effect without anyone writing their own plugin. What is it, and what is it required to do?\", \"answer\": \"A default enqueue plugin, which must honour the semantics of the new scheduling-paused/ready API\", \"accept\": [\"a default enqueue plugin that honours the new API's semantics\", \"a built-in/default Enqueue plugin implementing the new API semantics\", \"default enqueue plugin; it enforces the semantics of the new field\", \"a default plugin at the enqueue point, honouring the new scheduling-gates semantics\"]}",
+   "rationale": "PreEnqueue is documented scheduler-framework surface on kubernetes.io, so the old accept[1] was reachable cold. Replaced with the brief's goal_default_plugin fact, which requires reading the goals list to the fourth item; a model that knows the extension point exists still has no prior telling it whether the KEP ships a default plugin or leaves gating entirely to third parties. The accept list carries both halves -- what it is and what it must do -- which also discharges the compound-item flaw the critic noted on the old accept[0]. Verified at kep-3521 line 220 and 442-444."
+  },
+  {
+   "target": "rfc-07-q3",
+   "defect_class": "self_answering",
+   "before": "What is the required handling of the PodScheduled condition for pods that are scheduling-paused?",
+   "after": "{\"id\": \"rfc-07-q3\", \"brief_id\": \"rfc-07\", \"q\": \"What two things does the proposal explicitly list as non-goals?\", \"answer\": \"Enforcing updates to pod conditions so they expose more context about scheduling-paused pods, and focusing on in-house use cases of the Enqueue extension point\", \"accept\": [\"richer pod conditions for paused pods, and in-house use cases of the Enqueue extension point\", \"not enforcing more context in pod conditions; not focusing on in-house Enqueue use cases\", \"exposing more context via pod conditions, and in-house uses of the new extension point\", \"enforcing extra pod-condition context for paused pods; concentrating on in-house Enqueue use-cases\"]}",
+   "rationale": "The old question named both the condition and the pod state, leaving one non-vacuous handling, and the old q1 in the same brief supplied its vocabulary and answer. Replaced with the brief's non_goals fact -- a two-item enumeration with no shared vocabulary with any sibling question and no shape the question itself implies. Verified at kep-3521 lines 227-228. The goal_condition_handling fact is now uncovered by design; it was the self-answering one."
+  },
+  {
+   "target": "rfc-08-q2",
+   "defect_class": "duplicate_fact",
+   "before": "After creation, what mutations to the scheduling gates list are permitted? (accept included 'removals allowed, additions rejected', which q1 already entails)",
+   "after": "{\"id\": \"rfc-08-q2\", \"brief_id\": \"rfc-08\", \"q\": \"After a pod exists, in what order may its scheduling gates be removed?\", \"answer\": \"In arbitrary order -- any gate can be removed at any point, independent of the order in which they were declared\", \"accept\": [\"in arbitrary order\", \"any order; there is no required sequence\", \"gates can be removed in whatever order, not just first-to-last\", \"arbitrary order, independent of how they were listed\"]}",
+   "rationale": "'New gates may not be added after creation' follows directly from q1's 'only at creation', so the old accept[2] graded q1's comprehension a second time. The question is narrowed to the one fact q2 genuinely adds -- arbitrary removal order -- and every accept string now requires it, so the entailed half can no longer score. Verified at kep-3521 lines 304-305. An answer that also volunteers 'additions disallowed' still matches on the order clause, so no correct answer is newly marked wrong."
+  },
+  {
+   "target": "rfc-08-q3",
+   "defect_class": "self_answering",
+   "before": "What happens if a client tries to create a pod that has both schedulingGates populated and spec.nodeName set?",
+   "after": "{\"id\": \"rfc-08-q3\", \"brief_id\": \"rfc-08\", \"q\": \"A client sets spec.nodeName and populates .spec.schedulingGates on the same pod at creation time. Which invariant does that break, and how does the API server respond?\", \"answer\": \"It breaks the invariant that a scheduled pod must always have empty schedulingGates; the API server returns a validation error\", \"accept\": [\"a scheduled pod must always have empty schedulingGates, so the API server returns a validation error\", \"violates the empty-gates-on-scheduled-pods rule; rejected with a validation error\", \"scheduled pods must carry no gates -- validation error\", \"the consistency rule that gates are empty once a pod is scheduled; the request fails validation\"]}",
+   "rationale": "'What happens when a client does something the API forbids' has one answer shape for any Kubernetes API server, and the old accept[1]/accept[2] scored on the rejection alone. The question now asks for the invariant, and every accept string requires it, so the discriminating content -- that a scheduled pod must always carry empty gates -- has to be produced rather than being optional colour on a free answer. Verified at kep-3521 lines 306-309."
+  },
+  {
+   "target": "rfc-08-q4",
+   "defect_class": "compound_item",
+   "before": "accept: [\"part c, the PreEnqueue extension point, remains enabled\", \"the PreEnqueue extension point stays on so developers can build their own gating plugin\", \"the framework-level extension point is not gated\"]",
+   "after": "{\"id\": \"rfc-08-q4\", \"brief_id\": \"rfc-08\", \"q\": \"When the feature is disabled, which of the three parts of the feature remains enabled, and what does that allow?\", \"answer\": \"The scheduler framework change -- the new PreEnqueue extension point -- stays on, letting a plugin developer build their own equivalents of the spec field and the SchedulingGates plugin\", \"accept\": [\"part c, the PreEnqueue extension point, stays enabled, so a plugin developer can build their own equivalents of the field and the SchedulingGates plugin\", \"the scheduler framework's PreEnqueue extension point is never gated off, letting developers implement their own gating field and plugin on top of it\", \"c remains on; a plugin author can reproduce a and b themselves using it\", \"the framework-level extension point is not gated, so equivalents of parts a and b can be built by a plugin developer\"]}",
+   "rationale": "The question asks two things and the old accept list dropped the second half, so a half answer scored full -- and the dropped half (a developer can rebuild a and b on top of c) is the part that requires reading the write-up. Question and canonical answer are unchanged; every accept string now enumerates both halves, in the varied phrasings a correct answer plausibly takes, so this tightens discrimination without introducing false negatives on formatting. Verified at kep-3521 lines 315-320. The sibling instances the critic cited (rfc-07-q1 accept[2], rfc-07-q2 accept[0]) are discharged inside those two questions' own repairs."
+  }
+ ],
+ "unrepaired": []
+}

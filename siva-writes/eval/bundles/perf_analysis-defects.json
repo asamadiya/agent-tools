@@ -1,0 +1,192 @@
+{
+ "defects": [
+  {
+   "target": "perf_analysis-07-q1",
+   "defect_class": "world_knowledge",
+   "what_is_wrong": "Pure world knowledge, and simultaneously unanswerable from the human reference. Asks which register the x86-64 ABI names as the frame pointer and what two savings the ABI footnote cites. Any model answers this with zero reading; and the human reference text does not contain it, so the ceiling condition scores below a model that read nothing.",
+   "evidence": "Blind answer, no document read: '%rbp; indexing via %rsp instead saves two instructions in the prologue and epilogue and frees one general-purpose register' - this is the x86-64 ABI footnote [12], reproducible from memory. Span check: reconstructed the brief-07 human span from human_first_words ('In 2004 a compiler developer, Roger Sayle, changed gcc to stop generating') to human_last_words; word count 508 == human_words 508 exactly. grep -oiE '%rbp|%rsp|15%|libc layer|prologue' over that 508-word span returns only 'off-CPU' - zero hits for %rbp, %rsp, prologue. The ABI footnote sits at source char offset ~2400, the span starts at 3332.",
+   "severity": "blocker"
+  },
+  {
+   "target": "perf_analysis-07-q5",
+   "defect_class": "world_knowledge",
+   "what_is_wrong": "Asks for the JVM option, the JDK release it shipped in, and who reworked the fix. The option name and release are among the most widely documented JVM profiling facts in existence.",
+   "evidence": "Blind answer, no document read: '-XX:+PreserveFramePointer, shipped in JDK 8u60, reworked by Oracle.' That matches accept string 1 verbatim ('-XX:+PreserveFramePointer in JDK8u60, reworked by Oracle'). 'Oracle' is also the only possible answer to 'who reworked a JVM c2 fix' since Oracle owns HotSpot.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-08-q3",
+   "defect_class": "world_knowledge",
+   "what_is_wrong": "Asks who added the kernel.perf_event_max_stack sysctl. The named person is the long-time Linux perf maintainer; the 'why' follows from the sysctl's own name.",
+   "evidence": "Blind answer, no document read: 'Arnaldo Carvalho de Melo (acme), Red Hat, the perf tooling maintainer; added because the default PERF_MAX_STACK_DEPTH was too small for very deep stacks.' That is accept string 1 ('Arnaldo Carvalho de Melo (Red Hat), for the Netflix deep-stack microservice') minus the word Netflix, which the question stem does not require.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-01-q3",
+   "defect_class": "world_knowledge",
+   "what_is_wrong": "The question's two clauses ('rogue service' / 'short-lived processes') map one-to-one onto the two canonical tools, which are also the accept strings. No candidate text is needed.",
+   "evidence": "Blind answer, no document read: 'top(1) for what is on CPU, execsnoop(8) for short-lived processes.' Accept strings are exactly 'top and execsnoop' / 'top(1) and execsnoop(8)'. execsnoop is THE named tool for short-lived process visibility in this toolchain; there is no second candidate.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-04-q3",
+   "defect_class": "world_knowledge",
+   "what_is_wrong": "Single-token answer that is the canonical eBPF tool name for the stated job. The X-snoop naming convention makes it derivable even without recall.",
+   "evidence": "Blind answer, no document read: 'mmapsnoop.py'. Accept strings are 'mmapsnoop' and 'mmapsnoop.py from the eBPF tools'. Full credit with zero comprehension of the candidate write-up.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-02-q4",
+   "defect_class": "world_knowledge",
+   "what_is_wrong": "Asks for the contents of available_clocksource on an EC2 Xen guest, which one was current, and the corroborating frame name. All three are standard, reproducible-from-memory facts about Xen guests, and the brief's own framing (Xen guest, fix is tsc) forces 'xen' as the current source.",
+   "evidence": "Blind answer, no document read: 'xen tsc hpet acpi_pm; current was xen; pvclock_clocksource_read().' That is accept string 1 verbatim. The four-name list is the standard EC2-Xen output and pvclock_clocksource_read is the only Xen clocksource read function.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-06-q5",
+   "defect_class": "world_knowledge",
+   "what_is_wrong": "The setup is the answer, in the Amdahl pattern flagged by the first critic. Once the brief's premise is stated (a 100 GB file does not fit a 48 GB page cache), the two remedies - buy more memory, or stop making whole-file passes - are the only two that exist.",
+   "evidence": "Blind answer from the premise alone, no document read: 'quickest is a larger-memory instance that fits the file; otherwise rework the code to process parts of the file rather than repeated full passes.' That is accept string 2 near-verbatim ('larger instance so the file fits in cache; alternatively process parts of the file instead of repeated full passes'). Nothing in the answer is specific to this incident.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-07-q2",
+   "defect_class": "world_knowledge",
+   "what_is_wrong": "Named-attribution question of exactly the 'who published SFQ and in what year' type. The register rationale is also derivable from knowing x86-32 register pressure.",
+   "evidence": "Blind answer, no document read: 'Roger Sayle, 2004 gcc i386 backend change; i386 register pressure was the reason.' Two of the three justifications (few registers; debuggers had other unwinding techniques) are inferable; only the icc-competition motive needs the text.",
+   "severity": "minor"
+  },
+  {
+   "target": "perf_analysis-05-q4",
+   "defect_class": "self_answering",
+   "what_is_wrong": "The stem supplies the number ('roughly 128 Kbytes') and the source ('from iostat'), leaving only the one arithmetic operation iostat permits. It also duplicates 05-q2: rkB/s and r/s are already the graded content of that question, so brief 05 spends two of five questions on one measurement.",
+   "evidence": "Stem: 'How was the I/O size of roughly 128 Kbytes derived from iostat, and which tool later confirmed it?' Blind answer: 'divide rkB/s by r/s; bitesize.' Accept string 2 is 'divide read kilobytes per second by reads per second; the bcc bitesize tool confirmed' - fully produced from the stem plus tool-naming convention. 05-q2 already grades the same rkB/s (91,656-92,152) and r/s (734-750) values.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-05-q4",
+   "defect_class": "arithmetic",
+   "what_is_wrong": "The accept string asserts a division result the division does not produce. Dividing the brief's own rkB/s by its own r/s gives 122-126 KB, not 128 KB. A candidate who actually computes and writes ~123 KB is marked wrong against an accept string that states the quotient 'gave ~128 KB'.",
+   "evidence": "Computed from the brief's four iostat rows: 91656/745 = 123.03 KB; 92152/739 = 124.70 KB; 91704/734 = 124.94 KB; 92104/750 = 122.81 KB. Extremes of the brief's stated ranges: 91656/750 = 122.21 KB to 92152/734 = 125.55 KB. No combination reaches 128 (max error 4.3%). Independently corroborated by avgrq-sz: 246.06 sectors x 512 B = 123.03 KB. The 128 figure is the source author's rounding to the natural block size; the brief and the accept list restate it as the output of the division.",
+   "severity": "minor"
+  },
+  {
+   "target": "perf_analysis-01-q1",
+   "defect_class": "other",
+   "what_is_wrong": "Question keyed to a fact the human reference span does not contain. The graded number appears in the source paragraph immediately BEFORE the span, so the human/ceiling condition cannot answer it.",
+   "evidence": "Span reconstructed from human_first_words 'The Cassandra systems were EC2 virtual machine (Xen) instances. I logged into' to human_last_words; word count 842 == human_words 842 exactly. grep -oiE '30(\\.14)?%|32\\.1%|write latency' over the span returns only '30.14%' and '32.1%' (the flame-graph percentages) - the phrase 'write latency increased by over 30%' lives at source offset ~1500, the span begins at 1811. Answer required: 'Both rose by over 30%'.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-07-q4",
+   "defect_class": "other",
+   "what_is_wrong": "Question keyed to material outside the human reference span. Both the '15% of samples' figure and the 'stack walking stops at the libc layer' description sit in the post's opening, before the span starts.",
+   "evidence": "grep -oiE '%rbp|%rsp|15%|libc layer|off-CPU' over the 508-word brief-07 human span returns exactly one hit: 'off-CPU'. No '15%', no 'libc layer'. One of the four accept strings is the bare token '15%', which the reference text cannot produce.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-08-q2",
+   "defect_class": "other",
+   "what_is_wrong": "Both numeric atoms the accept strings require - 3000 frames pre-inlining and perf's 128-frame limit - are absent from the human reference span. Both accept strings are conjunctions that demand them, so the ceiling condition scores zero on this item. The 128-frame limit is additionally world knowledge (PERF_MAX_STACK_DEPTH).",
+   "evidence": "Span reconstructed from 'As part of production rollout I did many performance overhead tests, which' to 'frame pointers are the most practical way to find performance wins today.'; word count 323 == human_words 323 exactly. grep -oiE '3000|128|gbyte|instruction text|canary' over that span returns zero hits. Those facts live in a later section of gregg-return-of-the-frame-pointers.txt (line 191), outside the span. The span says only 'over 1000 frames deep (via Groovy), so deep that it broke Linux's perf profiler'.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-08-q4",
+   "defect_class": "other",
+   "what_is_wrong": "The second half of the required answer - over 1 Gbyte of instruction text, near the edge of cache warmth - is absent from the human reference span, and both accept strings require it.",
+   "evidence": "Same 323-word span as above; grep for 'gbyte' and 'instruction text' returns zero hits. The span's only 'cache warmth' occurrence is in a different context (microbenchmarks spilling out of L1), not this microservice, so a reference-faithful answer would attribute it wrongly. Both accept strings demand '>1 GB of instruction text'.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-08",
+   "defect_class": "other",
+   "what_is_wrong": "Brief and human reference are badly mismatched in scope and length. The brief assembles material from two separate sections of the source but the reference span covers only one of them, and asks for 700 words against a 323-word reference - a 2.2x length target that confounds any length- or density-sensitive comparison against the human condition.",
+   "evidence": "brief target_words = 700; human_words = 323 (verified: reconstructed span word count 323 exactly). Brief content absent from the span: 3000-frame depth, 128-frame perf limit, >1 Gbyte instruction text, flame-graph canary instance, BPF Performance Tools page 40, PEBS/active-benchmarking method - all confirmed by grep returning zero hits over the span; all present at source line 191/189/181, outside it. For comparison the same mismatch runs the other way in brief 03 (target 700 vs human 1196) and brief 07 (target 800 vs human 508).",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-08",
+   "defect_class": "prose_lifted_into_brief",
+   "what_is_wrong": "The brief's opening factual sentence is a near-verbatim copy of the human reference's own opening sentence, plus three further pasteable clauses lifted from the same passage. A candidate can transcribe these straight into its output and score on any overlap-with-human metric without composing anything.",
+   "evidence": "Maximal shared n-grams (brief prompt vs source, >=6 words): 'overhead of adding frame pointers to everything (libc and java) was usually less than 1% with one exception' (17 words); 'a large function where gcc switched from %rsp offsets to %rbp-relative offsets which took more bytes to store' (17 words); 'flying close to the edge of hardware cache'; 'will happen to the next developer who adds code anyway'; 'others have reported around 1% and around 2%. microbenchmarks'. Human reference sentence 1: 'The overhead of adding frame pointers to everything (libc and Java) was usually less than 1%, with one exception of 10%.' Brief: '...with one exception at 10%.' 16 of the reference's first 40 words handed over verbatim.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-07",
+   "defect_class": "prose_lifted_into_brief",
+   "what_is_wrong": "Nine spans of six or more words are lifted from the source, several of them finished clauses that can be pasted unchanged, including a complete description of the observable damage.",
+   "evidence": "Maximal shared n-grams: 'stack walking stops at the libc layer producing'; 'dominated by libc read/write and mutex'; \"found java's lack of frame pointer support broke all application stacks\" (9 words); 'two instructions in the prologue and epilogue and'; 'as a base pointer to a stack frame'; 'that it gets out of control'; 'the change was then applied to x86-64'; 'as well which had over a dozen'; 'default to the equivalent of -fomit-frame-pointer -ffixed-ebp on 32-bit'.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-05",
+   "defect_class": "prose_lifted_into_brief",
+   "what_is_wrong": "The brief contains a complete finished definitional sentence copied from the source, not raw material.",
+   "evidence": "Shared 18-word span: 'disk i/o where a page of memory is read in from disk and are normal for many workloads.' Source: 'Pageins are a type of disk I/O where a page of memory is read in from disk, and are normal for many workloads.' Brief: 'pageins are disk I/O where a page of memory is read in from disk, and are normal for many workloads.' Also: 'the microservice managed and processed large files'; 'coincided with a high rate of paging.'",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-04",
+   "defect_class": "prose_lifted_into_brief",
+   "what_is_wrong": "A full authored sentence of justification prose is carried into the brief, phrasing included.",
+   "evidence": "Shared spans 'at netflix 10% of cpu time somewhere unexpected' + 'a large costly issue across thousands of server' reconstruct the source sentence 'At Netflix, 10% of CPU time somewhere unexpected can be a large costly issue across thousands of server instances.' Brief: 'at Netflix, 10% of CPU time somewhere unexpected is a large, costly issue across thousands of server instances'. Also 'rebuilt with glibc and the problem was'; 'initial testing showed only a 3% win'.",
+   "severity": "minor"
+  },
+  {
+   "target": "perf_analysis-05",
+   "defect_class": "style_instruction_in_brief",
+   "what_is_wrong": "The brief specifies the register of the output: 'a rough case-study post'. Roughness is precisely the stylistic property of the human reference here (the source declares 'These are rough notes... No editing, spell checking, or comments'), so the brief hands every condition a piece of the variable under test. Identical wording appears in perf_analysis-06 ('the diagnosis-and-recommendation section of a rough case-study post'); no other brief carries a register word.",
+   "evidence": "Regex sweep of all 8 brief prompts for style terms (concise|tight|terse|avoid|sentence|paragraph|tone|voice|jargon|plain|bullet|heading|first person|crisp|punchy|rough|style|active voice|...) returns hits in exactly two briefs, both the word 'rough': brief 05 'Write the opening diagnosis section of a rough case-study post' and brief 06 'Write the diagnosis-and-recommendation section of a rough case-study post'. The other six briefs specify only genre, audience and section scope.",
+   "severity": "minor"
+  },
+  {
+   "target": "perf_analysis-02-q4",
+   "defect_class": "compound_item",
+   "what_is_wrong": "Six distinct atoms demanded in one item (four clocksource names, the current one, and the corroborating frame name), with every accept string written as a full conjunction. A correct answer naming xen as current and pvclock_clocksource_read but listing three of four available sources fails on string matching.",
+   "evidence": "Accept string 1: 'xen, tsc, hpet, acpi_pm; current was xen, matching pvclock_clocksource_read()' - 6 atoms. Only 2 accept variants, both full conjunctions. Population across the bundle: 19 of 40 questions demand 3 or more distinct atoms with only conjunctive accept strings (01-q5, 02-q1, 02-q4, 02-q5, 03-q4, 03-q5, 04-q2, 04-q5, 05-q2, 05-q5, 06-q1, 06-q4, 07-q1, 07-q2, 07-q3, 07-q5, 08-q2, 08-q4, 08-q5).",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-07-q3",
+   "defect_class": "compound_item",
+   "what_is_wrong": "Four atoms in one item: the 17th-register argument, the pushl/movl point, the leaf-routine point, and the /usr/bin scope warning. Accept string 1 is a four-way conjunction; a candidate that reproduces the debuggability argument and the /usr/bin warning but omits leaf routines is correct and fails.",
+   "evidence": "Accept string 1: 'adding a 17th register buys nothing, you only skip a pushl/movl pair, leaf routines never make frames; it gets out of control when /usr/bin is compiled without frame pointers.' Answer field lists all four. Only 2 accept variants exist and they differ in coverage (string 2 drops the leaf-routine and pushl/movl atoms entirely), so the two variants do not grade the same thing.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-05-q2",
+   "defect_class": "compound_item",
+   "what_is_wrong": "Three numeric ranges demanded in one item (read rate, read throughput, %util) against conjunctive accept strings, when the interesting comprehension signal is whether any of the three survived the write-up.",
+   "evidence": "Answer: 'About 734 to 750 reads/s at roughly 92,000 rkB/s (about 91,656 to 92,152), with %util pegged at 100%.' All three accept strings carry all three quantities; none permits partial credit for e.g. '~750 r/s at 100% util'.",
+   "severity": "minor"
+  },
+  {
+   "target": "perf_analysis-02-q3",
+   "defect_class": "duplicate_fact",
+   "what_is_wrong": "Three of brief 02's five questions grade the same three measurements. q3's per-call costs are q2's wall-clock times divided by the iteration count, and q5's two ratios are those same numbers again. Brief 02 therefore contributes 5 question slots but roughly 3 independent facts, over-weighting one measurement in the comprehension score.",
+   "evidence": "Computed: 12.989 s / 1e8 = 0.12989 us (q3's '0.13 us'); 68.300 s / 1e8 = 0.68300 us (q3's '0.68 us'); ratio 5.258 (q3's '~5x'). q5: 68.300/3.370 = 20.267 ('over 20x'); 12.989/3.370 = 3.854 ('nearly 4x'). Every q3 and q5 quantity is a deterministic function of the three real times already graded by q2.",
+   "severity": "major"
+  },
+  {
+   "target": "perf_analysis-08-q4",
+   "defect_class": "idiom_leak",
+   "what_is_wrong": "One accept string carries the source author's voiced metaphor rather than a plain statement of the fact.",
+   "evidence": "Accept string 2: 'no PEBS/cycle analysis available on the VM, plus over 1 Gbyte of instruction text flying close to cache-warmth limits'. Source: 'we may have been flying close to the edge of hardware cache warmth'. 'Flying close to' is the author's figure, not a neutral description; the neutral form is 'possibly at the limit of instruction cache capacity'. This is the only voiced idiom found in the 40 accept lists.",
+   "severity": "minor"
+  }
+ ],
+ "clean_categories": [
+  "arithmetic, brief 02 (the numerically densest brief): all six derived quantities recomputed and correct. 12.989/1e8 = 0.12989 us vs '0.13 us'; 68.300/1e8 = 0.68300 us vs '0.68 us'; ratio 5.258 vs '5x'; 3.370/1e8 = 33.70 ns vs '~33 ns'; 68.300/3.370 = 20.267 vs 'over 20x'; 12.989/3.370 = 3.854 vs 'nearly 4x'. All hold.",
+  "arithmetic, brief 06: free -m identity checks (15421+349+48643 = 64413 vs total 64414; 18421+11218+34773 = 64412 vs 64414 - 1-2 MB rounding only), and all seven cachestat RATIO values recomputed from raw hits/misses: 74.13/9.72/6.54/11.98/34.48/7.00/11.10 vs reported 74.1/9.7/6.5/12.0/34.5/7.0/11.1. All hold. The 6.5-74.1% range and the 23,341 peak-miss figure in the questions are correct.",
+  "arithmetic, brief 05 biolatency histogram: max bucket is 32-63 ms at 8,139 as claimed; total 10,328; the 16-127 ms buckets hold 96.2% of I/O, consistent with 'most I/O between 16 and 127 ms'; outliers do reach the 512-1023 ms bucket. Holds.",
+  "arithmetic, briefs 01, 03, 04, 07, 08: no derived quantities are asserted; every stated figure (30.14%/32.1%, 38% sys, ZFS #6531, 10%/0.8%/3%, 15%, <1%/10%/5-500%, 1000/3000/128 frames) was checked character-by-character against the source document and matches. '32.1% = about a third' is 1.2 points low, within any reasonable reading of 'about'.",
+  "transcription fidelity, all 8 briefs: every numeric fact in every brief prompt and fact list was cross-checked against the corresponding gregg-*.txt source. All match, including the full iostat column set (r/s 734-750, rkB/s 91,656-92,152, avgrq-sz 246-250, avgqu-sz ~25, r_await 33-34 ms, %util 100, 14.8% user / 24-30% iowait), the free -m rows, the biolatency and bitesize buckets, and all eight cachestat rows of the control test. No fabricated or drifted numbers.",
+  "unfalsifiable: checked all 40 questions for items whose answer cannot be objectively adjudicated (open-ended 'what did you learn', aesthetic or speculative asks). None found. The two questions that grade a hedge (03-q2 'probably contending on the same locks', 08-q4 'could not be definitively attributed') both have determinate mechanisms named in the accept strings.",
+  "idiom_leak across all 40 accept lists: checked mechanically by 5-gram overlap of every answer and accept string against the full source text, then read manually. The overlaps are almost entirely unavoidable technical tokens (function names, %rsp/%rbp, '1 Gbyte of instruction text', numeric quantities). Exactly one voiced idiom was found and is filed (08-q4). The other 39 are plain and fact-shaped - no equivalent of 'slow, squishy and inconsistent'.",
+  "style_instruction_in_brief for 6 of 8 briefs (01, 02, 03, 04, 07, 08): regex sweep for voice/structure/length terms returns zero hits. These briefs end only with genre, audience and section scope ('Write the overhead-analysis section of a technical blog post for systems and performance engineers'), which is task definition held constant across conditions, not a style hint. Only 'rough' in 05/06 is filed.",
+  "cross-brief question duplication: briefs 01/02 share a source, 05/06 share a source, 07/08 share a source. Checked all three pairs for questions grading the same fact twice. None do - the pairs split cleanly at the section boundary (investigation vs experimentation; iostat/biolatency vs memory/cachestat; history vs overhead). The only duplication found is intra-brief, in brief 02, and is filed.",
+  "intra-brief fact-list duplication: all 8 fact lists (10-11 keys each) checked for two keys asserting the same content. None found; brief 08's five keys about the outlier microservice each carry distinct content (the 10% figure, stack depth, unconfirmed attribution, instruction-text theory, rollout decision).",
+  "human-span reconstruction integrity: all 8 spans located in their source documents from human_first_words/human_last_words, and every reconstructed word count matches the recorded human_words exactly (842, 657, 1196, 435, 769, 712, 508, 323). The span metadata itself is sound - the coverage defects filed are about which questions fall outside those spans, not about bad span bookkeeping."
+ ]
+}
