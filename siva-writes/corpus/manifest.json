@@ -1,0 +1,886 @@
+{
+  "split": {
+    "train": [
+      "industrialempathy",
+      "pep",
+      "rust-rfc",
+      "aws-builders",
+      "danluu",
+      "allthingsdistributed",
+      "tail-at-scale",
+      "sre-book",
+      "gcp-incident"
+    ],
+    "test": [
+      "kep",
+      "brooker",
+      "cloudflare-pm",
+      "brendangregg"
+    ],
+    "principles": [
+      "prin-pg",
+      "prin-google-style",
+      "prin-stopslop",
+      "prin-mcenerney"
+    ],
+    "negative": [
+      "neg-wikipedia",
+      "neg-humanizer",
+      "neg-mozeik",
+      "neg-goblins"
+    ],
+    "genre_of_test_family": {
+      "kep": "rfc",
+      "brooker": "design_doc",
+      "cloudflare-pm": "postmortem",
+      "brendangregg": "perf_analysis"
+    }
+  },
+  "min_words": {
+    "default": 400,
+    "principles": 150,
+    "negative": 150
+  },
+  "counts": {
+    "total": 57,
+    "ok": 57,
+    "failed": 0
+  },
+  "documents": [
+    {
+      "id": "atd-10-lessons-10-years-aws",
+      "family": "allthingsdistributed",
+      "genre": "design_doc",
+      "url": "https://www.allthingsdistributed.com/2016/03/10-lessons-from-10-years-of-aws.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 1917,
+      "chars": 11564,
+      "sha256": "17588018ece4d7c8503ddbb681e7f61bf1345a87daf6dbbbfae9a716b6a24c09",
+      "attempts": []
+    },
+    {
+      "id": "atd-amazons-dynamo",
+      "family": "allthingsdistributed",
+      "genre": "design_doc",
+      "url": "https://www.allthingsdistributed.com/2007/10/amazons_dynamo.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 15354,
+      "chars": 99092,
+      "sha256": "60ab833edacce7cbc5e52e62ae0308600697365b86d6223f843be854de735c0d",
+      "attempts": []
+    },
+    {
+      "id": "atd-challenges-hyperscale",
+      "family": "allthingsdistributed",
+      "genre": "design_doc",
+      "url": "https://www.allthingsdistributed.com/2023/07/building-and-operating-a-pretty-big-storage-system.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 6258,
+      "chars": 36130,
+      "sha256": "d8dd8be47de06315bcbf7a259c2be45f406ef7db88e258bc33e1d8431bef0026",
+      "attempts": []
+    },
+    {
+      "id": "atd-eventually-consistent",
+      "family": "allthingsdistributed",
+      "genre": "design_doc",
+      "url": "https://www.allthingsdistributed.com/2008/12/eventually_consistent.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 3250,
+      "chars": 20345,
+      "sha256": "87a826e5b7970cf9faec76d0d4886410e3c51ad53608a9a28dc11c0478e73ace",
+      "attempts": []
+    },
+    {
+      "id": "aws-avoiding-fallback",
+      "family": "aws-builders",
+      "genre": "design_doc",
+      "url": "https://aws.amazon.com/builders-library/avoiding-fallback-in-distributed-systems/",
+      "kind": "html",
+      "methods": [
+        "wayback",
+        "reader"
+      ],
+      "status": "ok",
+      "method": "wayback",
+      "words": 3187,
+      "chars": 19959,
+      "sha256": "94f72505cb5a1b44c32ede17fcc6badb9d0635f2460f4b760c441a075afb8590",
+      "attempts": []
+    },
+    {
+      "id": "aws-caching-challenges-strategies",
+      "family": "aws-builders",
+      "genre": "design_doc",
+      "url": "https://aws.amazon.com/builders-library/caching-challenges-and-strategies/",
+      "kind": "html",
+      "methods": [
+        "wayback",
+        "reader"
+      ],
+      "status": "ok",
+      "method": "wayback",
+      "words": 3519,
+      "chars": 21824,
+      "sha256": "f512164245bbba7c2ed241bbcdaa6182d03243ece5e70e2f8a6d4fb14e62d82f",
+      "attempts": []
+    },
+    {
+      "id": "aws-timeouts-retries-backoff-jitter",
+      "family": "aws-builders",
+      "genre": "design_doc",
+      "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
+      "kind": "html",
+      "methods": [
+        "wayback",
+        "reader"
+      ],
+      "status": "ok",
+      "method": "wayback",
+      "resolved_url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
+      "words": 2380,
+      "chars": 14725,
+      "sha256": "cbaf10a7677eff8407a3fec096b78f58fc75d1fbb0ab0e9e58825c1c4ef9db42",
+      "attempts": []
+    },
+    {
+      "id": "aws-using-load-shedding",
+      "family": "aws-builders",
+      "genre": "design_doc",
+      "url": "https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/",
+      "kind": "html",
+      "methods": [
+        "reader",
+        "wayback",
+        "direct"
+      ],
+      "fallback_urls": [
+        "https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/?did=ba_card&trk=ba_card",
+        "https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload"
+      ],
+      "status": "ok",
+      "method": "wayback",
+      "resolved_url": "https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/",
+      "words": 5627,
+      "chars": 34986,
+      "sha256": "f9bd069f16fc1ef258d6292c9a23029f86178cb3c4f6769d4c2caf32931383b4",
+      "attempts": [
+        "reader https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/ try1: HTTPError: HTTP Error 403: Forbidden",
+        "reader https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/ try2: HTTPError: HTTP Error 403: Forbidden",
+        "reader https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/ try3: HTTPError: HTTP Error 403: Forbidden"
+      ]
+    },
+    {
+      "id": "aws-workload-isolation-shuffle-sharding",
+      "family": "aws-builders",
+      "genre": "design_doc",
+      "url": "https://aws.amazon.com/builders-library/workload-isolation-using-shuffle-sharding/",
+      "kind": "html",
+      "methods": [
+        "wayback",
+        "reader"
+      ],
+      "status": "ok",
+      "method": "wayback",
+      "resolved_url": "https://aws.amazon.com/builders-library/workload-isolation-using-shuffle-sharding/",
+      "words": 1900,
+      "chars": 11481,
+      "sha256": "916e2ebc19f8ac0ac080ac77553711f7ebf9508031627759e7143fc3b39346fc",
+      "attempts": []
+    },
+    {
+      "id": "gregg-high-rate-of-paging",
+      "family": "brendangregg",
+      "genre": "perf_analysis",
+      "url": "https://www.brendangregg.com/blog/2021-08-30/high-rate-of-paging.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 1405,
+      "chars": 13205,
+      "sha256": "26c1ead668e366444e0676267e07e726f4499c5364d0cca17019357b72bcca76",
+      "attempts": []
+    },
+    {
+      "id": "gregg-return-of-the-frame-pointers",
+      "family": "brendangregg",
+      "genre": "perf_analysis",
+      "url": "https://www.brendangregg.com/blog/2024-03-17/the-return-of-the-frame-pointers.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 3730,
+      "chars": 23222,
+      "sha256": "7001ff9477ba0f0ac67ca875b08decd5c3d29741e2135f415519bc5804cc0df9",
+      "attempts": []
+    },
+    {
+      "id": "gregg-tensorflow-library-performance",
+      "family": "brendangregg",
+      "genre": "perf_analysis",
+      "url": "https://www.brendangregg.com/blog/2022-04-09/tensorflow-library-performance.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 716,
+      "chars": 4704,
+      "sha256": "522c237d8294221b375459b531b02b7921bda012a124f03e2fd2093f4b42731b",
+      "attempts": []
+    },
+    {
+      "id": "gregg-the-speed-of-time",
+      "family": "brendangregg",
+      "genre": "perf_analysis",
+      "url": "https://www.brendangregg.com/blog/2021-09-26/the-speed-of-time.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 2451,
+      "chars": 15481,
+      "sha256": "1399bf3f929ed1aaa6e9555d943f94a78ef4ad9506bb11cf3197d6034babc3f5",
+      "attempts": []
+    },
+    {
+      "id": "gregg-zfs-eating-my-cpu",
+      "family": "brendangregg",
+      "genre": "perf_analysis",
+      "url": "https://www.brendangregg.com/blog/2021-09-06/zfs-is-mysteriously-eating-my-cpu.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 1467,
+      "chars": 9427,
+      "sha256": "9a49d1fc5a95cf0e0f5dc244752b6b6fd06f9725c69abbcff36553f3485d6044",
+      "attempts": []
+    },
+    {
+      "id": "brooker-dsql-paper",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/07/19/dsql-paper.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 986,
+      "chars": 6685,
+      "sha256": "c9340e3a8b03a3206ddcf073a1be05b8a1ff863d931e6c10e2c3dde8d79f0f97",
+      "attempts": []
+    },
+    {
+      "id": "brooker-lorenz-and-little",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/07/29/lorenz-and-little.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 896,
+      "chars": 5619,
+      "sha256": "29e3841c9ddc83c2891dca9aac0a1f19b443a5d241d186516fd4c85c0dde85e6",
+      "attempts": []
+    },
+    {
+      "id": "brooker-sfq",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/02/25/sfq.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 692,
+      "chars": 4507,
+      "sha256": "af3e44e92fc603fd69db9ef0a5b72264aeb8082e9106bf8b320b57d32b031979",
+      "attempts": []
+    },
+    {
+      "id": "brooker-waiting",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/06/19/waiting.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 976,
+      "chars": 6130,
+      "sha256": "60f80be30398c64b7b9502a94c18f6ff8e462ce100627c3ee44abfefc29ff36c",
+      "attempts": []
+    },
+    {
+      "id": "brooker-whats-easy-whats-hard",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/05/18/whats-easy-whats-hard.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 1167,
+      "chars": 7122,
+      "sha256": "e9c6eba0e5fd0583a7f56e9b3c7c6d7dc858784ab7b101363a64ab92eb3bc8cb",
+      "attempts": []
+    },
+    {
+      "id": "brooker-you-are-here",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/02/07/you-are-here.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "wayback",
+      "words": 900,
+      "chars": 5329,
+      "sha256": "6bb2ac1f7f0c0cdf8b676c45afa7b7955a74c716a5255d10a9d7b47ddb0acc22",
+      "attempts": [
+        "direct: TimeoutError: The read operation timed out"
+      ]
+    },
+    {
+      "id": "cloudflare-1111-incident-july-14-2025",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/cloudflare-1-1-1-1-incident-on-july-14-2025/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 2237,
+      "chars": 15413,
+      "sha256": "4ed8671e075c8038d17fc3605c3573aeda13b8d7e8f5fb2a53a1ffd5ec45a9d6",
+      "attempts": []
+    },
+    {
+      "id": "cloudflare-18-november-2025-outage",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/18-november-2025-outage/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "resolved_url": "https://blog.cloudflare.com/18-november-2025-outage/",
+      "words": 3413,
+      "chars": 21756,
+      "sha256": "aeed50dff929df0e8a97326c18d1e557b710ae63d24e98fa71c63beb48eba22d",
+      "attempts": []
+    },
+    {
+      "id": "cloudflare-5-december-2025-outage",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/5-december-2025-outage/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 1444,
+      "chars": 9288,
+      "sha256": "a90fb464edcacb72bf33f9675a34868b14e7c71f9cdd152076f36a87bc286e53",
+      "attempts": []
+    },
+    {
+      "id": "cloudflare-february-20-2026-outage",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/cloudflare-outage-february-20-2026/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 2743,
+      "chars": 18246,
+      "sha256": "d5cf7670d1a1c829fed6470d12251dc4cbc49189902ebdf044e43c262accdb8c",
+      "attempts": []
+    },
+    {
+      "id": "cloudflare-incident-august-21-2025",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/cloudflare-incident-on-august-21-2025/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 1470,
+      "chars": 10073,
+      "sha256": "9142de43aaf697f44b658d0767961afe718c63693614c84b65ebe4794dfd5043",
+      "attempts": []
+    },
+    {
+      "id": "cloudflare-sept-12-dashboard-api-outage",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/deep-dive-into-cloudflares-sept-12-dashboard-and-api-outage/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 1257,
+      "chars": 8114,
+      "sha256": "c781db7cc52dd587f3d493f52b656514e7b5fc5181950419b111af75aac9fbb3",
+      "attempts": []
+    },
+    {
+      "id": "danluu-bug-blind",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/bug-blind/",
+      "kind": "html",
+      "fallback_urls": [
+        "https://danluu.com/bug-blind/"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "resolved_url": "https://danluu.com/bug-blind/",
+      "words": 8261,
+      "chars": 46080,
+      "sha256": "c6a56da1862342d2da800d4481d3f0d3198ce94363c2a867fd55504076f15e80",
+      "attempts": []
+    },
+    {
+      "id": "danluu-latency-pitfalls",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/latency-pitfalls/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 3020,
+      "chars": 18385,
+      "sha256": "ff318c2d65bee4d225309694e33130c387703531368dbf045de3654065e7a64e",
+      "attempts": []
+    },
+    {
+      "id": "danluu-metrics-analytics",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/metrics-analytics/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 5447,
+      "chars": 31911,
+      "sha256": "bd8bac771489acdd143835d67aaec48a1906ab409ba4e5690aa1078f04e361c4",
+      "attempts": []
+    },
+    {
+      "id": "danluu-p95-latency",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/p95-skill/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 10189,
+      "chars": 58260,
+      "sha256": "98eee8214f1136ebdd19d9801e79af15ad2bf7695ad7fb4ffa408859ceb8d5ca",
+      "attempts": []
+    },
+    {
+      "id": "danluu-perf-opt",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/perf-opt/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 5054,
+      "chars": 29807,
+      "sha256": "fb49c73ff595b3f0de9fa5a2307266bfbde58cd7cf7a7629e9aacd95a3bd30a1",
+      "attempts": []
+    },
+    {
+      "id": "danluu-pl-tokens",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/pl-tokens/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 13891,
+      "chars": 80972,
+      "sha256": "4fe64b0944468700739388e6fbc77f8814af1c27b479e9c4d9f77b8cf74beda7",
+      "attempts": []
+    },
+    {
+      "id": "danluu-postmortem-lessons",
+      "family": "danluu",
+      "genre": "postmortem",
+      "url": "https://danluu.com/postmortem-lessons/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 2390,
+      "chars": 14325,
+      "sha256": "a837747afebabe0696142e18f6e1c4bdf1b4517cc6bfc94cf5b208de9c3a8ce2",
+      "attempts": []
+    },
+    {
+      "id": "gcp-incident-3BvH3LVGcupoYqV6F4Nw",
+      "family": "gcp-incident",
+      "genre": "postmortem",
+      "url": "https://status.cloud.google.com/incidents/3BvH3LVGcupoYqV6F4Nw",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 10922,
+      "chars": 74366,
+      "sha256": "9ee85e5c9296085e815027b8c3ed704ceb28f3c1a3344edb97bb830f4aeff6ef",
+      "attempts": []
+    },
+    {
+      "id": "gcp-incident-J5ia5t9p3g9Q5Wi7r8Ev",
+      "family": "gcp-incident",
+      "genre": "postmortem",
+      "url": "https://status.cloud.google.com/incidents/J5ia5t9p3g9Q5Wi7r8Ev",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 5613,
+      "chars": 39474,
+      "sha256": "0a9592265a625f1a3b8295b253323e2efdd4ab2c1bcce1c9af68f7c8444fa154",
+      "attempts": []
+    },
+    {
+      "id": "gcp-incident-ow5i3PPK96RduMcb1SsW",
+      "family": "gcp-incident",
+      "genre": "postmortem",
+      "url": "https://status.cloud.google.com/incidents/ow5i3PPK96RduMcb1SsW",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 5380,
+      "chars": 36889,
+      "sha256": "a3a851f01de52baa1e917cb03b25a84f4d70de0a19de73ec2bd1edaa2a61f99c",
+      "attempts": []
+    },
+    {
+      "id": "gcp-incident-zall-20013",
+      "family": "gcp-incident",
+      "genre": "postmortem",
+      "url": "https://status.cloud.google.com/incident/zall/20013",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 5798,
+      "chars": 39543,
+      "sha256": "5eda5785a48afb20d7f519d9e318f39cea3f06146f6830e3389aae09fe5df679",
+      "attempts": []
+    },
+    {
+      "id": "industrialempathy-design-docs-at-google",
+      "family": "industrialempathy",
+      "genre": "design_doc",
+      "url": "https://industrialempathy.com/posts/design-docs-at-google/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "resolved_url": "https://industrialempathy.com/posts/design-docs-at-google/",
+      "words": 2649,
+      "chars": 16204,
+      "sha256": "2fb3518ff78babe1d6879557e368cb980961c0fb27048fa03824d85a60290ba0",
+      "attempts": []
+    },
+    {
+      "id": "kep-1287-in-place-update-pod-resources",
+      "family": "kep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/kubernetes/enhancements/master/keps/sig-node/1287-in-place-update-pod-resources/README.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "words": 12820,
+      "chars": 94803,
+      "sha256": "d8f8aa541d50ee7000ce1df9a1a28711c2e6a859939540e999404e9c601d84c2",
+      "attempts": []
+    },
+    {
+      "id": "kep-2400-node-swap",
+      "family": "kep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/kubernetes/enhancements/master/keps/sig-node/2400-node-swap/README.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "words": 9693,
+      "chars": 68135,
+      "sha256": "d7f4b6db48419a2f237da14f5cecf8b94f07ddf6196fc29ffee5fcbc0a607e4b",
+      "attempts": []
+    },
+    {
+      "id": "kep-3521-pod-scheduling-readiness",
+      "family": "kep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/kubernetes/enhancements/master/keps/sig-scheduling/3521-pod-scheduling-readiness/README.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "words": 7023,
+      "chars": 49252,
+      "sha256": "f20fd3f5c502b746645fbf6046b11f6aa91ba84dc27c916cef799de16e36143c",
+      "attempts": []
+    },
+    {
+      "id": "neg-openai-goblins",
+      "family": "neg-goblins",
+      "genre": "negative",
+      "url": "https://openai.com/index/where-the-goblins-came-from/",
+      "kind": "html",
+      "methods": [
+        "wayback",
+        "reader"
+      ],
+      "status": "ok",
+      "method": "wayback",
+      "resolved_url": "https://openai.com/index/where-the-goblins-came-from/",
+      "words": 1116,
+      "chars": 7374,
+      "sha256": "ae2a989098933e0b0d08668c799638ab99ab4d8b03ad18e4ea1272514fdf3fbb",
+      "attempts": []
+    },
+    {
+      "id": "neg-humanizer-patterns",
+      "family": "neg-humanizer",
+      "genre": "negative",
+      "url": "https://raw.githubusercontent.com/blader/humanizer/main/README.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "words": 2298,
+      "chars": 16038,
+      "sha256": "28e1dfc1bd521db18a72aa40adf92160ee643c0cb70c4e0ff91b2faa9d0ff446",
+      "attempts": []
+    },
+    {
+      "id": "neg-mozeik-frontier-models",
+      "family": "neg-mozeik",
+      "genre": "negative",
+      "url": "https://blog.mozeik.com/articles/frontier-models-dont-write-so-good",
+      "kind": "html",
+      "methods": [
+        "reader"
+      ],
+      "status": "ok",
+      "attempts": [
+        "reader https://blog.mozeik.com/articles/frontier-models-dont-write-so-good try1: HTTPError: HTTP Error 403: Forbidden",
+        "reader https://blog.mozeik.com/articles/frontier-models-dont-write-so-good try2: HTTPError: HTTP Error 403: Forbidden",
+        "reader https://blog.mozeik.com/articles/frontier-models-dont-write-so-good try3: HTTPError: HTTP Error 403: Forbidden",
+        "installed from an earlier successful r.jina.ai fetch in this session; later attempts were rate-limited 403"
+      ],
+      "method": "reader",
+      "resolved_url": "https://blog.mozeik.com/articles/frontier-models-dont-write-so-good",
+      "words": 3784,
+      "chars": 23032,
+      "sha256": "8a1ee476609b0cb131d82acfcc6cc64907c58c972fb3fb46009e0bd7091de5fe"
+    },
+    {
+      "id": "neg-wikipedia-signs-of-ai-writing",
+      "family": "neg-wikipedia",
+      "genre": "negative",
+      "url": "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 37468,
+      "chars": 266896,
+      "sha256": "34b15692c6323aef6c0c57dcdeaf4fce674c1c29e521a2c0ecbcc2889d028bb4",
+      "attempts": []
+    },
+    {
+      "id": "pep-0484-type-hints",
+      "family": "pep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/python/peps/main/peps/pep-0484.rst",
+      "kind": "rst",
+      "methods": [
+        "direct"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "words": 13017,
+      "chars": 88612,
+      "sha256": "a25e032f504686c8543744d3cded3c23c461b64b90be4b8ef43adadc5ed42642",
+      "attempts": []
+    },
+    {
+      "id": "pep-0572-assignment-expressions",
+      "family": "pep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/python/peps/main/peps/pep-0572.rst",
+      "kind": "rst",
+      "methods": [
+        "direct"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "words": 6544,
+      "chars": 47027,
+      "sha256": "94c93f7fd8babceeb0405be31d69ebe9c8a4e0705b9425866d2571244dbbd8aa",
+      "attempts": []
+    },
+    {
+      "id": "pep-0703-making-the-gil-optional",
+      "family": "pep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/python/peps/main/peps/pep-0703.rst",
+      "kind": "rst",
+      "methods": [
+        "direct"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "words": 12278,
+      "chars": 86325,
+      "sha256": "d42991383f672fe8faf57eaa178887adac18c782c18cc6599bac9d8bf7259d4c",
+      "attempts": []
+    },
+    {
+      "id": "prin-google-developer-style",
+      "family": "prin-google-style",
+      "genre": "principles",
+      "url": "https://developers.google.com/style/highlights",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "resolved_url": "https://developers.google.com/style/highlights",
+      "words": 351,
+      "chars": 2537,
+      "sha256": "242d5ba0882df236894ebd75666d2255be110aaa8694068635f14f2fdf8784b3",
+      "attempts": []
+    },
+    {
+      "id": "prin-pg-simply",
+      "family": "prin-pg",
+      "genre": "principles",
+      "url": "https://paulgraham.com/simply.html",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 1016,
+      "chars": 5572,
+      "sha256": "b4971bacf11b1665f5d9a0e20c681e8c6e585fde6b8ded8bf6c82a7f6a6885a8",
+      "attempts": []
+    },
+    {
+      "id": "prin-stopslop",
+      "family": "prin-stopslop",
+      "genre": "principles",
+      "url": "https://raw.githubusercontent.com/hardikpandya/stop-slop/main/README.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "resolved_url": "https://raw.githubusercontent.com/hardikpandya/stop-slop/main/README.md",
+      "words": 220,
+      "chars": 1844,
+      "sha256": "6cdaa058980e7360e5e9e9f750348b8ee2f931b1ef89549cf266c24695973dfc",
+      "attempts": []
+    },
+    {
+      "id": "rust-rfc-2094-non-lexical-lifetimes",
+      "family": "rust-rfc",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/rust-lang/rfcs/master/text/2094-nll.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "words": 13063,
+      "chars": 83822,
+      "sha256": "1b526ee507edef9c600dfa0cc33096e6dd0b5bc20e0ccc25e8a42502c5f02479",
+      "attempts": []
+    },
+    {
+      "id": "rust-rfc-2229-capture-disjoint-fields",
+      "family": "rust-rfc",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/rust-lang/rfcs/master/text/2229-capture-disjoint-fields.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "words": 1498,
+      "chars": 9993,
+      "sha256": "3f6de88852da6b412c5742675a917f5fe975a4b043831c376780e5b3ece1f134",
+      "attempts": []
+    },
+    {
+      "id": "sre-book-ch03-embracing-risk",
+      "family": "sre-book",
+      "genre": "design_doc",
+      "url": "https://sre.google/sre-book/embracing-risk/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 4311,
+      "chars": 27930,
+      "sha256": "83322793a133f5d86ae5ca25d633b5bf8bb5982834006f54175fbd7a4fc4e702",
+      "attempts": []
+    },
+    {
+      "id": "sre-book-ch04-service-level-objectives",
+      "family": "sre-book",
+      "genre": "design_doc",
+      "url": "https://sre.google/sre-book/service-level-objectives/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 3291,
+      "chars": 20714,
+      "sha256": "cc5109347716456871634fbd438994309ad9cc0de3d1820d3e992cc41aab06ae",
+      "attempts": []
+    },
+    {
+      "id": "sre-book-ch15-postmortem-culture",
+      "family": "sre-book",
+      "genre": "postmortem",
+      "url": "https://sre.google/sre-book/postmortem-culture/",
+      "kind": "html",
+      "status": "ok",
+      "method": "direct",
+      "words": 2011,
+      "chars": 13766,
+      "sha256": "eaa5f1d256d8f642b8cbd317fc0d13355a1ad7b57c356561190e882411a06d4c",
+      "attempts": []
+    },
+    {
+      "id": "tail-at-scale",
+      "family": "tail-at-scale",
+      "genre": "perf_analysis",
+      "url": "https://www.barroso.org/publications/TheTailAtScale.pdf",
+      "kind": "pdf",
+      "methods": [
+        "direct"
+      ],
+      "fallback_urls": [
+        "https://people.eecs.berkeley.edu/~kubitron/cs262/handouts/papers/TheTailAtScale.pdf",
+        "https://www2.cs.duke.edu/courses/cps296.4/compsci590.4/fall13/838-CloudPapers/dean_longtail.pdf"
+      ],
+      "status": "ok",
+      "method": "direct",
+      "resolved_url": "https://www.barroso.org/publications/TheTailAtScale.pdf",
+      "words": 4938,
+      "chars": 34012,
+      "sha256": "739aa529dfe7df57f53daf2ccfbec66c9be8cea2a3ec37cc0a8316e61a106231",
+      "attempts": []
+    }
+  ]
+}

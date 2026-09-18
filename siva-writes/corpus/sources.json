@@ -1,0 +1,513 @@
+{
+  "_comment": "Split is at SOURCE-FAMILY level, never at document level, so no author appears on both sides. Test families were chosen to cover one genre each - RFC/design, systems, postmortem, perf analysis - so that condition H (the real human text) exists for every genre the eval writes in. Status update has no public exemplar family and therefore has no H; that gap is reported rather than papered over.",
+  "split": {
+    "train": [
+      "industrialempathy",
+      "pep",
+      "rust-rfc",
+      "aws-builders",
+      "danluu",
+      "allthingsdistributed",
+      "tail-at-scale",
+      "sre-book",
+      "gcp-incident"
+    ],
+    "test": [
+      "kep",
+      "brooker",
+      "cloudflare-pm",
+      "brendangregg"
+    ],
+    "principles": [
+      "prin-pg",
+      "prin-google-style",
+      "prin-stopslop",
+      "prin-mcenerney"
+    ],
+    "negative": [
+      "neg-wikipedia",
+      "neg-humanizer",
+      "neg-mozeik",
+      "neg-goblins"
+    ],
+    "genre_of_test_family": {
+      "kep": "rfc",
+      "brooker": "design_doc",
+      "cloudflare-pm": "postmortem",
+      "brendangregg": "perf_analysis"
+    }
+  },
+  "documents": [
+    {
+      "id": "industrialempathy-design-docs-at-google",
+      "family": "industrialempathy",
+      "genre": "design_doc",
+      "url": "https://industrialempathy.com/posts/design-docs-at-google/",
+      "kind": "html"
+    },
+    {
+      "id": "pep-0484-type-hints",
+      "family": "pep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/python/peps/main/peps/pep-0484.rst",
+      "kind": "rst",
+      "methods": [
+        "direct"
+      ]
+    },
+    {
+      "id": "pep-0572-assignment-expressions",
+      "family": "pep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/python/peps/main/peps/pep-0572.rst",
+      "kind": "rst",
+      "methods": [
+        "direct"
+      ]
+    },
+    {
+      "id": "pep-0703-making-the-gil-optional",
+      "family": "pep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/python/peps/main/peps/pep-0703.rst",
+      "kind": "rst",
+      "methods": [
+        "direct"
+      ]
+    },
+    {
+      "id": "rust-rfc-2094-non-lexical-lifetimes",
+      "family": "rust-rfc",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/rust-lang/rfcs/master/text/2094-nll.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ]
+    },
+    {
+      "id": "rust-rfc-2229-capture-disjoint-fields",
+      "family": "rust-rfc",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/rust-lang/rfcs/master/text/2229-capture-disjoint-fields.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ]
+    },
+    {
+      "id": "aws-timeouts-retries-backoff-jitter",
+      "family": "aws-builders",
+      "genre": "design_doc",
+      "url": "https://aws.amazon.com/builders-library/timeouts-retries-and-backoff-with-jitter/",
+      "kind": "html",
+      "methods": [
+        "wayback",
+        "reader"
+      ]
+    },
+    {
+      "id": "aws-workload-isolation-shuffle-sharding",
+      "family": "aws-builders",
+      "genre": "design_doc",
+      "url": "https://aws.amazon.com/builders-library/workload-isolation-using-shuffle-sharding/",
+      "kind": "html",
+      "methods": [
+        "wayback",
+        "reader"
+      ]
+    },
+    {
+      "id": "aws-avoiding-fallback",
+      "family": "aws-builders",
+      "genre": "design_doc",
+      "url": "https://aws.amazon.com/builders-library/avoiding-fallback-in-distributed-systems/",
+      "kind": "html",
+      "methods": [
+        "wayback",
+        "reader"
+      ]
+    },
+    {
+      "id": "aws-using-load-shedding",
+      "family": "aws-builders",
+      "genre": "design_doc",
+      "url": "https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/",
+      "kind": "html",
+      "methods": [
+        "reader",
+        "wayback",
+        "direct"
+      ],
+      "fallback_urls": [
+        "https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload/?did=ba_card&trk=ba_card",
+        "https://aws.amazon.com/builders-library/using-load-shedding-to-avoid-overload"
+      ]
+    },
+    {
+      "id": "aws-caching-challenges-strategies",
+      "family": "aws-builders",
+      "genre": "design_doc",
+      "url": "https://aws.amazon.com/builders-library/caching-challenges-and-strategies/",
+      "kind": "html",
+      "methods": [
+        "wayback",
+        "reader"
+      ]
+    },
+    {
+      "id": "danluu-perf-opt",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/perf-opt/",
+      "kind": "html"
+    },
+    {
+      "id": "danluu-bug-blind",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/bug-blind/",
+      "kind": "html",
+      "fallback_urls": [
+        "https://danluu.com/bug-blind/"
+      ]
+    },
+    {
+      "id": "danluu-pl-tokens",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/pl-tokens/",
+      "kind": "html"
+    },
+    {
+      "id": "danluu-p95-latency",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/p95-skill/",
+      "kind": "html"
+    },
+    {
+      "id": "danluu-postmortem-lessons",
+      "family": "danluu",
+      "genre": "postmortem",
+      "url": "https://danluu.com/postmortem-lessons/",
+      "kind": "html"
+    },
+    {
+      "id": "danluu-metrics-analytics",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/metrics-analytics/",
+      "kind": "html"
+    },
+    {
+      "id": "danluu-latency-pitfalls",
+      "family": "danluu",
+      "genre": "perf_analysis",
+      "url": "https://danluu.com/latency-pitfalls/",
+      "kind": "html"
+    },
+    {
+      "id": "atd-10-lessons-10-years-aws",
+      "family": "allthingsdistributed",
+      "genre": "design_doc",
+      "url": "https://www.allthingsdistributed.com/2016/03/10-lessons-from-10-years-of-aws.html",
+      "kind": "html"
+    },
+    {
+      "id": "atd-amazons-dynamo",
+      "family": "allthingsdistributed",
+      "genre": "design_doc",
+      "url": "https://www.allthingsdistributed.com/2007/10/amazons_dynamo.html",
+      "kind": "html"
+    },
+    {
+      "id": "atd-eventually-consistent",
+      "family": "allthingsdistributed",
+      "genre": "design_doc",
+      "url": "https://www.allthingsdistributed.com/2008/12/eventually_consistent.html",
+      "kind": "html"
+    },
+    {
+      "id": "atd-challenges-hyperscale",
+      "family": "allthingsdistributed",
+      "genre": "design_doc",
+      "url": "https://www.allthingsdistributed.com/2023/07/building-and-operating-a-pretty-big-storage-system.html",
+      "kind": "html"
+    },
+    {
+      "id": "tail-at-scale",
+      "family": "tail-at-scale",
+      "genre": "perf_analysis",
+      "url": "https://www.barroso.org/publications/TheTailAtScale.pdf",
+      "kind": "pdf",
+      "methods": [
+        "direct"
+      ],
+      "fallback_urls": [
+        "https://people.eecs.berkeley.edu/~kubitron/cs262/handouts/papers/TheTailAtScale.pdf",
+        "https://www2.cs.duke.edu/courses/cps296.4/compsci590.4/fall13/838-CloudPapers/dean_longtail.pdf"
+      ]
+    },
+    {
+      "id": "sre-book-ch03-embracing-risk",
+      "family": "sre-book",
+      "genre": "design_doc",
+      "url": "https://sre.google/sre-book/embracing-risk/",
+      "kind": "html"
+    },
+    {
+      "id": "sre-book-ch04-service-level-objectives",
+      "family": "sre-book",
+      "genre": "design_doc",
+      "url": "https://sre.google/sre-book/service-level-objectives/",
+      "kind": "html"
+    },
+    {
+      "id": "sre-book-ch15-postmortem-culture",
+      "family": "sre-book",
+      "genre": "postmortem",
+      "url": "https://sre.google/sre-book/postmortem-culture/",
+      "kind": "html"
+    },
+    {
+      "id": "gcp-incident-ow5i3PPK96RduMcb1SsW",
+      "family": "gcp-incident",
+      "genre": "postmortem",
+      "url": "https://status.cloud.google.com/incidents/ow5i3PPK96RduMcb1SsW",
+      "kind": "html"
+    },
+    {
+      "id": "gcp-incident-3BvH3LVGcupoYqV6F4Nw",
+      "family": "gcp-incident",
+      "genre": "postmortem",
+      "url": "https://status.cloud.google.com/incidents/3BvH3LVGcupoYqV6F4Nw",
+      "kind": "html"
+    },
+    {
+      "id": "gcp-incident-J5ia5t9p3g9Q5Wi7r8Ev",
+      "family": "gcp-incident",
+      "genre": "postmortem",
+      "url": "https://status.cloud.google.com/incidents/J5ia5t9p3g9Q5Wi7r8Ev",
+      "kind": "html"
+    },
+    {
+      "id": "gcp-incident-zall-20013",
+      "family": "gcp-incident",
+      "genre": "postmortem",
+      "url": "https://status.cloud.google.com/incident/zall/20013",
+      "kind": "html"
+    },
+    {
+      "id": "kep-1287-in-place-update-pod-resources",
+      "family": "kep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/kubernetes/enhancements/master/keps/sig-node/1287-in-place-update-pod-resources/README.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ]
+    },
+    {
+      "id": "kep-2400-node-swap",
+      "family": "kep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/kubernetes/enhancements/master/keps/sig-node/2400-node-swap/README.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ]
+    },
+    {
+      "id": "kep-3521-pod-scheduling-readiness",
+      "family": "kep",
+      "genre": "rfc",
+      "url": "https://raw.githubusercontent.com/kubernetes/enhancements/master/keps/sig-scheduling/3521-pod-scheduling-readiness/README.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ]
+    },
+    {
+      "id": "brooker-lorenz-and-little",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/07/29/lorenz-and-little.html",
+      "kind": "html"
+    },
+    {
+      "id": "brooker-waiting",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/06/19/waiting.html",
+      "kind": "html"
+    },
+    {
+      "id": "brooker-sfq",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/02/25/sfq.html",
+      "kind": "html"
+    },
+    {
+      "id": "brooker-dsql-paper",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/07/19/dsql-paper.html",
+      "kind": "html"
+    },
+    {
+      "id": "brooker-you-are-here",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/02/07/you-are-here.html",
+      "kind": "html"
+    },
+    {
+      "id": "brooker-whats-easy-whats-hard",
+      "family": "brooker",
+      "genre": "design_doc",
+      "url": "https://brooker.co.za/blog/2026/05/18/whats-easy-whats-hard.html",
+      "kind": "html"
+    },
+    {
+      "id": "cloudflare-18-november-2025-outage",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/18-november-2025-outage/",
+      "kind": "html"
+    },
+    {
+      "id": "cloudflare-5-december-2025-outage",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/5-december-2025-outage/",
+      "kind": "html"
+    },
+    {
+      "id": "cloudflare-february-20-2026-outage",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/cloudflare-outage-february-20-2026/",
+      "kind": "html"
+    },
+    {
+      "id": "cloudflare-sept-12-dashboard-api-outage",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/deep-dive-into-cloudflares-sept-12-dashboard-and-api-outage/",
+      "kind": "html"
+    },
+    {
+      "id": "cloudflare-1111-incident-july-14-2025",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/cloudflare-1-1-1-1-incident-on-july-14-2025/",
+      "kind": "html"
+    },
+    {
+      "id": "cloudflare-incident-august-21-2025",
+      "family": "cloudflare-pm",
+      "genre": "postmortem",
+      "url": "https://blog.cloudflare.com/cloudflare-incident-on-august-21-2025/",
+      "kind": "html"
+    },
+    {
+      "id": "gregg-the-speed-of-time",
+      "family": "brendangregg",
+      "genre": "perf_analysis",
+      "url": "https://www.brendangregg.com/blog/2021-09-26/the-speed-of-time.html",
+      "kind": "html"
+    },
+    {
+      "id": "gregg-zfs-eating-my-cpu",
+      "family": "brendangregg",
+      "genre": "perf_analysis",
+      "url": "https://www.brendangregg.com/blog/2021-09-06/zfs-is-mysteriously-eating-my-cpu.html",
+      "kind": "html"
+    },
+    {
+      "id": "gregg-tensorflow-library-performance",
+      "family": "brendangregg",
+      "genre": "perf_analysis",
+      "url": "https://www.brendangregg.com/blog/2022-04-09/tensorflow-library-performance.html",
+      "kind": "html"
+    },
+    {
+      "id": "gregg-return-of-the-frame-pointers",
+      "family": "brendangregg",
+      "genre": "perf_analysis",
+      "url": "https://www.brendangregg.com/blog/2024-03-17/the-return-of-the-frame-pointers.html",
+      "kind": "html"
+    },
+    {
+      "id": "gregg-high-rate-of-paging",
+      "family": "brendangregg",
+      "genre": "perf_analysis",
+      "url": "https://www.brendangregg.com/blog/2021-08-30/high-rate-of-paging.html",
+      "kind": "html"
+    },
+    {
+      "id": "prin-pg-simply",
+      "family": "prin-pg",
+      "genre": "principles",
+      "url": "https://paulgraham.com/simply.html",
+      "kind": "html"
+    },
+    {
+      "id": "prin-google-developer-style",
+      "family": "prin-google-style",
+      "genre": "principles",
+      "url": "https://developers.google.com/style/highlights",
+      "kind": "html"
+    },
+    {
+      "id": "prin-stopslop",
+      "family": "prin-stopslop",
+      "genre": "principles",
+      "url": "https://raw.githubusercontent.com/hardikpandya/stop-slop/main/README.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ]
+    },
+    {
+      "id": "neg-wikipedia-signs-of-ai-writing",
+      "family": "neg-wikipedia",
+      "genre": "negative",
+      "url": "https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing",
+      "kind": "html"
+    },
+    {
+      "id": "neg-humanizer-patterns",
+      "family": "neg-humanizer",
+      "genre": "negative",
+      "url": "https://raw.githubusercontent.com/blader/humanizer/main/README.md",
+      "kind": "md",
+      "methods": [
+        "direct"
+      ]
+    },
+    {
+      "id": "neg-mozeik-frontier-models",
+      "family": "neg-mozeik",
+      "genre": "negative",
+      "url": "https://blog.mozeik.com/articles/frontier-models-dont-write-so-good",
+      "kind": "html",
+      "methods": [
+        "reader"
+      ]
+    },
+    {
+      "id": "neg-openai-goblins",
+      "family": "neg-goblins",
+      "genre": "negative",
+      "url": "https://openai.com/index/where-the-goblins-came-from/",
+      "kind": "html",
+      "methods": [
+        "wayback",
+        "reader"
+      ]
+    }
+  ]
+}

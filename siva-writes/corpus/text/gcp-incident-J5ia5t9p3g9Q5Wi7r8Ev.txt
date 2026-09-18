@@ -1,0 +1,539 @@
+Google Cloud Service Health
+
+Incidents
+
+Multiple products in us-central1-b are experiencing network service degradation.
+
+Service Health
+
+For incidents related to Google Security Products, visit https://status.cloud.google.com/security . For incidents related to Looker (original), visit https://status.cloud.google.com/looker .
+
+Available
+
+Service disruption
+
+Service outage
+
+Incident affecting AlloyDB for PostgreSQL, Apigee, Cloud Filestore, Cloud Run, Cloud Spanner, Google App Engine, Google BigQuery, Google Cloud Bigtable, Google Cloud Dataflow, Google Cloud SQL, Google Compute Engine, Google Kubernetes Engine, Hybrid Connectivity, Looker (Google Cloud core), Virtual Private Cloud (VPC)
+
+Multiple products in us-central1-b are experiencing network service degradation.
+
+Incident began at 2026-09-01 07:44 and ended at 2026-09-01 11:52 (all times are US/Pacific ).
+
+Previously affected location(s)
+
+Iowa (us-central1)
+
+14:20 PDT
+
+Incident Report Summary On Tuesday, 1 September 2026, some customers in us-central1 experienced network service degradation and instance isolation for a duration of 4 hours and 11 minutes. To our customers whose businesses were impacted during this disruption, we sincerely apologize. This is not the level of quality and reliability we strive to offer you, and we are taking immediate steps to improve the platform’s performance and availability. Root Cause The event was triggered by the inadvertent physical disconnection of network fiber-optic cables during routine hardware maintenance. A technician was performing a scheduled capacity upgrade on data center routers that support a fraction of capacity in the us-central1-b zone and a small fraction of capacity in the us-central1-f zone. During the hands-on maintenance, optical fibers connecting the data center routers to the network fabric were unplugged and the optical transceivers were replaced with a transceiver that supports higher-density connectivity. This transceiver was not compatible with the transceivers still in place in the data center fabric, causing a loss of connectivity for each fiber. The network is designed with redundant routers in separate data center rooms within the same building so that failure of one router does not interrupt service. The maintenance was intended to upgrade one router at a time over several days, with traffic diversions at each step and verification between steps that the network has returned to a fully-connected state. However, a procedural error in the manually orchestrated upgrade process caused the complete list of transceiver replacements across all routers to be issued to the technician without instructions to sequence the work one router at a time. The maintenance workflow also did not include the expected human and software verification steps for detecting unintended disruption. As a result, the technician sequentially unplugged all fiber paths across the affected devices within 13 minutes. The speed and nature of the error prevented warnings of incorrect action from reaching the engineer before connectivity was lost. Additionally, a standing procedure to halt if light is detected on any fiber-optic cable after unplug was not followed. This resulted in compute capacity in the impacted zone being isolated from the network. Customers were unable to reach their virtual machines, and those virtual machines could not establish connections outside their zone. Remediation and Prevention The issue was detected immediately by automated network loss monitoring systems as well as proactive probes, which rapidly engaged the network engineering and incident response teams. To mitigate the immediate customer impact, engineering teams actively moved traffic away from the impacted infrastructure. Concurrently, hardware operations technicians on site identified the disconnected optical links and physically re-inserted the original optical transceivers. Once the physical links were fully restored, traffic flow rates normalized and the traffic was redirected back to return the capacity to service. Google is committed to preventing a repeat of this issue in the future and is completing the following actions: Reinforce training in us-central1 region and globally around safe maintenance techniques, including the mandatory requirement to verify whether light is on every unplugged fiber. Finish the migration of network upgrade workflows to a fully automatically sequenced orchestration system. Most common regional network workflows were completed in 2025, and zonal workflows are in progress. Complete the deployment of work stop alerting for actions resulting in the unintended disconnection of live fiber cables in Google data centers. Complete the deployment of the automated system that will move regional traffic away from faulty zones, reducing the time from approximately 19 minutes in this instance to around 5 minutes. Detailed Description of Impact On Tuesday, 1 September, from 07:41 to 11:52 US/Pacific, a portion of the us-central1-b and us-central1-f zones experienced severe network degradation and resource isolation. Multiple products affected: The network disruption to/from a portion of us-central1-b and us-central1-f zones impacted all zonal GCP Products for some customers in those zones. Regional impact: Regional products using capacity in the affected data center were affected until traffic diversions were fully in place at 08:00 US/Pacific. Google Kubernetes Engine and Cloud Run / Google App Engine had longer impacts, discussed below. Error rate: Traffic flow drop rates for resources hosted in the affected area reached 100% during the peak of the incident, resulting in unreachable virtual machines and elevated packet loss. Affected Services and Features Google Compute Engine: Inability for users in the affected portion of us-central1-b and us-central1-f zones to access virtual machines externally, and inability for VMs to reach remote resources. Cloud SQL, AlloyDB for PostgreSQL, Google Cloud Bigtable, Cloud Filestore: Data access and connectivity severed for instances localized strictly to the impacted infrastructure. Cloud Spanner, Cloud Firestore: Elevated Remote Procedure Call (RPC) error rates, write timeouts, and latency spikes for the nam5 multi-region instances due to severed connectivity to components running in the impacted zone. Virtual Private Cloud (VPC), Cloud NAT, Apigee, Google BigQuery, Google Cloud Dataflow, Looker, Google SecOps SOAR, Hybrid Connectivity, Cloud Interconnect: Elevated network packet loss, connectivity drops, and API timeouts in the impacted zone. Google Kubernetes Engine (GKE): Between 07:40 and 09:15 US/Pacific on 2026-09-01, customers experienced errors and timeouts on requests to their GKE cluster control planes (Kubernetes API servers) in us-central1. This could have caused new or updated workloads to fail scheduling and Kubernetes API operations to fail. Cloud Run / Google App Engine: Temporary latency spikes and pending queue aborts as backend workloads automatically evacuated and shifted to healthy capacity. A subset of workloads in the specifically impacted area experienced degradation until 11:52 US/Pacific. Customer Impact Customers with resources hosted in the specific affected clusters within us-central1-b and us-central1-f experienced a complete loss of network connectivity starting at 07:41 US/Pacific.
+During this time, virtual machines and associated services became unreachable from the internet and from other Google Cloud regions, and those internal resources could not initiate outbound connections. The issue was detected almost immediately and engineers took traffic diversion actions at 07:45 and 08:00 US/Pacific to reduce impact to regional products.
+By 08:50 US/Pacific, the majority of physical connections were restored and traffic began recovering, and the traffic diversion actions were removed at 09:19 US/Pacific.
+Full recovery across nearly all affected services and long-running operations was confirmed by 11:52 US/Pacific. Because the network isolation was strictly limited to specific clusters within us-central1-b and us-central1-f, multi-zonal deployments correctly utilizing redundancy across other zones in us-central1 were largely able to bypass the physical hardware failure and continue serving traffic.
+Customers with projects in both us-central1-b and us-central1-f would not have seen multi-zonal impact - at most one of their zones would have capacity in the affected data center.
+
+Incident Report
+
+Summary
+
+On Tuesday, 1 September 2026, some customers in us-central1 experienced network service degradation and instance isolation for a duration of 4 hours and 11 minutes. To our customers whose businesses were impacted during this disruption, we sincerely apologize. This is not the level of quality and reliability we strive to offer you, and we are taking immediate steps to improve the platform’s performance and availability.
+
+Root Cause
+
+The event was triggered by the inadvertent physical disconnection of network fiber-optic cables during routine hardware maintenance. A technician was performing a scheduled capacity upgrade on data center routers that support a fraction of capacity in the us-central1-b zone and a small fraction of capacity in the us-central1-f zone.
+
+During the hands-on maintenance, optical fibers connecting the data center routers to the network fabric were unplugged and the optical transceivers were replaced with a transceiver that supports higher-density connectivity. This transceiver was not compatible with the transceivers still in place in the data center fabric, causing a loss of connectivity for each fiber.
+
+The network is designed with redundant routers in separate data center rooms within the same building so that failure of one router does not interrupt service. The maintenance was intended to upgrade one router at a time over several days, with traffic diversions at each step and verification between steps that the network has returned to a fully-connected state.
+
+However, a procedural error in the manually orchestrated upgrade process caused the complete list of transceiver replacements across all routers to be issued to the technician without instructions to sequence the work one router at a time. The maintenance workflow also did not include the expected human and software verification steps for detecting unintended disruption.
+
+As a result, the technician sequentially unplugged all fiber paths across the affected devices within 13 minutes. The speed and nature of the error prevented warnings of incorrect action from reaching the engineer before connectivity was lost. Additionally, a standing procedure to halt if light is detected on any fiber-optic cable after unplug was not followed.
+
+This resulted in compute capacity in the impacted zone being isolated from the network. Customers were unable to reach their virtual machines, and those virtual machines could not establish connections outside their zone.
+
+Remediation and Prevention
+
+The issue was detected immediately by automated network loss monitoring systems as well as proactive probes, which rapidly engaged the network engineering and incident response teams.
+
+To mitigate the immediate customer impact, engineering teams actively moved traffic away from the impacted infrastructure.
+
+Concurrently, hardware operations technicians on site identified the disconnected optical links and physically re-inserted the original optical transceivers. Once the physical links were fully restored, traffic flow rates normalized and the traffic was redirected back to return the capacity to service.
+
+Google is committed to preventing a repeat of this issue in the future and is completing the following actions:
+
+Reinforce training in us-central1 region and globally around safe maintenance techniques, including the mandatory requirement to verify whether light is on every unplugged fiber.
+
+Finish the migration of network upgrade workflows to a fully automatically sequenced orchestration system. Most common regional network workflows were completed in 2025, and zonal workflows are in progress.
+
+Complete the deployment of work stop alerting for actions resulting in the unintended disconnection of live fiber cables in Google data centers.
+
+Complete the deployment of the automated system that will move regional traffic away from faulty zones, reducing the time from approximately 19 minutes in this instance to around 5 minutes.
+
+Detailed Description of Impact
+
+On Tuesday, 1 September, from 07:41 to 11:52 US/Pacific, a portion of the us-central1-b and us-central1-f zones experienced severe network degradation and resource isolation.
+
+Multiple products affected: The network disruption to/from a portion of us-central1-b and us-central1-f zones impacted all zonal GCP Products for some customers in those zones.
+
+Regional impact: Regional products using capacity in the affected data center were affected until traffic diversions were fully in place at 08:00 US/Pacific. Google Kubernetes Engine and Cloud Run / Google App Engine had longer impacts, discussed below.
+
+Error rate: Traffic flow drop rates for resources hosted in the affected area reached 100% during the peak of the incident, resulting in unreachable virtual machines and elevated packet loss.
+
+Affected Services and Features
+
+Google Compute Engine: Inability for users in the affected portion of us-central1-b and us-central1-f zones to access virtual machines externally, and inability for VMs to reach remote resources.
+
+Cloud SQL, AlloyDB for PostgreSQL, Google Cloud Bigtable, Cloud Filestore: Data access and connectivity severed for instances localized strictly to the impacted infrastructure.
+
+Cloud Spanner, Cloud Firestore: Elevated Remote Procedure Call (RPC) error rates, write timeouts, and latency spikes for the nam5 multi-region instances due to severed connectivity to components running in the impacted zone.
+
+Virtual Private Cloud (VPC), Cloud NAT, Apigee, Google BigQuery, Google Cloud Dataflow, Looker, Google SecOps SOAR, Hybrid Connectivity, Cloud Interconnect: Elevated network packet loss, connectivity drops, and API timeouts in the impacted zone.
+
+Google Kubernetes Engine (GKE): Between 07:40 and 09:15 US/Pacific on 2026-09-01, customers experienced errors and timeouts on requests to their GKE cluster control planes (Kubernetes API servers) in us-central1. This could have caused new or updated workloads to fail scheduling and Kubernetes API operations to fail.
+
+Cloud Run / Google App Engine: Temporary latency spikes and pending queue aborts as backend workloads automatically evacuated and shifted to healthy capacity. A subset of workloads in the specifically impacted area experienced degradation until 11:52 US/Pacific.
+
+Customer Impact
+
+Customers with resources hosted in the specific affected clusters within us-central1-b and us-central1-f experienced a complete loss of network connectivity starting at 07:41 US/Pacific.
+During this time, virtual machines and associated services became unreachable from the internet and from other Google Cloud regions, and those internal resources could not initiate outbound connections.
+
+The issue was detected almost immediately and engineers took traffic diversion actions at 07:45 and 08:00 US/Pacific to reduce impact to regional products.
+By 08:50 US/Pacific, the majority of physical connections were restored and traffic began recovering, and the traffic diversion actions were removed at 09:19 US/Pacific.
+Full recovery across nearly all affected services and long-running operations was confirmed by 11:52 US/Pacific.
+
+Because the network isolation was strictly limited to specific clusters within us-central1-b and us-central1-f, multi-zonal deployments correctly utilizing redundancy across other zones in us-central1 were largely able to bypass the physical hardware failure and continue serving traffic.
+Customers with projects in both us-central1-b and us-central1-f would not have seen multi-zonal impact - at most one of their zones would have capacity in the affected data center.
+
+10:47 PDT
+
+Preliminary Incident Report We sincerely apologize for the disruption this incident caused to your business. We know how much you rely on Google Cloud, and we regret the impact on your environment. We are working to address the root cause and prevent this from occurring in the future. Please note, this information is based on our best knowledge at the time of posting and is subject to change as our investigation continues. A final Incident Report with preventative actions will be posted once our investigation is complete. If you have experienced impact outside of what is listed below, please reach out to Google Cloud Support using https://cloud.google.com/support Date/Time of the Issue (All time US/Pacific) Incident Start : 1 September 2026 07:41 Incident End : 1 September 2026 11:52 Duration : 4 hours, 11 minutes Summary On Tuesday, 1 September 2026, some customers in us-central1-b experienced network service degradation and instance isolation for a duration of 4 hours and 11 minutes. To our customers whose businesses were impacted during this disruption, we sincerely apologize. This is not the level of quality and reliability we strive to offer you, and we are taking immediate steps to improve the platform’s performance and availability. Preliminary Root Cause The immediate technical trigger for this event was the inadvertent physical disconnection of network fiber-optic cables during a routine hardware maintenance procedure. An engineer was performing a scheduled capacity upgrade on datacenter routers that support a fraction of capacity in the us-central1-b zone. The network architecture for each datacenter is designed with redundancy across multiple routing devices. The system is designed to be resilient to all single device or fiber-path failures, and most double- or triple-failures do not affect customer traffic. To ensure this, the devices and fiber paths are physically separated in each datacenter, with diverse power sources. A procedural error meant that the physical maintenance action sequentially unplugged 100% of fiber paths across all devices within 13 minutes. The nature of the error, combined with the speed of the action, prevented warnings of incorrect action reaching the engineer before complete disconnection. This resulted in compute capacity in the impacted zone being isolated from the network. Customers were unable to reach their virtual machines, and those virtual machines could not establish connections outside their zone. Remediation The issue was detected immediately by automated network loss monitoring systems as well as proactive probes, which rapidly engaged the network engineering and incident response teams. To mitigate the immediate customer impact, engineering teams actively moved traffic  away from the impacted infrastructure, automatically shifting compatible workload traffic to healthy capacity elsewhere in the region. Concurrently, hardware operations technicians on site identified the disconnected optical links and physically reseated the fibers. Once the physical links were fully restored, traffic flow rates normalized and the traffic was redirected back to return the capacity to service. Description of Impact On Tuesday, 1 September, from 07:41 to 11:52 US/Pacific, a portion of the us-central1-b zone experienced severe network degradation and resource isolation. Multiple products affected: The network disruption to/from a portion of us-central1-b impacted multiple GCP Products for some customers in that zone. Error rate: Traffic flow drop rates for resources hosted in the affected area reached 100% during the peak of the incident, resulting in unreachable virtual machines and elevated packet loss. Affected Services and Features Google Compute Engine: Inability to access virtual machines externally, and inability for VMs to reach remote resources. Google Kubernetes Engine: Unreachable regional/zonal clusters and nodes within the affected zone, prompting delayed cluster recovery times. Cloud Run / Google App Engine: Temporary latency spikes and pending queue aborts as backend workloads automatically evacuated and shifted to healthy capacity. A subset of workloads in the specifically impacted area experienced degradation until 11:52 US/Pacific. Cloud SQL, AlloyDB for PostgreSQL, Cloud Spanner, Google Cloud Bigtable, Cloud Filestore: Data access and connectivity severed for instances localized strictly to the impacted infrastructure. Virtual Private Cloud (VPC), Cloud NAT, Apigee, Google BigQuery, Google Cloud Dataflow, Looker, Google SecOps SOAR, Hybrid Connectivity, Cloud Interconnect: Elevated network packet loss, connectivity drops, and API timeouts in the impacted zone.
+
+Preliminary Incident Report
+
+We sincerely apologize for the disruption this incident caused to your business. We know how much you rely on Google Cloud, and we regret the impact on your environment. We are working to address the root cause and prevent this from occurring in the future.
+
+Please note, this information is based on our best knowledge at the time of posting and is subject to change as our investigation continues. A final Incident Report with preventative actions will be posted once our investigation is complete.
+
+If you have experienced impact outside of what is listed below, please reach out to Google Cloud Support using https://cloud.google.com/support
+
+Date/Time of the Issue (All time US/Pacific)
+
+Incident Start : 1 September 2026 07:41
+
+Incident End : 1 September 2026 11:52
+
+Duration : 4 hours, 11 minutes
+
+Summary
+
+On Tuesday, 1 September 2026, some customers in us-central1-b experienced network service degradation and instance isolation for a duration of 4 hours and 11 minutes. To our customers whose businesses were impacted during this disruption, we sincerely apologize. This is not the level of quality and reliability we strive to offer you, and we are taking immediate steps to improve the platform’s performance and availability.
+
+Preliminary Root Cause
+
+The immediate technical trigger for this event was the inadvertent physical disconnection of network fiber-optic cables during a routine hardware maintenance procedure. An engineer was performing a scheduled capacity upgrade on datacenter routers that support a fraction of capacity in the us-central1-b zone.
+
+The network architecture for each datacenter is designed with redundancy across multiple routing devices. The system is designed to be resilient to all single device or fiber-path failures, and most double- or triple-failures do not affect customer traffic. To ensure this, the devices and fiber paths are physically separated in each datacenter, with diverse power sources.
+
+A procedural error meant that the physical maintenance action sequentially unplugged 100% of fiber paths across all devices within 13 minutes. The nature of the error, combined with the speed of the action, prevented warnings of incorrect action reaching the engineer before complete disconnection.
+
+This resulted in compute capacity in the impacted zone being isolated from the network. Customers were unable to reach their virtual machines, and those virtual machines could not establish connections outside their zone.
+
+Remediation
+
+The issue was detected immediately by automated network loss monitoring systems as well as proactive probes, which rapidly engaged the network engineering and incident response teams.
+
+To mitigate the immediate customer impact, engineering teams actively moved traffic  away from the impacted infrastructure, automatically shifting compatible workload traffic to healthy capacity elsewhere in the region.
+
+Concurrently, hardware operations technicians on site identified the disconnected optical links and physically reseated the fibers. Once the physical links were fully restored, traffic flow rates normalized and the traffic was redirected back to return the capacity to service.
+
+Description of Impact
+
+On Tuesday, 1 September, from 07:41 to 11:52 US/Pacific, a portion of the us-central1-b zone experienced severe network degradation and resource isolation.
+
+Multiple products affected: The network disruption to/from a portion of us-central1-b impacted multiple GCP Products for some customers in that zone.
+
+Multiple products affected: The network disruption to/from a portion of us-central1-b impacted multiple GCP Products for some customers in that zone.
+
+Error rate: Traffic flow drop rates for resources hosted in the affected area reached 100% during the peak of the incident, resulting in unreachable virtual machines and elevated packet loss.
+
+Error rate: Traffic flow drop rates for resources hosted in the affected area reached 100% during the peak of the incident, resulting in unreachable virtual machines and elevated packet loss.
+
+Affected Services and Features
+
+Google Compute Engine: Inability to access virtual machines externally, and inability for VMs to reach remote resources.
+
+Google Kubernetes Engine: Unreachable regional/zonal clusters and nodes within the affected zone, prompting delayed cluster recovery times.
+
+Cloud Run / Google App Engine: Temporary latency spikes and pending queue aborts as backend workloads automatically evacuated and shifted to healthy capacity. A subset of workloads in the specifically impacted area experienced degradation until 11:52 US/Pacific.
+
+Cloud SQL, AlloyDB for PostgreSQL, Cloud Spanner, Google Cloud Bigtable, Cloud Filestore: Data access and connectivity severed for instances localized strictly to the impacted infrastructure.
+
+Virtual Private Cloud (VPC), Cloud NAT, Apigee, Google BigQuery, Google Cloud Dataflow, Looker, Google SecOps SOAR, Hybrid Connectivity, Cloud Interconnect: Elevated network packet loss, connectivity drops, and API timeouts in the impacted zone.
+
+12:12 PDT
+
+Summary Multiple products in us-central1-b experienced network service degradation. Description The issue was affecting a portion of the us-central1-b zone. The remaining zones in the region were unaffected. All the impacted products have recovered. From preliminary analysis, routine network fabric path maintenance triggered unexpected issues in one  cluster in us-central1-b. We have recovered the network capacity that was impacted and restored all zonal and regional services. Maintenance in the region has been halted while proactive audits are carried out. We thank you for your patience while we worked on resolving the issue. Customer Symptoms Customers experienced elevated packet loss and errors. Workaround The issue has been mitigated.
+
+Summary
+
+Multiple products in us-central1-b experienced network service degradation.
+
+Description
+
+The issue was affecting a portion of the us-central1-b zone. The remaining zones in the region were unaffected.
+
+All the impacted products have recovered.
+
+From preliminary analysis, routine network fabric path maintenance triggered unexpected issues in one  cluster in us-central1-b. We have recovered the network capacity that was impacted and restored all zonal and regional services. Maintenance in the region has been halted while proactive audits are carried out.
+
+We thank you for your patience while we worked on resolving the issue.
+
+Customer Symptoms
+
+Customers experienced elevated packet loss and errors.
+
+Workaround
+
+The issue has been mitigated.
+
+11:36 PDT
+
+Summary Multiple products in us-central1-b are experiencing network service degradation. Description The issue is affecting a portion of the us-central1-b zone. The remaining zones in the region are unaffected. Most of the products have recovered. The impacted products Cloud Run and App Engine are also seeing recovery and the errors have lowered pre-incident levels. Engineering continues to monitor and validate. Routine network fabric path maintenance triggered unexpected issues in two clusters in us-central1-b. We have recovered the network capacity that was impacted and restored all zonal and regional services. Maintenance in the region has been halted while proactive audits are carried out. We will provide more information by Tuesday, 2026-09-01 12:30 US/Pacific with current details. Customer Symptoms Customers are experiencing elevated packet loss and errors. Cloud Run App Engine Following products have recovered BigQuery Cloud Dataflow Cloud Bigtable Compute Engine Cloud Hybrid Connectivity Cloud Filestore Virtual Private Cloud Cloud Spanner Google Kubernetes Engine Cloud SQL AlloyDBCloud VPN Apigee Cloud Interconnect Cloud NAT Looker (Google Cloud core) Google SecOps SOAR Cloud Firestore Workaround Customers with service layer retries may see successful completions as only a portion of the zone is affected.
+
+Summary
+
+Multiple products in us-central1-b are experiencing network service degradation.
+
+Description
+
+The issue is affecting a portion of the us-central1-b zone. The remaining zones in the region are unaffected.
+
+Most of the products have recovered. The impacted products Cloud Run and App Engine are also seeing recovery and the errors have lowered pre-incident levels. Engineering continues to monitor and validate.
+
+Routine network fabric path maintenance triggered unexpected issues in two clusters in us-central1-b. We have recovered the network capacity that was impacted and restored all zonal and regional services. Maintenance in the region has been halted while proactive audits are carried out.
+
+We will provide more information by Tuesday, 2026-09-01 12:30 US/Pacific with current details.
+
+Customer Symptoms
+
+Customers are experiencing elevated packet loss and errors.
+
+Cloud Run
+
+App Engine
+
+Following products have recovered
+
+BigQuery
+
+Cloud Dataflow
+
+Cloud Bigtable
+
+Compute Engine
+
+Cloud Hybrid Connectivity
+
+Cloud Filestore
+
+Virtual Private Cloud
+
+Cloud Spanner
+
+Google Kubernetes Engine
+
+Cloud SQL
+
+AlloyDBCloud VPN
+
+Apigee
+
+Cloud Interconnect
+
+Cloud NAT
+
+Looker (Google Cloud core)
+
+Google SecOps SOAR
+
+Cloud Firestore
+
+Workaround
+
+Customers with service layer retries may see successful completions as only a portion of the zone is affected.
+
+11:01 PDT
+
+Summary Multiple products in us-central1-b are experiencing network service degradation. Description The issue is affecting a portion of the us-central1-b zone. The remaining zones in the region are unaffected. Most of the products have recovered and the engineering team is still validating a few remaining product impacts. Routine network maintenance triggered issues in us-central1-b. We have recovered the network capacity that was impacted and restored all zonal and regional services. Maintenance in the region has been halted while proactive audits are carried out. We will provide more information by Tuesday, 2026-09-01 12:30 US/Pacific with current details. Customer Symptoms Customers are experiencing elevated packet loss and errors. Cloud Run App Engine Following products have recovered BigQuery Cloud Dataflow Cloud Bigtable Compute Engine Cloud Hybrid Connectivity Cloud Filestore Virtual Private Cloud Cloud Spanner Google Kubernetes Engine Cloud SQL AlloyDBCloud VPN Apigee Cloud Interconnect Cloud NAT Looker (Google Cloud core) Google SecOps SOAR Cloud Firestore Workaround Customers with service layer retries may see successful completions as only a portion of the zone is affected.
+
+Summary
+
+Multiple products in us-central1-b are experiencing network service degradation.
+
+Description
+
+The issue is affecting a portion of the us-central1-b zone. The remaining zones in the region are unaffected.
+
+Most of the products have recovered and the engineering team is still validating a few remaining product impacts.
+
+Routine network maintenance triggered issues in us-central1-b. We have recovered the network capacity that was impacted and restored all zonal and regional services. Maintenance in the region has been halted while proactive audits are carried out.
+
+We will provide more information by Tuesday, 2026-09-01 12:30 US/Pacific with current details.
+
+Customer Symptoms
+
+Customers are experiencing elevated packet loss and errors.
+
+Cloud Run
+
+App Engine
+
+Following products have recovered
+
+BigQuery
+
+Cloud Dataflow
+
+Cloud Bigtable
+
+Compute Engine
+
+Cloud Hybrid Connectivity
+
+Cloud Filestore
+
+Virtual Private Cloud
+
+Cloud Spanner
+
+Google Kubernetes Engine
+
+Cloud SQL
+
+AlloyDBCloud VPN
+
+Apigee
+
+Cloud Interconnect
+
+Cloud NAT
+
+Looker (Google Cloud core)
+
+Google SecOps SOAR
+
+Cloud Firestore
+
+Workaround
+
+Customers with service layer retries may see successful completions as only a portion of the zone is affected.
+
+10:09 PDT
+
+Summary Multiple products in us-central1-b are experiencing network service degradation. Description The issue is affecting a portion of the us-central1-b zone. The remaining zones in the region are unaffected. Most of the products have recovered and the engineering team is still validating a few remaining product impacts. We will provide more information by Tuesday, 2026-09-01 11:00 US/Pacific with current details. Customer Symptoms Customers are experiencing elevated packet loss and errors. Cloud Run App Engine Following products have recovered BigQuery Cloud Dataflow Cloud Bigtable Compute Engine Cloud Hybrid Connectivity Cloud Filestore Virtual Private Cloud Cloud Spanner Google Kubernetes Engine Cloud SQL AlloyDBCloud VPN Apigee Cloud Interconnect Cloud NAT Looker (Google Cloud core) Google SecOps SOAR Cloud Firestore Workaround Customers with service layer retries may see successful completions as only a portion of the zone is affected. Customers that are severely affected and have services available in alternate zones can failover to alternate zones.
+
+Summary
+
+Multiple products in us-central1-b are experiencing network service degradation.
+
+Description
+
+The issue is affecting a portion of the us-central1-b zone. The remaining zones in the region are unaffected.
+
+Most of the products have recovered and the engineering team is still validating a few remaining product impacts.
+
+We will provide more information by Tuesday, 2026-09-01 11:00 US/Pacific with current details.
+
+Customer Symptoms
+
+Customers are experiencing elevated packet loss and errors.
+
+Cloud Run
+
+App Engine
+
+Following products have recovered
+
+BigQuery
+
+Cloud Dataflow
+
+Cloud Bigtable
+
+Compute Engine
+
+Cloud Hybrid Connectivity
+
+Cloud Filestore
+
+Virtual Private Cloud
+
+Cloud Spanner
+
+Google Kubernetes Engine
+
+Cloud SQL
+
+AlloyDBCloud VPN
+
+Apigee
+
+Cloud Interconnect
+
+Cloud NAT
+
+Looker (Google Cloud core)
+
+Google SecOps SOAR
+
+Cloud Firestore
+
+Workaround
+
+Customers with service layer retries may see successful completions as only a portion of the zone is affected.
+
+Customers that are severely affected and have services available in alternate zones can failover to alternate zones.
+
+09:19 PDT
+
+Summary Multiple products in us-central1-b are experiencing network service degradation. Description The issue is affecting a portion of the us-central1-b zone. The remaining zones in the region are unaffected. Following network-level mitigation efforts, the underlying network infrastructure has fully recovered. Product engineering teams across Cloud are currently validating the recovery status of individual services. We will provide more information by Tuesday, 2026-09-01 10:00 US/Pacific with current details. Customer Symptoms Customers are experiencing elevated packet loss and errors. BigQuery Cloud Dataflow Cloud SQL App Engine Cloud Run AlloyDB Cloud Bigtable Cloud Spanner Compute Engine Cloud VPN Cloud Interconnect Cloud NAT Cloud Filestore Cloud Hybrid Connectivity Virtual Private Cloud Google Kubernetes Engine Looker (Google Cloud core) Apigee Google SecOps SOAR Workaround Customers with service layer retries may see successful completions as only a portion of the zone is affected. Customers that are severely affected and have services available in alternate zones can failover to alternate zones.
+
+Summary
+
+Multiple products in us-central1-b are experiencing network service degradation.
+
+Description
+
+The issue is affecting a portion of the us-central1-b zone. The remaining zones in the region are unaffected.
+
+Following network-level mitigation efforts, the underlying network infrastructure has fully recovered. Product engineering teams across Cloud are currently validating the recovery status of individual services.
+
+We will provide more information by Tuesday, 2026-09-01 10:00 US/Pacific with current details.
+
+Customer Symptoms
+
+Customers are experiencing elevated packet loss and errors.
+
+BigQuery
+
+Cloud Dataflow
+
+Cloud SQL
+
+App Engine
+
+Cloud Run
+
+AlloyDB
+
+Cloud Bigtable
+
+Cloud Spanner
+
+Compute Engine
+
+Cloud VPN
+
+Cloud Interconnect
+
+Cloud NAT
+
+Cloud Filestore
+
+Cloud Hybrid Connectivity
+
+Virtual Private Cloud
+
+Google Kubernetes Engine
+
+Looker (Google Cloud core)
+
+Apigee
+
+Google SecOps SOAR
+
+Workaround
+
+Customers with service layer retries may see successful completions as only a portion of the zone is affected.
+
+Customers that are severely affected and have services available in alternate zones can failover to alternate zones.
+
+09:03 PDT
+
+Summary Multiple products in us-central1-b are experiencing network service degradation. Description We are experiencing a networking issue starting Tuesday, 2026-09-01 07:41 US/Pacific. The issue is affecting a portion of the us-central1-b zone. The remaining zones in the region are unaffected. Our network engineering team has put in mitigations and we are seeing services starting to recover. We will provide more information by Tuesday, 2026-09-01 09:30 US/Pacific with current details. We apologize to all who are affected by the disruption. Customer Symptoms Customers are experiencing elevated packet loss and errors. BigQuery Cloud Dataflow Cloud SQL App Engine Cloud Run AlloyDB Cloud Bigtable Cloud Spanner Compute Engine Cloud VPN Cloud Interconnect Cloud NAT Cloud Filestore Cloud Hybrid Connectivity Virtual Private Cloud Google Kubernetes Engine Looker (Google Cloud core) Workaround Customers with service layer retries may see successful completions as only a portion of the zone is affected. Customers that are severely affected and have services available in alternate zones can failover to alternate zones.
+
+Summary
+
+Multiple products in us-central1-b are experiencing network service degradation.
+
+Description
+
+We are experiencing a networking issue starting Tuesday, 2026-09-01 07:41 US/Pacific.
+
+The issue is affecting a portion of the us-central1-b zone. The remaining zones in the region are unaffected.
+
+Our network engineering team has put in mitigations and we are seeing services starting to recover.
+
+We will provide more information by Tuesday, 2026-09-01 09:30 US/Pacific with current details.
+
+We apologize to all who are affected by the disruption.
+
+Customer Symptoms
+
+Customers are experiencing elevated packet loss and errors.
+
+BigQuery
+
+Cloud Dataflow
+
+Cloud SQL
+
+App Engine
+
+Cloud Run
+
+AlloyDB
+
+Cloud Bigtable
+
+Cloud Spanner
+
+Compute Engine
+
+Cloud VPN
+
+Cloud Interconnect
+
+Cloud NAT
+
+Cloud Filestore
+
+Cloud Hybrid Connectivity
+
+Virtual Private Cloud
+
+Google Kubernetes Engine
+
+Looker (Google Cloud core)
+
+Workaround
+
+Customers with service layer retries may see successful completions as only a portion of the zone is affected.
+
+Customers that are severely affected and have services available in alternate zones can failover to alternate zones.
+
+All times are US/Pacific
+
+Documentation
+
+RSS Feed
+
+JSON History | Schema
+
+JSON Product Catalog | Schema
+
+Send feedback
+
+Privacy policy

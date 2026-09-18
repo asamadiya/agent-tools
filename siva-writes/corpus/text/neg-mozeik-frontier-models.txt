@@ -1,0 +1,151 @@
+Title: Frontier Models Don't Write So Good
+
+URL Source: https://blog.mozeik.com/articles/frontier-models-dont-write-so-good
+
+Published Time: 2026-07-22
+
+Markdown Content:
+GPT-3.5 arrived on the scene during the final year of my law degree. I used it as a study and research partner: it could reason across complex legal texts, explain them to me, and help me cram more effectively than ever before. Back then, frontier models weren't yet 'agentic'. Sure, they had a few tools in their harnesses (e.g. web search), but primarily they were text-based assistants:
+
+And they were damn good at that!
+
+## Beyond the Chatbot
+
+It was clear that LLMs had potential far beyond the Chat interface. The race was on to make models more 'agentic': able to do more in the real world. Tool calling needed to become more reliable, and models needed to be able to reason longer and try harder before giving up. This was a post-training arms race, with each major model release heralding a step-change in agentic capabilities. In 2025, the models started get ting good. Opus 4, in the nascent Claude Code, could suddenly work across and maintain an entire codebase. By late 2025, Opus 4.5 was good enough that professional software engineers were trusting it with real work. The GPT-5.6 models are relentlessly agentic: they can work for days, call complex tools, and write great software. METR estimates that the duration of tasks models can complete with a 50% success rate has doubled roughly every seven months since 2019.
+
+Making models more agentic was half of the goal. The other half was making them more intelligent. Nobody wants an indefatigable assistant if it's stupid. Likewise, an erudite chatbot isn't very useful if it's impotent.Frontier labs' inexorable drive to scale their models' raw intelligence has been inspiring. They're committing trillions in capex and hiring the world's smartest minds to work on my generation's Manhattan Project. The gains kept coming through 2025, but I really started to feel the acceleration in 2026: GPT is solving Erdős problems; an Anthropic mathematician has just used Fable 5 to disprove the Jacobian Conjecture.And this intelligence isn't just accessible to mathletes: even I used Fable to solve a research problem I'd been tinkering with for eight years, let ting me implement a novel state-of-the-art lossless audio codec (but that's a separate article!).
+
+> Smashing lossless audio compression benchmarks (with some help from Fable). Full songs come out average 6.3% smaller than FLAC's best setting, decoding up to ~29x faster than realtime for playback. Not sure what to do with the codec yet 🥸 If you're spending $$$ on lossless audio egress, DM me!
+> 
+> — Sean (@seanmozeik) [14 July 2026](https://x.com/seanmozeik/status/2077072577260924967)
+
+## Claude Fable
+
+Unfortunately, Fable also pushed me to investigate a suspicion that had crystallized over 18 months of working daily with frontier models.The first thing I did with Fable was point it at my notes. I maintain an Obsidian vault filled with my life's work: ideas, research, brain dumps, journal entries, and even songwriting (I used to be a record producer!). I use my own hybrid search tool, [talon](https://github.com/seanmozeik/talon), so agents can search and reason over this knowledge base without loading the whole thing into context. I'm obviously intimately familiar with these data: taken together, they're my life's story! I'm also used to what agents do with it. So when I asked Fable:
+
+> "Analyze Sean's character and the state of his life based on this vault. Identify his weaknesses and blind spots. Write him a plan to help him realize his potential"
+
+I already knew with some exactitude what a good answer looked like.I'd asked previous frontier models the same question, and I ruminate over it in my journal every day.
+
+Fable blew me away. It found connections between my disparate ideas that I could never make myself, though I can't disclose more details without leaking half my "Dear Diary" entries to the internet! Although I had yet to ask it to do anything new, the leap in intelligence was un deniable: Fable had that sweet 'big model smell'. But all I had in front of me was the text it produced, and that text finally confirmed the shift I'd been sensing for 18 months:
+
+## AI Slop
+
+The writing was _shit_. The prose was unnatural, the structure pre dictable, and the vocabulary full of infelicities. It was riddled with'tics': phrases that rarely occur in human writing but appear con stantly in model output:
+
+> _load-bearing_; _it's not just X, it's Y_; _you're absolutely right_; _I hear you_; _hand-waving_; _smoke-test_; _[goblins](https://openai.com/index/where-the-goblins-came-from/)_; the em dash; and many more!
+
+Distinctive, identifiable slop is only half the problem. The other half is harder to put your finger on. The best description I have is _men tally taxing_. As a developer, I am accosted by passages like this thou sands of times a day:
+
+> "Independent review is still running. One thing I've already challenged explicitly: a log line that says only 'commitTransition failed' is not enough if the nested cause says 'generation rotation requires settled durable work'. I'm holding the logging branch to actionable-cause output, not merely non-JSON prettiness." - GPT 5.6 Sol
+
+I forgive you if your eyes glazed over while reading this. Mine did too.This is my codebase, so I know exactly what the passage is talking about and what every word means. I enjoy challenging literature and con sider myself a good reader. And yet the passage is a schlepp to read. I have to return to the beginning several times and exert myself to make sense of it. The action is buried beneath invented compound words,stretched metaphors, opaque contrasts, and double negatives.
+
+> the fable / sol summaries are getting more and more absurdly information-dense  
+>   
+> 1 in every 5 words is a novel compound word (ex: ‘rate-adjacent’) which itself is the model's invented stand-in for a metaconcept that it developed that i need to interrogate it about  
+>   
+> how to fix this?
+> 
+> — Ashwinee Panda (@PandaAshwinee) [18 July 2026](https://x.com/PandaAshwinee/status/2078296458122645635)
+
+Anthropic has noticed this too. Its Mythos Preview system card de scribes almost hermetic prose: the model 'writes densely, and as sumes the reader shares its context'; some testers found its statements'difficult to unpack'. My hypothesis is that _as models get better, their communication gets worse_.
+
+## The Problems
+
+As model intelligence climbs, the user's IQ is increasingly the bottle neck. Likewise, as the models become more powerful, it becomes more important for the user and the model to remain on the same page. For the time being, we're still in the driver's seat: very few agent systems are completely autonomous. If a misunderstanding of intent arises between the agent and the user, it can mean hours of wasted work or costly, dangerous mistakes. Intelligence has raised the stakes.
+
+Direct model <> user miscommunication worries me less than the degradation of human <> human communication that LLMs have pre cipitated. AI use is exploding, and as people rely on it more heavily in daily life, they naturally want to automate their writing: emails, mar keting copy, social media replies, Hinge messages I receive (don't ask),and everything in between!
+
+When we use a model's poor output to communicate with another person,we foist the burden of comprehension upon the recipient. The time we save drafting is time they spend decoding slop. If we're aware of this,we might instead spend much of that saved time manually cleaning up the slop before it goes out.
+
+Because anyone familiar with AI prose can spot it, AI-assisted writing has become déclassé. When readers suspect AI involvement, their opin ion of the material plummets. They assume less effort and hold it in lower regard. Their judgement often doesn't stop at the content: the author falls in their estimation too. Even if the point is great! So there's a cognitive tax and a trust tax.
+
+I'm a perfect example of this: I use AI every day and I'm a huge fan (if you didn't know already!). I also know that, in most ways, frontier models are leagues smarter than me. Yet when I read an article and get even an inkling that AI wrote it, I have a visceral reaction and immediately think less of both the article and its author. I see this as a model failure:
+
+> A model's job is to translate the user's intent into their desired outcome.
+
+If the desired outcome of your startup's landing-page copy is to win customers, and they balk at the AI copy, then that's a failure. And if Fable 5 writes worse copy than Haiku 3, then that's a model regression!
+
+## The Obvious Intervention
+
+Frontier models are great at following instructions now. Surely, if we can easily identify AI slop, we can simply tell the model to rewrite its prose until it's no longer shit, right? That's the premise behind 'writing skills'. Many exist, and indeed I have my own. Each is a compendium of antipatterns, references and rules that a model must follow. Mine is almost like a linter for the English language: if the passage doesn't pass CI, it doesn't get pushed!
+
+But I wouldn't be writing this article (by hand lol) if 'writing skills'worked. Writing skills are inherently subtractive. They forbid overt model tells. I do find that prose run through my writing skill is gen erally cleaner, more concise and slightly less recognizably AI. But they are about rewriting and editing. They cannot create something that was never there.
+
+In fact, I find that something funny happens: by the time a passage passes my writing skill, I can no longer put my finger on why I don't like it. It no longer has obvious AI tells. I can no longer write rules to explain what to do differently. I've run out of ways to express why I don't like it, but I don't!
+
+Poor model communication is a huge problem. It affects our ability to align models with our intent and push them to their potential. It affects our ability to oversee them and make sure they're behaving. And as AI mediates more of our conversations, it rends the fabric of our social contract: in business and in personal relationships. Something must be done, and we're gonna need more than a SKILL.md!
+
+## Why are LLMs getting worse?
+
+> Are current LLMs incompatible with great creative writing?  
+>   
+> I can't tell if it's cope or not, but it seems like even with the best models, I still can't get them to write like humans would.  
+>   
+> For coding, there is a verifiable reward like it compiling or tests passing. But for creative work like writing, it's much more subjective.  
+>   
+> I have struggled to prompt / harness the models to write truly amazing work. They are fantastic for spell checking, grammar suggestions, and taking on different personas to read and critique work.  
+>   
+> Maybe it's because I'm only doing nonfiction, and to write something top 0.1% means that you need to think over a long horizon and develop an interesting insight about the world. Great writing is clear thinking.  
+>   
+> I've even asked models to try 10 different versions of a blog post, then have a council of models grade and critique the results and pick the best parts... and still I end up with this lowest common denominator slop.  
+>   
+> Skill issue? Someone show me the way.
+> 
+> — Lee Robinson (@leerob) [4 July 2026](https://x.com/leerob/status/2073232794868756851)
+
+Transformers are like a sandwich: the bread is human language, but the filling is math. On one side, the input text is split into tokens and em bedded as vectors. Inside the transformer, the text is gone: the model sees only the embeddings that represent it. This is why Mythos can't simply count how many Rs are in 'strawberry': those embeddings may encode the word's meaning, and even knowledge of its spelling, but there are no literal letters to count without first reconstructing them or calling a tool. The model transforms those vectors through layer after layer to produce a probability distribution over the next token. It sam ples from that distribution, decodes the chosen token back into text and repeats: the other side of the sandwich.
+
+When we're training models, we keep optimizing the filling. The loss may be calculated from language tokens, but gradient descent operates on a high-dimensional parameter space of matrices and vectors.
+
+Post-training often concentrates probability mass on responses that score well against capability and alignment objectives. This makes models more capable, but not necessarily better communicators. In one comparison of two model generations, newer instruction-tuned models showed less syntactic and, especially, lexical diversity than older non-instruction-tuned models. Another study found the trade-off di rectly: RLHF improved OOD generalization over SFT while significantly reducing output diversity.
+
+Output diversity is not intrinsically good: losing diversity can mean removing errors, prioritizing good answers and increasing model align ment. But narrowing also makes a model's cadence and structure more predictable, leaving a fingerprint that informed readers recognize and machines can measure. One recent classifier attributed text to one of six model families using lexical, syntactic and structural features.According to Pangram, these patterns survive rewriting, translation and other AI-assisted edits. You can ban certain tokens, but the un derlying token distribution remains. And that distribution has been collapsing as frontier models improve.
+
+## Dumb and Dumber
+
+As post-training datasets grow, it becomes intractable for humans to write or judge every example. Luckily, models are pretty good these days, right?!
+
+Much of model post-training now relies on other models to synthesize data, provide process supervision and judge outputs. This creates a feedback loop where models prefer outputs that adhere to their own distribution. Familiar forms beget familiar forms: models favor what they would've written themselves and what they deem good writing.As judges, they suffer from the same issue as our earlier writing skill.Take GRPO driven by an LLM judge, for example: we can give a fron tier judge model a list of rules to penalize, and it is perfectly capable of enforcing them. But when it makes those patterns less likely, they are not necessarily replaced with higher-entropy, more creative outputs!The underlying distribution hasn't just shifted, it's shrunk! (I promise that sentence construction was ironic.) The judge model simply does not have taste that the model being trained can distill.
+
+I genuinely believe this is a core tension in frontier model develop ment. I've spoken to people at frontier labs who maintain that model prose is simply an alignment problem. My gut disagrees: model intelli gence might be intrinsically linked to slop output. But I also don't think we should deprioritize intelligence or capabilities for the sake of the discerning reader. So what can we do?
+
+## An Expensive Compiler
+
+Earlier this year, I gave up. I hate reading AI slop and didn't want to inflict that feeling on anyone else. This wasn't pure magnanimity: I also couldn't trust it to communicate my intent to others without either weakening my argument or risking my relationships and reputation.But I still wanted to rely on AI to brainstorm, reason and research before writing it myself! Not because I'm lazy (well I am, but that's not why!),but because it's genuinely good at this. This is not an easy circle to square, because once you have the AI output, it's fingerprinted!
+
+My idea to solve this tension was as follows: work with the model as normal to ideate and reach a consensus, then make it express the result as a structured brief that was as terse and semantically dense as possible.In GCSE English, we learnt PEEL: Point, Evidence, Explanation and Link.I always thought it was rigid and stupid: I couldn't picture Hemingway PEELing his paragraphs! It hadn't served me in GCSE English, but when I needed to compress model output as far as possible, I landed on PEEL in caveman English.
+
+I am an expensive compiler. I take this brief, which contains the dis tilled essence of the argument I wish to express, and I compile it into prose. I construct a narrative. I weave together the input with a natural rhythm. Most importantly, I apply my taste: I choose what to prioritize and where to add humor. Much as I did when writing songs, I get to think about the emotional response I want to elicit from my reader, sen tence by sentence! This system works great. But like I said, I'm a little lazy. I also work in AI, and when you're a hammer, everything looks like a nail! So of course there's a part of me that sees this problem as follows:
+
+Let's train a goddamn model, baby! But before I get too excited, I should acknowledge the Sisyphean task I've set myself. I've described myself as the expensive compiler: an arbiter of taste and a constructor of narra tive. I try to read my work through my readers' eyes. These are distinctly human faculties. Have you ever seen an LLM with a sense of humor?How the hell do you teach a model taste?!
+
+## Madison
+
+I'm not a scientist, and this is an opinion piece, so let's get even more subjective! To my mind, Taste == Love. Whether we cultivate our taste deliberately or acquire it passively, I think of it as the weighted sum of our emotional responses to every input we encounter throughout our lives. Each input leaves an impression with its own weight and rate of decay. When I hear a song I like, it leaves an impression on my taste. When I read a passage I hate, that informs my taste. When I fall in love... you can almost picture the weights shifting internally, much like a model's parameters during training. Continuous learning, baby!
+
+But the learning signal for this internal taste model comes from our'heart': our emotions. And machines don't have that! Instead of trying to give Sol a Soul, I'm going to accept that and try to work around it. Maybe it wouldn't matter that the model can't have taste if it could mimic a snapshot of mine perfectly.
+
+When I was in high school, I discovered _Mad Men_. To this day, it's my all-time favorite TV show. It left more than just an impression on me:I binged Ogilvy's books. My first internship was at JCDecaux. My first part-time job was as a copywriter (I'm rusty, I know!).
+
+Through introspection, I distilled my own taste into a set of characteris tics: good writing is, in my opinion, creative, persuasive, inspiring and unpretentious. Most importantly, it communicates clearly. Advertising copy from the 1960s and 70s embodies these characteristics. A sani tized (read: de-misogynized) corpus would supply most of Madison's continued pre-training data and supervised fine-tuning examples.
+
+![Image 1: David Ogilvy's 1959 Rolls-Royce advertisement, led by the headline about the electric clock being the loudest noise at sixty miles an hour.](https://blog.mozeik.com/posts/frontier-models-dont-write-so-good/ogilvy-rolls-royce-600.webp)
+I decided to call my model 'Madison' after Madison Avenue; the female name also fit because I originally fine-tuned Gemma (but I do not rec ommend Gemma!). Madison is now fine-tuned from a Qwen base model.Crucially, I'm not optimizing for general instruction following, which is why I use a base model rather than an instruct model. Instead, I'm teach ing it one narrow task: take a PEEL brief and compile it into creative,high-entropy, limpid prose.
+
+When I'm working on a problem with a model, I find it useful to ask,'Could I do this without a model?' I was particularly interested in struc tural entropy: after a basic CPT and SFT, I found that Madison produced sentences that varied more naturally than those of frontier models. It made better vocabulary choices and had more personality. But on a paragraph level, it was still too predictable. What if I could inject cre ativity into the paragraph scaffolding algorithmically, then get Madison to fill in the gaps? This has shown remarkable potential so far.
+
+The last challenge is the hardest: who grades the output? I know it has to be me. Madison's objective is to write well, and in this context, 'well'means according to my taste! So the only eval that matters is this: do I love it? That's not easy to express in Python! My hypothesis is that Madison can only capture my taste if I give every piece of feedback myself. Oof. That's a lot of time when your combined GPU rental and porridge oats budget is ~$100!
+
+## The Split
+
+If Madison can compile a slop brief into good English, then this opens up another opportunity: instead of constraining our frontier models to outputting something that resembles human-readable prose, we can set them free and optimize them purely for their intelligence and token efficiency, tics be damned! If a small, specialized Madison-class model can take their degenerate slop and translate it into natural prose, we get better communication with our agents while frontier reasoning models can be post-trained even more aggressively.
+
+To be fair, I doubt I'm the first person to suggest this split. And we know versions of it already exist in production: for example, in the Claude app, the displayed 'thinking' traces are actually summaries of the model's true reasoning by a small model. I don't know whether that model is specifically trained for the task, but it's not exactly Charles Dickens! Just because a model is trained for a tightly circumscribed task, such as compiling briefs into English in Madison's case, does n't mean it won't suffer from different symptoms of the same failure modes as other models. The split alone isn't the silver bullet, but it does allow me the flexibility to aggressively fine-tune a model to my taste without having to worry about its broader intelligence or capa bilities. From what I've seen, this can be pushed very far, and could get Madison as close to being a great copywriter as possible without actually making it an alcoholic womanizer (if you take one thing away from this article, watch _Mad Men_!).
+
+## What's Next?
+
+This is a genuinely exciting problem to work on, and it feels urgent.If the quality of frontier model text output continues to degrade, we may be forced to make difficult decisions: decelerating, compromis ing, sacrificing our ability to monitor them. They'll also generate far less economic value than anticipated in many of the industries we're counting on them to transform. We invented LLMs to serve us. As long as we don't paperclip factory ourselves, we're going to be living with something approaching superintelligence, and it needs to speak our language(s), because I don't speak fluent linear algebra!
+
+I'd love to talk with other people interested in this problem, so feel free to email me at [sean@mozeik.com](mailto:sean@mozeik.com). Thanks for reading, and thanks to everyone whose ear I chewed off talking about this!

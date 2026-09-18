@@ -1,0 +1,126 @@
+Brendan's site:
+
+07 Feb 2026 » Why I joined OpenAI
+
+05 Dec 2025 » Leaving Intel
+
+28 Nov 2025 » On "AI Brendans" or "Virtual Brendans"
+
+22 Nov 2025 » Intel is listening, don't waste your shot
+
+17 Nov 2025 » Third Stage Engineering
+
+04 Aug 2025 » When to Hire a Computer Performance Engineering Team (2025) part 1 of 2
+
+22 May 2025 » 3 Years of Extremely Remote Work
+
+01 May 2025 » Doom GPU Flame Graphs
+
+29 Oct 2024 » AI Flame Graphs
+
+22 Jul 2024 » No More Blue Fridays
+
+24 Mar 2024 » Linux Crisis Tools
+
+17 Mar 2024 » The Return of the Frame Pointers
+
+10 Mar 2024 » eBPF Documentary
+
+28 Apr 2023 » eBPF Observability Tools Are Not Security Tools
+
+01 Mar 2023 » USENIX SREcon APAC 2022: Computing Performance: What's on the Horizon
+
+17 Feb 2023 » USENIX SREcon APAC 2023: CFP
+
+02 May 2022 » Brendan@Intel.com
+
+15 Apr 2022 » Netflix End of Series 1
+
+09 Apr 2022 » TensorFlow Library Performance
+
+19 Mar 2022 » Why Don't You Use ...
+
+Brendan Gregg's Blog
+
+TensorFlow Library Performance
+
+09 Apr 2022
+
+A while ago I helped a colleague, Vadim, debug a performance issue with TensorFlow in an unexpected location.
+I thought this was a bit interesting so I've been meaning to share it; here's a rough post of the details.
+
+1. The Expert's Eye
+
+Vadim had spotted something unusual in this CPU flamegraph (redacted); do you see it?:
+
+I'm impressed he found it so quickly, but then if you look at enough flame graphs the smaller unusual patterns start to jump out. In this case there's an orange tower (kernel code) that's unusual. The cause I've highlighted here . 10% of total CPU time in page faults.
+
+At Netflix, 10% of CPU time somewhere unexpected can be a large costly issue across thousands of server instances. We'll use flame graphs to chase down the 1%s.
+
+2. Why is it Still Faulting?
+
+Browsing the stack trace shows these are from __memcpy_avx_unaligned(). Well, at least that makes sense: memcpy would be faulting in a data segment mappings. But this process had been up and running for hours, and shouldn't still be doing so much page fault growth of its RSS. You see that early on when segments and the heap are fresh and don't have mappings yet, but after hours they are mostly faulted in (mapped to physical memory) and you see the faults dwindle.
+
+Sometimes processes page fault a lot because they call mmap()/munmap() to add/remove memory. I used my eBPF tools to trace them ( mmapsnoop.py ) but there was no activity. So how is it still page faulting?
+
+Is it doing madvise() and dropping memory? A search of madvise in the flame graph showed it was 0.8% of CPU, so it definitely was, and madvise() was calling zap_page_range() that was calling the faults. (Click on the flame graph and try Ctrl-F searching for "madvise" and zooming in.)
+
+3. Premature Optimization
+
+I read the kernel code related to madvise() and zap_page_range() from mm/advise.c. That showed it calls zap_page_range() for the MADV_DONTNEED flag. (I could have also traced sys_madvise() flags using kprobes/tracepoints).
+
+This seemed to be a premature optimization gone bad: The allocator was calling dontneed on memory pages that it did in fact need. The dontneed dropped the virtual to physical mapping, which would soon afterwards cause a page fault to bring the mapping back.
+
+4. Allocator Issue
+
+I suggested looking into the allocator, and Vadim said it was jemalloc, a configure option. He rebuilt with glibc, and the problem was fixed!
+
+Here's the fixed flame graph:
+
+Initial testing showed only a 3% win (can be verified by the flame graphs). We were hoping for 10%!
+
+Click here for Disqus comments (ad supported).
+
+You are welcome to comment here, but I've been meaning to switch comment systems one day and I don't know yet if I can preserve existing comments (I'll try to find a way).
+
+07 Feb 2026 » Why I joined OpenAI
+
+05 Dec 2025 » Leaving Intel
+
+28 Nov 2025 » On "AI Brendans" or "Virtual Brendans"
+
+22 Nov 2025 » Intel is listening, don't waste your shot
+
+17 Nov 2025 » Third Stage Engineering
+
+04 Aug 2025 » When to Hire a Computer Performance Engineering Team (2025) part 1 of 2
+
+22 May 2025 » 3 Years of Extremely Remote Work
+
+01 May 2025 » Doom GPU Flame Graphs
+
+29 Oct 2024 » AI Flame Graphs
+
+22 Jul 2024 » No More Blue Fridays
+
+24 Mar 2024 » Linux Crisis Tools
+
+17 Mar 2024 » The Return of the Frame Pointers
+
+10 Mar 2024 » eBPF Documentary
+
+28 Apr 2023 » eBPF Observability Tools Are Not Security Tools
+
+01 Mar 2023 » USENIX SREcon APAC 2022: Computing Performance: What's on the Horizon
+
+17 Feb 2023 » USENIX SREcon APAC 2023: CFP
+
+02 May 2022 » Brendan@Intel.com
+
+15 Apr 2022 » Netflix End of Series 1
+
+09 Apr 2022 » TensorFlow Library Performance
+
+19 Mar 2022 » Why Don't You Use ...
+
+Brendan's site:
