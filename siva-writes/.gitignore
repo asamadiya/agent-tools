@@ -1,2 +1,4 @@
 corpus/raw/
 .scratch/
+__pycache__/
+baseline/skill-v0-installed-backup/
