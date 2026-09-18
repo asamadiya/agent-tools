@@ -144,7 +144,7 @@ specify, and the reason is in the right-hand column.
 | **Quantified claims** | every claim resting on a quantity carries it with unit and source | **not** "every claim numbered". Numbers/100w has sd 1.267 against a mean of 1.334; there is no rate to hit. Unattributed numbers are the failure, not absent ones |
 | **Long sentences** | report sentences over 45 words for clause-resolution review. **No cap, no failure number** | a 30-word cap fails 22.8% of the corpus and 47% of danluu. Length is not the defect; an unresolvable clause is |
 | **Long paragraphs** | flag paragraphs carrying two distinct claims. 120 words is a look-here line, not a limit | 17.2% of measured paragraphs exceed 120 words. The defect is two claims in one paragraph, which the reader cannot attribute |
-| **Negative-set patterns** | zero tier-1 patterns | tier 1 is the mechanically checkable set with near-zero false positives. Tier 2 is flagged for a human read. See `references/negative-set.md` |
+| **Negative-set patterns** | zero tier-1 patterns | 25 patterns, each firing **zero times across 184,722 words of expert human prose**. That control demoted 5 that passed hand-written negatives, one of which fired 215 times across 15 documents. Tier 2 (43) is flagged for a human read. See `references/negative-set.md` |
 | **R11 dash** | zero prose U+2014 | quotations excepted and labelled |
 
 A clean gate report is not approval. No automated pass detects a document that states its mechanism

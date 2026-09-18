@@ -1,0 +1,7 @@
+{
+  "label": "rules only",
+  "exemplars": false,
+  "stages": false,
+  "gate": false,
+  "system_chars": 6218
+}

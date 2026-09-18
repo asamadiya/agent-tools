@@ -1,0 +1,2386 @@
+{
+  "method": "four independent extractions; every regex cross-tested against the pooled negative examples of all four. tier1 = compiles, fires on its own positives, fires on zero pooled negatives, author confidence high.",
+  "counts": {
+    "tier1": 25,
+    "tier2": 43,
+    "tier3_no_regex": 16,
+    "broken_regex": 0,
+    "pooled_negatives": 262
+  },
+  "tier1": [
+    {
+      "name": "not-just-x-its-y",
+      "kind": "syntactic",
+      "regex": "\\b(?:it|that|this)\\s*(?:'s\\s+not|\\s+is\\s+not|\\s+isn'?t)\\s+(?:just|merely|only|simply)\\b[^.;!?\\n]{1,80}[,;:\u2014\u2013-]\\s*(?:it|that|this)\\s*(?:'s|\\s+is)\\b",
+      "positive_examples": [
+        "It's not just a cache, it's a consistency boundary.",
+        "This isn't just a latency problem \u2014 it's a correctness problem.",
+        "It's not just a caching problem - it's a correctness problem.",
+        "This isn't just about latency, it's about trust.",
+        "It's not merely a config change, it's a contract change."
+      ],
+      "negative_examples": [
+        "The regression is not just in the write path; the read path also slowed.",
+        "It is not only slower, it fails closed on timeout.",
+        "The p99 regression is not in the serializer but in the codec.",
+        "The p99 did not just rise; it rose 40x, from 30 ms to 1.2 s.",
+        "We are not replacing the codec but wrapping it.",
+        "The budget is not about fairness; it is 3 attempts over 250 ms."
+      ],
+      "repair": "Drop the negated half and assert the claim once: 'The cache is the consistency boundary.' If both halves carry information, they are two sentences with two subjects, not one elevation move.",
+      "source_quote": "_it's not just X, it's Y_",
+      "confidence": "high",
+      "detection_note": "The load-bearing element is the doubled copula: the same dummy subject ('it'/'this'/'that' + is) on both sides of the pivot. Legitimate 'not just A but also B' constructions carry a real subject on at least one side, which is why both negatives stay silent. Verified against both.",
+      "n_sources": 2,
+      "fires_on_own_positives": "5/5",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "goblin-token",
+      "kind": "lexical",
+      "regex": "(?<![A-Za-z_])goblins?(?![A-Za-z_])",
+      "positive_examples": [
+        "There are a few goblins hiding in the retry path.",
+        "We inherited some goblins from the v1 scheduler."
+      ],
+      "negative_examples": [
+        "The `goblin_mode` flag is disabled in production.",
+        "We ripped out the gremlin script that randomly killed pods."
+      ],
+      "repair": "Name the actual defect: 'three unguarded retries', 'an unbounded queue'. The word carries no technical content and marks the sentence as generated.",
+      "source_quote": "_[goblins](https://openai.com/index/where-the-goblins-came-from/)_",
+      "confidence": "high",
+      "detection_note": "Lookarounds exclude identifier contexts, so `goblin_mode` and GOBLIN_MODE-style code spans do not fire (verified). Run after stripping fenced/backticked code, like every lexical rule here. The only genuine over-fire domain is a document actually about game content, which the target genres are not.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "creature-in-metaphor-frame",
+      "kind": "syntactic",
+      "regex": "\\b(?:like|as if it(?:'s| is| were)|is basically|is essentially|think of .{0,28}? as|imagine|picture)\\s+(?:a |an |some |the |your |our )?(?:little |tiny |angry |friendly |grumpy |mischievous |hungry |sleepy |grouchy )?(?:goblin|gremlin|ogre|raccoon|imp|sprite|elf|elves|dragon|wizard|monster|critter|creature|troll|frog|pigeon|gnome)s?\\b",
+      "positive_examples": [
+        "Think of the GC as a raccoon rummaging through the heap.",
+        "The retry storm is basically a troll under the bridge.",
+        "Imagine a tiny frog hopping between shards."
+      ],
+      "negative_examples": [
+        "The frog-boiling failure mode is well documented in the SRE book.",
+        "Pigeonhole principle guarantees at least one bucket holds two keys.",
+        "Internet trolls generate a disproportionate share of abuse reports.",
+        "Think of the cache as a bounded queue with an eviction policy."
+      ],
+      "repair": "Drop the creature and state the comparison in mechanism terms: what resource does the analogue consume, what does it contend with, what is its rate.",
+      "source_quote": "most uses of frog turned out to be legitimate",
+      "confidence": "high",
+      "detection_note": "This encodes the source's own auditing lesson: the same lexeme is a tic or legitimate depending on frame, so the rule is frame-gated rather than lexeme-gated. Requires an explicit simile/metaphor frame immediately before the creature noun, which is why troll/frog/pigeon can be included here but not in the bare lexical rule. Zero corpus false positives. Known miss: a creature introduced as a bare subject (\"The gnome that owns the lock table\") has no frame and will not fire.",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "clipped-negative-fragments",
+      "kind": "rhetorical",
+      "regex": "(?:^|[.!?]\\s+)No [a-z]+(?:\\s+[a-z]+)?\\.\\s+No [a-z]+",
+      "positive_examples": [
+        "No prior. No nostalgia.",
+        "No config. No daemons. No excuses."
+      ],
+      "negative_examples": [
+        "No configuration file is required for the agent.",
+        "No retries are issued after the budget is exhausted; the request fails fast."
+      ],
+      "repair": "Merge the fragments into one sentence that says what is absent and why it matters: \"The agent reads no config file; every knob is a flag.\"",
+      "detection_note": "Requires two consecutive verbless \"No X.\" sentences, which is what distinguishes the rhythm from a single legitimate negative statement. Recovered from the version history, which added \"clipped negative endings\" in 2.5.0 and folded them into pattern 2 in 3.0.0.",
+      "source_quote": "Added deeper-truth claims, announcements, repeated headings, and clipped negative endings.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "pause-command",
+      "kind": "rhetorical",
+      "regex": "(?:^|[.!?]\\s+)(?:wait|pause|stop|think about (?:it|that)|let that sink in|read that again)\\.",
+      "positive_examples": [
+        "Let that sink in.",
+        "Wait. The lock was already held."
+      ],
+      "negative_examples": [
+        "Wait for the canary to bake for 30 minutes.",
+        "The client must wait until the lease expires."
+      ],
+      "repair": "Delete the command. If the next fact is the surprising one, put the surprise in the fact: \"The lock was already held by the same thread - the mutex is not reentrant.\"",
+      "detection_note": "The imperative must be the whole sentence, which is what separates it from \"wait for\"/\"must wait\". From the 2.11.3 note, folded into pattern 2 in 3.0.0.",
+      "source_quote": "Added decorative arrows to \u00a718 and pause commands and one-word shouting to \u00a731.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "deepity-opener",
+      "kind": "lexical",
+      "regex": "\\bat its core\\b|\\bat the end of the day\\b|\\bwhen all is said and done\\b|\\bthe (?:true|real) (?:essence|nature) of\\b|\\bis the language of\\b",
+      "positive_examples": [
+        "At its core, what matters is trust.",
+        "At the end of the day, latency is a product decision."
+      ],
+      "negative_examples": [
+        "At the core of the scheduler sits a min-heap.",
+        "The essence of the algorithm is a two-pass scan over the WAL."
+      ],
+      "repair": "Cut the opener and keep the claim, then make the claim specific enough to be wrong: \"Users abandon the page after 2 s, so p95 is the budget that matters.\"",
+      "detection_note": "\"at the core of X\" (a real component) is legitimate and is excluded by requiring the possessive \"its\". Aphorisms of the form \"X is the language of Y\" are caught only in that exact shape; other coined maxims need a human read.",
+      "source_quote": "**Sayings that sound deep** | \"At its core, what matters is...\", \"Symmetry is the language of trust\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "staged-run-up",
+      "kind": "lexical",
+      "regex": "\\blet'?s (?:dive|jump) (?:in|into)\\b|\\bbefore we (?:dive|jump|get started)\\b|\\bwithout further ado\\b|\\bbuckle up\\b|\\bhere'?s the (?:thing|kicker)\\b|\\blet'?s (?:unpack|break it down)\\b|\\bstrap in\\b",
+      "positive_examples": [
+        "Let's dive into the flame graph.",
+        "Here's the thing: the lock is fair."
+      ],
+      "negative_examples": [
+        "Let's walk through the timeline minute by minute.",
+        "Before we deploy, the canary must hold for 30 minutes."
+      ],
+      "repair": "Delete the run-up and open on the first fact: \"The flame graph puts 61% of CPU in the codec's copy loop.\"",
+      "detection_note": "\"Let's walk through\" and \"before we deploy\" are ordinary and useful in postmortems and runbooks, so the verb list is restricted to dive/jump/unpack/break-it-down. \"The thing is,\" was deliberately excluded - engineers write it in correct prose.",
+      "source_quote": "**Staged run-up before the point** | \"Let's dive in\", \"Honestly? It depends...\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "borrowed-authority",
+      "kind": "lexical",
+      "regex": "\\b(?:experts?|researchers?|studies|research|analysts?)\\s+(?:believe|say|suggest|show|agree|indicate|argue|note)s?\\b(?![^.\\n]{0,100}(?:\\[|\\(|https?:|doi|et al\\.))|\\bit is (?:widely|generally) (?:known|believed|accepted|understood)\\b",
+      "positive_examples": [
+        "Experts believe the approach scales.",
+        "It is widely accepted that tail latency dominates."
+      ],
+      "negative_examples": [
+        "Dean and Barroso show that tail latency dominates at scale [2013].",
+        "Research shows the same effect (https://example.com/report).",
+        "The benchmark shows a 3x regression on the write path."
+      ],
+      "repair": "Name the source and what it measured, or delete the claim: \"Dean and Barroso (2013) measured a 10x tail amplification at 100 fan-out.\"",
+      "detection_note": "The negative lookahead suppresses the rule when a citation, link, DOI, or \"et al.\" follows within the same sentence, so a properly sourced claim never fires. Singular \"the benchmark shows\" / \"the profile shows\" are excluded - those name a specific artifact.",
+      "source_quote": "**Borrowed authority** | \"Experts believe...\", \"cited in NYT, BBC, FT, and The Hindu\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "decorative-heading",
+      "kind": "structural",
+      "regex": "^#{1,6}\\s+(?:[^\\n]*[\ud83c\udf00-\ud83e\udfff\u2190-\u21ff\u2600-\u27bf\ufe0f]|(?-i:(?:[A-Z][a-z]+\\s+){3,}[A-Z][a-z]+)\\s*$)",
+      "positive_examples": [
+        "## \ud83d\ude80 Launch Phase",
+        "## Strategic Negotiations And Partnerships",
+        "### Deploy \u2192 Verify \u2192 Rollback"
+      ],
+      "negative_examples": [
+        "## Why the retry budget ran out",
+        "## HTTP/2 Flow Control",
+        "### Rollback plan",
+        "## Retry Budget Exhaustion"
+      ],
+      "repair": "Sentence case, no emoji, no arrows: \"## Deploy, verify, rollback\".",
+      "detection_note": "Two alternatives. The emoji/arrow branch is exact. The title-case branch needs four or more consecutive Capitalized-lowercase words, which is why \"HTTP/2 Flow Control\" (acronym breaks the run) and \"Retry Budget Exhaustion\" (only three) do not fire, while a four-word title-case heading does. The `(?-i:...)` scope is required so the branch still works under a case-insensitive compile - without it this rule fires on every heading.",
+      "source_quote": "**Decorative headings** | \"Strategic Negotiations And Partnerships\", \"\ud83d\ude80 Launch Phase:\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "chatbot-residue",
+      "kind": "lexical",
+      "regex": "\\b(?:great question|certainly[!,]|i hope this helps|hope that helps|let me know if you(?:'d| would) like|feel free to ask|as an ai|i'?m happy to help|here'?s a (?:comprehensive|detailed) (?:overview|breakdown|guide))\\b",
+      "positive_examples": [
+        "Great question! The scheduler is preemptive.",
+        "Let me know if you'd like me to expand the rollback section."
+      ],
+      "negative_examples": [
+        "Let me know if the repro steps are unclear.",
+        "Ask in #perf-oncall if the dashboard is empty.",
+        "Certainly not: the lease is not renewed after a fence."
+      ],
+      "repair": "Delete the wrapper sentence and keep the content.",
+      "detection_note": "\"Let me know if...\" is only flagged in the \"you'd like\" offer form, which keeps the legitimate reviewer-facing version in the first negative example. \"In conclusion,\" and \"To summarize,\" were deliberately left out: a summary paragraph in a long RFC legitimately opens that way. \"Certainly\" requires the following punctuation so the adverbial use does not fire.",
+      "source_quote": "**Chatbot residue** | \"Great question! ... I hope this helps!\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "hype-announcement",
+      "kind": "lexical",
+      "regex": "\\b(?:big news|exciting (?:news|update|announcement)|we'?re thrilled to|we'?re excited to (?:announce|share)|happy to announce|drum ?roll)\\b",
+      "positive_examples": [
+        "Exciting news: the new codec is live!",
+        "We're thrilled to announce v2."
+      ],
+      "negative_examples": [
+        "v2 is live in prod01 as of 14:00 UTC.",
+        "Announcing the deprecation: v1 endpoints stop serving on 2026-10-01."
+      ],
+      "repair": "Lead with the change, the environment, and the date: \"v2 is the default in prod01 as of 2026-09-18.\"",
+      "detection_note": "From the version history (\"Expanded \u00a728 to cover casual announcements\"), folded into the staging patterns in 3.0.0. A plain \"Announcing X\" with a date is a legitimate release note and does not fire.",
+      "source_quote": "Expanded \u00a728 to cover casual announcements.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "knowledge-limit-disclaimer",
+      "kind": "lexical",
+      "regex": "\\bas of my (?:last |knowledge )?(?:update|cutoff|training)\\b|\\bi (?:do not|don'?t) have access to\\b|\\bbased on (?:the )?available (?:information|sources|data)\\b|\\bwhile (?:specific )?details (?:are|remain) (?:limited|scarce|unclear)\\b",
+      "positive_examples": [
+        "As of my last update, the API supported v2.",
+        "Based on available information, the cluster was healthy."
+      ],
+      "negative_examples": [
+        "We could not determine whether the LB or the client closed the connection; trace ids were not propagated.",
+        "Metrics cover only the last 7 days; the 30-day view was not retained.",
+        "The cause is unconfirmed: we have a correlation in time and no trace."
+      ],
+      "repair": "Say what you checked, what it showed, and what is missing: \"Access logs cover 14:00-15:00 only; the connection-close side is not recoverable from them.\"",
+      "detection_note": "Honest uncertainty is mandatory in postmortems and must never fire - all three negative examples state precisely what is unknown and why, which is the correct form. Only the model-shaped disclaimers fire. \"It appears that\" was deliberately excluded from the regex: it is used both by a hedging model and by an engineer describing a genuine inference, and no regex separates them. Flag it only in a human or LLM pass, and only when the sentence names no evidence.",
+      "source_quote": "**Knowledge-limit disclaimers and guesses** | \"While details are limited in available sources, it appears...\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "participial-significance-tail",
+      "kind": "syntactic",
+      "regex": ",\\s+(?:under(?:scor|lin)ing|highlighting|showcasing|emphasi[sz]ing|reflecting|demonstrating|illustrating|cementing|solidifying|exemplifying|reinforcing|marking)\\s+(?:the|its|their|our|a|an|his|her)?\\s*(?:\\w+\\s+){0,3}?(?:importance|significance|commitment|role|potential|value|relevance|impact|versatility|legacy|strength|dedication|excellence|prominence|status)(?:\\s+(?:of|to|as|in|for|within|among)\\b|[.,;:]|\\s*$)",
+      "positive_examples": [
+        "The team moved the fleet to the new runtime in Q3, underscoring its commitment to reliability.",
+        "Tail latency fell 18 percent, highlighting the significance of the new cache tier.",
+        "The service was adopted by four orgs, cementing its role as the default ingest path."
+      ],
+      "negative_examples": [
+        "We pinned the kernel version, reflecting what the hosts actually run.",
+        "The flame graph is annotated, highlighting the hot path in red.",
+        "The dashboard was regenerated, reflecting the new role assignments for on-call.",
+        "The retry budget was cut to two, reducing tail amplification by half."
+      ],
+      "repair": "Delete the tail. The sentence before the comma already carries the fact; the participle adds an unsourced evaluation. If the significance is real, make it its own sentence with a measurement or a decision attached ('This is why we kept the cache tier after the Q4 cost review').",
+      "source_quote": "This is often done by attaching a present participle (\"-ing\") phrase at the end of sentences, sometimes with vague attributions to third parties",
+      "detection_note": "The abstract-noun requirement plus the following-preposition/punctuation anchor is what separates this from legitimate participial tails ('reflecting what the hosts run', 'highlighting the hot path in red'), which take concrete objects. A tail whose object is a measurement or a named component is fine and will not fire.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "legacy-significance-phrase",
+      "kind": "rhetorical",
+      "regex": "\\b(?:(?:stands?|stood|serves?|served)\\s+as\\s+(?:a|an)\\s+(?:testament|reminder|symbol|beacon|cornerstone|hallmark|bridge|gateway|monument)\\b|marks?\\s+(?:a|an)\\s+(?:pivotal|defining|watershed|turning|seminal|landmark)\\s+(?:moment|point|milestone|chapter)\\b|represents?\\s+a\\s+(?:significant|major|fundamental|paradigm)\\s+shift\\b|(?:cement|solidif)(?:s|es|ed|ies|ying|ing|y)?\\s+(?:its|his|her|their)\\s+(?:place|role|status|position|legacy)\\b|leav(?:es|ing|e)\\s+an\\s+indelible\\s+mark\\b|\\ba\\s+testament\\s+to\\b)",
+      "positive_examples": [
+        "The 2019 rewrite stands as a testament to the team's discipline.",
+        "The GA release marks a pivotal moment for the platform.",
+        "The move to columnar storage represents a fundamental shift in how we query."
+      ],
+      "negative_examples": [
+        "The commit marks the boundary between the two schema versions.",
+        "The sentinel value serves as a guard against double free.",
+        "This represents a 12 percent shift in traffic to the new cluster.",
+        "The migration cemented the v2 schema in place for every caller."
+      ],
+      "repair": "Say what changed and for whom. 'The GA release marks a pivotal moment' becomes 'After GA, the v1 write path is frozen; three teams must migrate by Q2.' If there is no such consequence, delete the sentence.",
+      "source_quote": "Words to watch: stands/serves as , is a testament/reminder , a crucial/pivotal/vital/significant/key role/moment ... represents/marks a shift , key turning point",
+      "detection_note": "Requires both the verb and the canned abstract complement. 'marks the boundary', 'serves as a guard', 'represents a 12 percent shift' are literal and will not fire, because the complement is concrete or numeric.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "boasts-copula-avoidance",
+      "kind": "lexical",
+      "regex": "\\b(?:boasts?|boasted|boasting)\\s+(?:a|an|the|over|nearly|more\\s+than|\\d)|\\bis\\s+home\\s+to\\b",
+      "positive_examples": [
+        "The new host boasts 8 H100 GPUs and 2 TB of RAM.",
+        "The cluster is home to the feature store and the ranking service."
+      ],
+      "negative_examples": [
+        "The box has 8 H100 GPUs and 2 TB of RAM.",
+        "The boastful tone in the launch doc was cut before review.",
+        "The cluster hosts the feature store and the ranking service."
+      ],
+      "repair": "Use 'has' or 'runs'. 'The host has 8 H100s'; 'The cluster runs the feature store and the ranking service.'",
+      "source_quote": "LLMs prefer to use marketing -related verbs like features , offers , and the like to their neutral synonym has",
+      "detection_note": "Deliberately narrow. The full copula-avoidance family in the source ('serves as', 'features', 'offers', 'functions as') cannot be linted, because 'the WAL serves as the durability boundary' and 'the sidecar functions as the TLS terminator' are ordinary correct engineering prose. Only 'boasts' and 'is home to' have essentially no legitimate technical use.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "slop-vocabulary-core",
+      "kind": "lexical",
+      "regex": "\\b(?:delv(?:e|es|ed|ing)\\s+in(?:to)?|tapestry|meticulous(?:ly)?|vibrant|garner(?:s|ed|ing)?|multifaceted|treasure\\s+trove|burgeoning|realm\\s+of)\\b",
+      "positive_examples": [
+        "We delve into the scheduler internals in the next section.",
+        "The config layer is a vibrant tapestry of per-tenant overrides.",
+        "The proposal garnered support from three orgs."
+      ],
+      "negative_examples": [
+        "Attach Delve to the running binary with dlv attach.",
+        "We use dlv (Delve) for stepping through the goroutine.",
+        "The OIDC realm is configured per environment.",
+        "The benchmark harness is carefully calibrated against production traces."
+      ],
+      "repair": "'delve into' -> 'walks through' / 'covers'. 'garnered support' -> 'three orgs signed off'. 'tapestry', 'vibrant', 'multifaceted', 'treasure trove' -> cut entirely; they carry no information in a design doc.",
+      "source_quote": "delve , [...] intricate/intricacies , [...] meticulous/meticulously , [...] tapestry (as an abstract noun), [...] vibrant",
+      "detection_note": "Requires 'delve' to be followed by 'in/into' specifically, because Delve is the Go debugger and 'attach Delve to the binary' is a legitimate sentence. 'realm' likewise requires 'of', since OIDC/Kerberos realms are real nouns. I deliberately left out source-listed words that are load-bearing in engineering prose: key, crucial, robust, landscape, enhance, align with, intricate. Those need a per-document density count, not a per-occurrence fire.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "vague-plural-authority",
+      "kind": "rhetorical",
+      "regex": "\\b(?:(?:industry|market|independent|trade)\\s+(?:experts|observers|analysts|reports|watchers|commentators|publications)|experts|observers|analysts|commentators|critics)\\s+(?:have\\s+|had\\s+)?(?:argue|argued|note|noted|say|said|suggest|suggested|believe|believed|agree|agreed|contend|contended|point\\s+out|pointed\\s+out)\\b",
+      "positive_examples": [
+        "Industry reports suggest the pattern is common at this scale.",
+        "Experts argue that the sidecar model is the wrong default."
+      ],
+      "negative_examples": [
+        "The Kafka docs note that rebalances are stop-the-world.",
+        "Two reviewers argued for the simpler design in the RFC thread.",
+        "Researchers at Google published the Borg paper in 2015.",
+        "The SRE report notes three separate saturation events."
+      ],
+      "repair": "Name the source or delete the claim. 'Industry reports suggest' -> 'The 2025 Netflix post-mortem (link) reports the same pattern at 200k rps.' In a design doc an unattributable claim is a guess wearing a citation's clothes.",
+      "source_quote": "AI chatbots tend to attribute opinions or claims to some vague authority\u2014a practice called weasel wording . They also commonly exaggerate the quantity of sources",
+      "detection_note": "Only unnamed plural authorities fire. 'Researchers' and 'scholars' are excluded because ML design docs routinely and correctly write 'Researchers at DeepMind showed...'; a named institution makes the attribution checkable. Named singular sources ('The Kafka docs note') never fire.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "despite-these-challenges-closer",
+      "kind": "structural",
+      "regex": "\\bDespite\\s+(?:these|those|the|its|such)\\s+(?:challenges|obstacles|hurdles|limitations|setbacks)\\b|\\bfaces?\\s+(?:several|numerous|many|a\\s+number\\s+of|various)\\s+challenges\\b|\\bcontinues?\\s+to\\s+(?:thrive|evolve|play\\s+a|serve\\s+as|grow\\s+in)\\b",
+      "positive_examples": [
+        "Despite these challenges, the service continues to serve as the system of record.",
+        "The platform faces several challenges as adoption grows."
+      ],
+      "negative_examples": [
+        "Despite the retry budget, the request failed after three attempts.",
+        "We hit three specific problems: clock skew, GC pauses, and a bad DNS TTL.",
+        "Despite its size, the index fits in page cache.",
+        "The schema continues to be read by two legacy jobs."
+      ],
+      "repair": "Enumerate the problems with owners and dates, then stop. Delete the reassuring closer entirely \u2014 'Despite these challenges, X continues to thrive' is the sentence that tells a reader the section had nothing in it.",
+      "source_quote": "Many LLM-generated Wikipedia articles include a \"Challenges\" section, which typically begins with a sentence like \"Despite its [positive/promotional words], [article subject] faces challenges...\" and ends with either a vaguely positive assessment",
+      "detection_note": "The source is explicit that the tell is the formula, not the word 'challenge'. Vague-quantifier 'faces several/numerous challenges' fires; a concrete count with an enumeration ('faces three challenges: A, B, C') will still fire on 'several'-class words only, so a doc that says 'faces three challenges' is clean by construction. Reviewers should not report the 'faces several challenges' arm when a colon-delimited list follows within the same sentence.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "canned-wrapup-heading",
+      "kind": "structural",
+      "regex": "^\\s{0,3}#{1,6}\\s*(?:Challenges\\s+and\\s+(?:Legacy|Opportunities|Future\\s+Directions)|Future\\s+(?:Outlook|Prospects|Directions)|Impact\\s+and\\s+Legacy|Key\\s+Takeaways|Final\\s+Thoughts|Awards\\s+and\\s+Recognition|Conclusion)\\s*$",
+      "positive_examples": [
+        "## Key Takeaways",
+        "### Future Outlook",
+        "## Conclusion"
+      ],
+      "negative_examples": [
+        "## Risks and Mitigations",
+        "## Background and Motivation",
+        "## Rollback Plan",
+        "## Decision"
+      ],
+      "repair": "Rename to the thing the section decides: 'Decision', 'Open questions', 'Rollout plan', 'Action items (owner, date)'. 'Key Takeaways' and 'Conclusion' almost always restate the body; delete the section and move any real content up.",
+      "source_quote": "Section or subsection headers in the format of \"X and Y\" are common in (but not exclusive to) AI generated articles. [...] which may also include a separate section for \"Future Prospects.\"",
+      "detection_note": "Needs re.MULTILINE. I did NOT generalise the source's 'X and Y' heading rule, because 'Risks and Mitigations', 'Background and Motivation', 'Goals and Non-Goals' are standard RFC headings. Only the specific canned wrap-up titles are listed. 'Conclusion' is the softest member: some house RFC templates mandate it, so suppress it if the repo's template contains it.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "in-conclusion-restate",
+      "kind": "structural",
+      "regex": "(?:^|(?<=[.!?])\\s|\\n)\\s*(?:In\\s+(?:summary|conclusion|closing)|Overall|To\\s+summari[sz]e|All\\s+in\\s+all)\\s*,",
+      "positive_examples": [
+        "In summary, the rollback restored p99 within four minutes.",
+        "Overall, the migration was net-positive for cost."
+      ],
+      "negative_examples": [
+        "Overall throughput rose 12 percent after the change.",
+        "The summary table is in Appendix A.",
+        "We concluded the incident at 14:32 UTC.",
+        "The overall p99 budget is 250 ms."
+      ],
+      "repair": "If the paragraph introduces no new fact, delete it. If it does, drop the connective and lead with the fact: 'The rollback restored p99 within four minutes.' Engineering readers scan; a restatement paragraph costs them a scan and returns nothing.",
+      "source_quote": "When generating longer outputs (such as when told to \"write an article\"), older LLMs often added sections titled \"Conclusion\" or similar, and often ended paragraphs or sections by summarizing and restating its core idea.",
+      "detection_note": "The required comma is what separates the connective from the adjective/adverb: 'Overall throughput rose 12 percent' and 'the overall p99 budget' do not fire. Report only when the flagged sentence opens the final paragraph of a section and contains no number or name absent from the section above \u2014 a lead paragraph that summarises up front is good writing, a trailing one is filler.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "assistant-chatter",
+      "kind": "lexical",
+      "regex": "\\b(?:I\\s+hope\\s+this\\s+helps|Let\\s+me\\s+know\\s+if\\s+you(?:['\u2019]d|\\s+would)\\s+like|Would\\s+you\\s+like\\s+me\\s+to|Here(?:['\u2019]s|\\s+is)\\s+(?:a|the)\\s+(?:detailed\\s+)?breakdown|Great\\s+question|Certainly!|Of\\s+course!|You(?:['\u2019]re|\\s+are)\\s+absolutely\\s+right|As\\s+an\\s+AI\\s+language\\s+model)\\b",
+      "positive_examples": [
+        "Certainly! Here is the breakdown of the retry budget.",
+        "Let me know if you'd like me to expand the rollback section."
+      ],
+      "negative_examples": [
+        "Let me know if the repro steps are unclear.",
+        "Here is the call graph for the hot path.",
+        "Of course the leader can fail mid-commit; that is what the lease is for.",
+        "You are right that the timeout is wrong."
+      ],
+      "repair": "Delete. This is chat-session residue that was pasted into the document; nothing in it is addressed to the document's reader.",
+      "source_quote": "Words to watch: I hope this helps , Of course! , Certainly! , You're absolutely right! , Would you like... , is there anything else , let me know , more detailed breakdown , here is a ...",
+      "detection_note": "Narrowed hard from the source's list. Bare 'let me know', 'here is a', and 'of course' are all normal in PR descriptions and doc bodies, so each is required to appear in its full canned form ('let me know if you'd like', 'Of course!' with the exclamation point). This is the highest-precision rule in the set and should be treated as blocking.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "unfindable-source-hedge",
+      "kind": "rhetorical",
+      "regex": "\\bnot\\s+(?:widely|extensively|publicly|well|readily)\\s+(?:documented|available|disclosed|published|reported)\\b|\\b(?:in|within)\\s+the\\s+(?:provided|available|given)\\s+(?:sources|search\\s+results|documents|context)\\b|\\bas\\s+of\\s+my\\s+(?:last\\s+)?(?:knowledge|training)\\s+(?:update|cutoff)\\b|\\bbased\\s+on\\s+(?:the\\s+)?available\\s+information\\b|\\bspecific\\s+details?\\s+(?:about|on|regarding)\\b[^.\\n]{0,60}?\\b(?:is|are)\\s+(?:limited|scarce|sparse)\\b",
+      "positive_examples": [
+        "As of my last knowledge update, the retention policy was seven days.",
+        "Specific details about the sharding scheme are limited.",
+        "The eviction policy is not widely documented."
+      ],
+      "negative_examples": [
+        "The rebalance protocol is not documented in the client README.",
+        "We could not find the config in the repo; it is generated at build time.",
+        "The information in the trace is enough to rule out GC.",
+        "Details about the sharding scheme are in design doc DD-204."
+      ],
+      "repair": "Say where you looked and what you would need. 'Not widely documented' -> 'Not in the service README or the 2024 design doc; asked @owner in #team-storage on 2026-09-14.' The vague form hides that nothing was checked, and it is usually followed by a fabricated guess.",
+      "source_quote": "Words to watch: Up to my last training update , as of my last knowledge update , While specific details are limited/scarce... , not widely available/documented/disclosed , ...in the provided/available sources / search results...",
+      "detection_note": "The adverb (widely/extensively/publicly/readily) is required. A located negative claim \u2014 'not documented in the client README' \u2014 is falsifiable and does not fire. In engineering prose this rule usually catches the sentence immediately before a hallucinated mechanism, so flag the following sentence for a human read too.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "unfilled-placeholder",
+      "kind": "structural",
+      "regex": "\\[(?:Your\\s+Name|Insert[^\\]]*|Describe[^\\]]*|Add\\s+your[^\\]]*|TODO:[^\\]]*|TBD[^\\]]*|PLACEHOLDER[^\\]]*|Specific\\s+Topic|link\\s+to[^\\]]*)\\]|\\b(?:INSERT|PASTE)_[A-Z_]+\\b|\\b\\d{4}-(?:XX|xx)-(?:XX|xx)\\b",
+      "positive_examples": [
+        "Best regards, [Your Name]",
+        "url = PASTE_DASHBOARD_URL_HERE",
+        "access-date = 2025-XX-XX"
+      ],
+      "negative_examples": [
+        "See [the design doc](https://go/dd-204) for details.",
+        "The array index arr[i] is bounds-checked at the call site.",
+        "// TODO(spopuri): drop the v1 path after the migration",
+        "The window is [start, end) and end is exclusive."
+      ],
+      "repair": "Fill it in or delete the surrounding claim. A shipped design doc containing [Insert benchmark numbers] is worse than one that says 'not measured yet, owner @x, due 2026-10-01'.",
+      "source_quote": "AI chatbots may generate responses with fill-in-the-blank phrasal templates [...] However, some LLM users forget to fill in those blanks.",
+      "detection_note": "Markdown links, array indexing, interval notation, and conventional in-code TODO comments are all explicitly excluded \u2014 a bare '// TODO(owner):' is legitimate engineering practice and must not fire. Only bracketed imperatives, SCREAMING_SNAKE paste tokens, and XX-dates fire.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "emoji-heading",
+      "kind": "structural",
+      "regex": "^\\s{0,3}#{1,6}\\s*[\ud83c\udc00-\ud83e\udeff\u2190-\u21ff\u2300-\u27bf\u2b00-\u2bff]",
+      "positive_examples": [
+        "## \ud83d\ude80 Rollout Plan",
+        "### \ud83d\udd0d Root Cause"
+      ],
+      "negative_examples": [
+        "## Rollout Plan",
+        "| \u2705 | canary | passed |",
+        "- \u2705 Backfill complete",
+        "#### Root cause"
+      ],
+      "repair": "Delete the emoji. Heading text should be greppable and diffable; a rocket adds no information and breaks anchor links in some renderers.",
+      "source_quote": "In particular, they sometimes decorated section headings or bullet points by placing emoji in front of them.",
+      "detection_note": "Needs re.MULTILINE. Scoped to headings only. The source also lists emoji-decorated bullets, but status glyphs in tables and checklists (\u2705/\u274c/\u26a0\ufe0f) are normal and useful in engineering docs, so bullets and table cells are deliberately excluded.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    },
+    {
+      "name": "broader-landscape-tail",
+      "kind": "rhetorical",
+      "regex": "\\b(?:broader|wider|evolving|changing|shifting)\\s+(?:\\w+\\s+){0,2}?(?:landscape|ecosystem|narrative|conversation|discourse|movement|trends?|context)\\b|\\breflects?\\s+(?:a|the)\\s+(?:broader|wider|growing)\\b|\\bpart\\s+of\\s+a\\s+(?:broader|wider)\\s+(?:movement|trend|shift|narrative)\\b",
+      "positive_examples": [
+        "The change reflects a broader move toward declarative config.",
+        "This sits within the evolving observability landscape.",
+        "The rewrite is part of a broader trend in the industry."
+      ],
+      "negative_examples": [
+        "This is part of a broader migration off Thrift.",
+        "The Kubernetes ecosystem has three competing CNI plugins.",
+        "We widened the scope to include the write path.",
+        "The context deadline propagates to every downstream call."
+      ],
+      "repair": "Name the specific programme or delete the framing. 'part of a broader trend' -> 'the third of five services moving off Thrift under DD-118'. A trend the doc cannot name is a trend the author invented to make the change sound inevitable.",
+      "source_quote": "LLM writing often puffs up the importance of the subject matter by adding statements about how arbitrary aspects of the topic represent or contribute to a broader topic.",
+      "detection_note": "'part of a broader migration off Thrift' names a concrete referent and does not fire; only the abstract nouns (landscape, ecosystem, narrative, movement, trend) do. 'ecosystem' and 'context' are common technical nouns and fire only when governed by broader/wider/evolving/changing/shifting.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": []
+    }
+  ],
+  "tier2": [
+    {
+      "name": "assistant-turn-tic",
+      "kind": "lexical",
+      "regex": "\\b(?:you(?:'re|\\s+are)\\s+(?:absolutely\\s+|completely\\s+|totally\\s+|so\\s+)?right\\b|i\\s+hear\\s+(?:you|what\\s+you(?:'re|\\s+are)\\s+saying)\\b|great\\s+question\\b|you(?:'re|\\s+are)\\s+right\\s+to\\s+(?:push|flag|call)\\b)",
+      "positive_examples": [
+        "You're absolutely right, the lock is held across the I/O.",
+        "I hear you on the rollback risk, but the config was already live."
+      ],
+      "negative_examples": [
+        "The reviewer was right that the committed offsets were stale.",
+        "Confirm the shard assignment is right before you cut over."
+      ],
+      "repair": "Delete the sentence. A design doc, RFC or postmortem has no conversational turn to acknowledge; if the point being conceded matters, state the point itself.",
+      "source_quote": "_load-bearing_; _it's not just X, it's Y_; _you're absolutely right_; _I hear you_",
+      "confidence": "high",
+      "detection_note": "Verified: fires on both positives, silent on both negatives. The separator is the second-person pronoun immediately before 'right' - engineers write 'X was right', never 'you're right', in a document. Near-zero false-positive risk in the target genres because these are dialogue moves, not prose.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [
+        {
+          "from_pattern": "assistant-chatter",
+          "sentence": "You are right that the timeout is wrong."
+        }
+      ],
+      "n_over_fires": 1,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "fires on 1 negative example(s) from the pooled adversarial set"
+    },
+    {
+      "name": "bare-predicative-load-bearing",
+      "kind": "lexical",
+      "regex": "\\b(?:is|are|was|were|it's|that's)\\s+(?:actually\\s+|really\\s+|genuinely\\s+|very\\s+|quite\\s+)?load[-\\s]bearing\\b(?!\\s+(?:for|because|on|in\\s+that))",
+      "positive_examples": [
+        "This is load-bearing.",
+        "That assumption is actually load-bearing, so tread carefully."
+      ],
+      "negative_examples": [
+        "The load-bearing assumption is that clocks are monotonic across the fleet.",
+        "The 10% retry budget is load-bearing for the availability math."
+      ],
+      "repair": "Say what rests on it: 'the availability math assumes this retry budget'. The metaphor is only worth its space when the dependent is named.",
+      "source_quote": "_load-bearing_",
+      "confidence": "medium",
+      "detection_note": "A blanket ban on 'load-bearing' would catch careful engineers, so the regex targets only the bare predicative form with no stated dependent. Attributive use ('the load-bearing assumption is that...') and predicative use followed by for/because/on/in-that are excluded, and both negatives are verified silent. Downgraded from high because the narrowing is my inference; the source names the phrase without qualifying it.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "reviewer-verdict-tic",
+      "kind": "lexical",
+      "regex": "\\b(?:hand[-\\s]?wav(?:y|iness)\\b|smoke[-\\s]?test(?:ing|ed|s)?\\s+(?:the|this|that|your|his|her|their|my)\\s+(?:idea|claim|argument|assumption|hypothesis|thinking|framing|premise|intuition)\\b)",
+      "positive_examples": [
+        "The capacity reasoning here is hand-wavy.",
+        "Let me smoke-test that assumption before we commit to the migration."
+      ],
+      "negative_examples": [
+        "I hand-wave the constant factor here; Appendix B has the bound.",
+        "The smoke test suite runs before the canary is promoted."
+      ],
+      "repair": "For hand-wavy: state which step is unjustified. For smoke-test: say what you will actually run, or use 'check' - reserve smoke test for a test that executes.",
+      "source_quote": "_hand-waving_; _smoke-test_",
+      "confidence": "medium",
+      "detection_note": "Both words have legitimate engineering senses, which is the whole difficulty. The split that works: the verb 'hand-wave' (author declaring their own elision, legitimate) versus the adjective 'hand-wavy' (verdict on someone's reasoning, the tic); and 'smoke test' applied to a test suite (legitimate) versus applied to an idea/claim/assumption (the tic). Verified: both legitimate negatives stay silent.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "nonce-suffix-coinage",
+      "kind": "lexical",
+      "regex": "\\b(?!hard-|soft-|colou?r-|base-|hand-)[a-z]{4,}-(?:adjacent|coded|pilled|esque)\\b",
+      "positive_examples": [
+        "The failure was rate-adjacent rather than a hard timeout.",
+        "That framing is very enterprise-coded."
+      ],
+      "negative_examples": [
+        "The flush interval is hard-coded to 200ms.",
+        "The write-ahead log is fsynced before the ack."
+      ],
+      "repair": "Replace with the relation you mean. 'Rate-adjacent' is either 'caused by rate limiting', 'correlated with request rate', or nothing at all - pick one.",
+      "source_quote": "1 in every 5 words is a novel compound word (ex: \u2018rate-adjacent\u2019) which itself is the model's invented stand-in for a metaconcept that i need to interrogate it about",
+      "confidence": "medium",
+      "detection_note": "Scoped to four productive slop suffixes rather than hyphenation generally. '-shaped' was tested and dropped: 'U-shaped latency curve' and 'L-shaped tail' are legitimate. The hard-/soft-/base- lookahead is mandatory - without it 'hard-coded' fires and the rule is dead on arrival. Verified against both negatives.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "stacked-negation-in-contrast",
+      "kind": "syntactic",
+      "regex": "\\bnot\\s+(?:merely|simply|just|only)\\s+(?:non-?|un)[a-z]{3,}\\b",
+      "positive_examples": [
+        "I am holding the logging branch to actionable-cause output, not merely non-JSON prettiness.",
+        "The rollback path is not simply unreliable; it is untested."
+      ],
+      "negative_examples": [
+        "The write is not durable until fsync returns.",
+        "We do not enable the shim for non-LinkedIn traffic."
+      ],
+      "repair": "Resolve the double negative into a positive claim: 'the log line must name the cause', not 'not merely non-JSON prettiness'. Then decide whether the contrast is needed at all.",
+      "source_quote": "The action is buried beneath invented compound words, stretched metaphors, opaque contrasts, and double negatives.",
+      "confidence": "medium",
+      "detection_note": "Restricted to the exact shape in the source's quoted Sol passage - a negated contrast whose second term is itself un-/non- prefixed - because the general 'two negations near each other' test fires on ordinary guard-clause prose ('if the queue is not empty and the worker is not draining'). Verified silent on both negatives. Recall is deliberately low; this catches the densest instances only.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "ceremonial-filler",
+      "kind": "lexical",
+      "regex": "\\b(?:delve\\s+into|lean(?:s|ed|ing)\\s+into|move\\s+the\\s+needle|it's\\s+worth\\s+noting|needless\\s+to\\s+say|the\\s+fact\\s+of\\s+the\\s+matter|plays?\\s+a\\s+(?:crucial|key|vital|pivotal)\\s+role|a\\s+testament\\s+to|in\\s+today's\\s+(?:fast[-\\s]paced|rapidly\\s+evolving))\\b",
+      "positive_examples": [
+        "Let us delve into the scheduler's admission path.",
+        "The lease duration plays a crucial role in failover latency."
+      ],
+      "negative_examples": [
+        "We lean on the scheduler for fairness rather than on client backoff.",
+        "We used Delve to attach to the running process."
+      ],
+      "repair": "Delete, or replace with the measurement: 'lease duration sets the failover floor at 12s'. Every item here is deletable without information loss, which is what makes the rule safe.",
+      "source_quote": "stretched metaphors",
+      "confidence": "medium",
+      "detection_note": "Deliberately excludes items with a literal technical reading: 'at the end of the day' (batch jobs literally run then), 'north star' (a real dashboard name at many companies), 'double-click on' (literal in UI docs), 'at its core' (fine writing). 'delve into' is required as a bigram so the Go debugger Delve does not fire - verified. Each surviving item is pure filler, so a false positive still costs the author only a deletion. Medium rather than high: the source says 'stretched metaphors' without naming these.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 2,
+      "expert_prose_documents": 2,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "plays a crucial role"
+        },
+        {
+          "doc": "rust-rfc-2094-non-lexical-lifetimes",
+          "match": "It's worth noting"
+        }
+      ],
+      "demoted": "fires 2 times across 2 documents of expert human prose"
+    },
+    {
+      "name": "creature-metaphor-tic",
+      "kind": "lexical",
+      "regex": "(?<![\\w-])(?:goblin|gremlin|ogre|raccoon|leprechaun|boogeyman)s?(?![\\w-])(?![^.]{0,30}\\b(?:traversal|TinkerPop|graph query|chaos engineering)\\b)",
+      "positive_examples": [
+        "A single little goblin in the retry path was enough to stall the queue.",
+        "The scheduler has a gremlin somewhere in its preemption logic.",
+        "Some gremlin is eating our writes."
+      ],
+      "negative_examples": [
+        "Gremlin chaos engineering experiments injected 200ms of latency into the dependency.",
+        "The Gremlin traversal returned an empty vertex set.",
+        "A foolish consistency is the hobgoblin of little minds, but this cache is worse.",
+        "ORC unwinding replaced frame pointers in the Linux kernel."
+      ],
+      "repair": "Name the mechanism. \"A gremlin in the preemption logic\" means you have not found it yet; write \"preemption fires before the runqueue lock is released\" or say explicitly that the cause is unknown.",
+      "source_quote": "Further investigation revealed a whole family of other odd creatures: raccoons, trolls, ogres, and pigeons were identified as other tic words",
+      "confidence": "high",
+      "detection_note": "The source names goblin, gremlin, raccoon, troll, ogre, pigeon as confirmed tic words. Only the four with no engineering homograph are in this regex; troll (internet troll), pigeon (pigeonhole), frog, and beast are handled by creature-in-metaphor-frame instead. The lookbehind blocks hobgoblin (Emerson quote) and the trailing lookahead blocks Gremlin the chaos-engineering product and Gremlin the TinkerPop graph language. Verified zero hits across 50 engineering documents; 36 hits in the AI-prose files.",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [
+        {
+          "from_pattern": "goblin-token",
+          "sentence": "We ripped out the gremlin script that randomly killed pods."
+        }
+      ],
+      "n_over_fires": 1,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "fires on 1 negative example(s) from the pooled adversarial set"
+    },
+    {
+      "name": "diminutive-creature-companion",
+      "kind": "lexical",
+      "regex": "\\ba (?:little|tiny|wee|smol) (?:helper|friend|guy|buddy|fellow|creature|monster|beast|daemon|demon|imp|sprite|elf|goblin|gremlin|robot|gnome|dude|critter)\\b",
+      "positive_examples": [
+        "A little helper process watches the socket and restarts it.",
+        "Picture a tiny gremlin flipping the bit on every third write."
+      ],
+      "negative_examples": [
+        "It took a little longer than the timeout allowed.",
+        "A little over two years into the migration, the shard count doubled.",
+        "We spent a little bit of time on the hard drive math."
+      ],
+      "repair": "Name the component and its contract: \"a watchdog process polls the socket every 5s and restarts the listener on three consecutive failures.\"",
+      "source_quote": "A single \"little goblin\" in an answer could be harmless, even charming.",
+      "confidence": "medium",
+      "detection_note": "The diminutive frame is the carrier the source quotes verbatim; the generalisation from goblin to helper/friend/guy is inferred from the mechanism (the reward was for playful register, not for goblins specifically). The bare pattern \"a little X\" cannot be linted: it fires 22 times legitimately in the corpus (\"a little over two years\", \"a little more complex\"), so the noun list is restricted to animate-companion nouns.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "anthropomorphic-mood",
+      "kind": "syntactic",
+      "regex": "\\b(?:scheduler|kernel|garbage collector|GC|cache|database|compiler|process|daemon|service|CPU|allocator|load ?balancer|queue|disk|thread|node|pod|linker|parser|index)\\s+(?:is|gets|was|got|becomes|became|feels?|starts? to (?:get|feel))\\s+(?:a bit |quite |very |really |kind of |downright |rather )?(?:grumpy|cranky|sulky|sulking|moody|grouchy|peeved|miffed|jealous|lonely|bored|cheerful|sleepy|hungry|cross|pouty|snippy|huffy|sad|mad at)\\b|\\b(?:scheduler|kernel|cache|database|compiler|daemon|CPU|allocator|load ?balancer|queue|disk|GC|service|cluster)(?:'s| is| was) (?:having a (?:bad|rough) day|throwing a (?:fit|tantrum)|in a mood|not having it|having none of it|sulking|pouting)\\b",
+      "positive_examples": [
+        "The allocator gets grumpy once fragmentation passes 40 percent.",
+        "The database is having a bad day whenever the vacuum runs.",
+        "The scheduler became cranky under memory pressure."
+      ],
+      "negative_examples": [
+        "The scheduler decides which task runs next based on vruntime.",
+        "The kernel wants a page and the allocator cannot supply one.",
+        "The compiler is confused by the lifetime annotation on line 40.",
+        "The database is unavailable during the failover window."
+      ],
+      "repair": "Replace the mood with the measurement: \"once fragmentation passes 40 percent, allocation latency rises from 200ns to 14us because the free list walk degrades.\"",
+      "source_quote": "You must undercut pretension through playful use of language.",
+      "confidence": "medium",
+      "detection_note": "Mechanism-derived, not stated in the source: the reward was for a playful register, and the creature nouns were one surface of it. Emotional attribution to machinery is the same register reaching for a different part of speech, so it is a predicted tell this corpus has not logged. The adjective list deliberately excludes the anthropomorphisms engineers use correctly and constantly - wants, decides, waits, is confused, is unhappy, is angry - because those are load-bearing technical idiom and banning them would be the linter-ignoring failure mode. Restricted to whimsy-only moods.",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "mischief-as-root-cause",
+      "kind": "rhetorical",
+      "regex": "\\b(?:gremlins?|goblins?|gnomes?|gnomes|gargoyles?)\\s+in the\\s+\\w+|\\b(?:some|a|the)\\s+(?:mischievous|naughty|cheeky|impish|devious little|gremlin-like)\\s+\\w+|\\bwreak(?:ed|ing|s)? havoc\\b|\\bcame back to haunt\\b|\\bplaying hide[- ]and[- ]seek\\b|\\bdecided to misbehave\\b|\\bgot into mischief\\b",
+      "positive_examples": [
+        "There were gremlins in the pipeline that week.",
+        "Some mischievous interaction between the two retry layers wreaked havoc on the fleet.",
+        "The bug was playing hide-and-seek with our tracing."
+      ],
+      "negative_examples": [
+        "A misbehaving client sent 400k requests per second to the control plane.",
+        "The killswitch exists so that a misbehaving rule can be disabled quickly.",
+        "The regression had been lurking for years before the test suite caught it."
+      ],
+      "repair": "A postmortem that attributes a defect to mischief has no root cause in it. State the trigger, the mechanism, and the propagation path, or write \"cause not yet identified\" and file the follow-up.",
+      "source_quote": "A few months later, the goblins came back to haunt us in a much more specific and reproducible form.",
+      "confidence": "medium",
+      "detection_note": "Highest-value rule for postmortems specifically, because whimsical agency is a substitute for causal analysis. The naive version of this rule is unshippable: bare \"misbehaving\" and \"lurking\" fire five times legitimately in the corpus (Brooker on misbehaving clients, Cloudflare's killswitch, Gregg's misbehaving Ubuntu service, Dan Luu on latent bugs), so both are excluded and only the agentive form \"decided to misbehave\" survives.",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "wonder-adverb",
+      "kind": "lexical",
+      "regex": "\\b(?:delightfully|deliciously|gloriously|hilariously|charmingly|gleefully|deliriously|blissfully|adorably|deviously|wondrously)\\s+\\w+",
+      "positive_examples": [
+        "The failure mode is delightfully weird: the cache serves stale entries only on Tuesdays.",
+        "A gloriously simple fix: bump the timeout."
+      ],
+      "negative_examples": [
+        "This works beautifully if and only if the condition is based on truthiness.",
+        "Building a delightful ergonomic photo editing website is a different problem.",
+        "The behavior is strange: latency drops when we add load."
+      ],
+      "repair": "Cut the adverb. If the finding is surprising, the surprise is in the data; \"the cache serves stale entries only on Tuesdays\" already carries it.",
+      "source_quote": "The world is complex and strange, and its strangeness must be acknowledged, analyzed, and enjoyed.",
+      "confidence": "medium",
+      "detection_note": "Derived from the rewarded system prompt quoted in the source: the Nerdy persona was instructed to enjoy strangeness, so the reward gradient favours delight-marking adverbs generally, not just creature nouns. \"beautifully\" is excluded because PEP 572 uses it correctly (\"works beautifully if and only if\") and \"delightful\" as a bare adjective is excluded because Brooker uses it correctly (\"a delightful ergonomic photo editing website\"); only the -ly wonder adverbs, which appear zero times in 50 engineering documents, are matched.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "undercut-pretension-aside",
+      "kind": "rhetorical",
+      "regex": "\\bplot twist\\b|\\bspoiler(?: alert)?[:,]|\\bhere'?s the (?:fun|best|wild|spicy|juicy) part\\b|\\(\\s*yes,?\\s*really\\s*\\)|\\(\\s*no,?\\s*really\\s*\\)|\\(\\s*don'?t ask\\s*\\)|\\bi know,? i know\\b|\\bfun fact[:,]",
+      "positive_examples": [
+        "Plot twist: the config had been correct the whole time.",
+        "Here's the fun part: the failover target was the same host.",
+        "Fun fact: the retry budget was never wired up."
+      ],
+      "negative_examples": [
+        "The twist in the plot of this incident is not relevant; here is the timeline.",
+        "The interesting part of the trace is the 40ms gap before the first read.",
+        "Note: the retry budget was never wired up."
+      ],
+      "repair": "Delete the aside and keep the clause after the colon. \"The failover target was the same host\" is the finding; the wink adds nothing and costs the document its severity.",
+      "source_quote": "You must undercut pretension through playful use of language. [...] Tackle weighty subjects without falling into the trap of self-seriousness.",
+      "confidence": "medium",
+      "detection_note": "Directly grounded in the reward-bearing system prompt the source quotes. These are the narrated-reveal markers a model reaches for when rewarded to avoid self-seriousness. Zero corpus hits. Note that the semantically similar but sober forms - \"Note:\", \"Of note:\", \"Unexpectedly,\" - are not matched and are the intended repair target.",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "reveal-framing",
+      "kind": "rhetorical",
+      "regex": "\\b(?:here|this|that|now)(?:'s| is| was) (?:where|when) (?:it|things|the fun|the real fun) (?:gets?|got|begins?|start(?:s|ed)? to get)\\b",
+      "positive_examples": [
+        "Here's where it gets interesting: the second replica had already acked.",
+        "This is when things get weird, because the clock went backwards."
+      ],
+      "negative_examples": [
+        "Here is where the request enters the proxy tier.",
+        "This is where we found the off-by-one, at line 212 of the encoder.",
+        "That is when the operator ran the rollback command."
+      ],
+      "repair": "State the fact without staging it: \"the second replica had already acked, so the coordinator counted one ack twice.\"",
+      "source_quote": "",
+      "confidence": "low",
+      "detection_note": "Inferred, not in the source. The regex is narrow because the locative \"here is where\" is genuinely useful in engineering prose (\"here is where the request enters the proxy tier\") - only the pro-form subjects it/things/the fun are matched, which is what separates suspense-building from location-marking. Zero corpus hits, but the sample of this exact construction in the corpus is also zero, so the separation is untested against real usage.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence low"
+    },
+    {
+      "name": "overfamiliar-address",
+      "kind": "rhetorical",
+      "regex": "\\blet'?s (?:dive|unpack|jump in|take a peek|explore together|break (?:this|it) down)\\b|\\bbuckle up\\b|\\bstrap in\\b|\\btrust me[,.:;]|\\byou'?re (?:gonna|going to) (?:love|like) (?:this|it)\\b|\\bstay with me here\\b|\\bhang tight\\b",
+      "positive_examples": [
+        "Buckle up, because the dependency graph is about to get ugly.",
+        "Let's dive into the scheduler internals.",
+        "Trust me, the lock is not the bottleneck."
+      ],
+      "negative_examples": [
+        "Let's consider a potential sequence of events with this fallback.",
+        "Let's say a service has two APIs, start() and end().",
+        "Let's call this value ContainerMemoryProportion.",
+        "The Elastic Load Balancing Deep Dive talk covers this at re:Invent 2016."
+      ],
+      "repair": "Delete the run-up and start at the content: \"The scheduler picks the next task by vruntime.\" For \"trust me\", supply the measurement instead of the assurance.",
+      "source_quote": "Users complained about the model being oddly overfamiliar in conversation, which prompted an investigation into specific verbal tics.",
+      "confidence": "medium",
+      "detection_note": "Overfamiliarity is the user-facing symptom the source says triggered the tic investigation, so the register is source-attested even though these specific phrases are not. Critical constraint: \"let's\" cannot be banned. It appears 13 times correctly in the corpus (AWS \"let's consider\", \"let's say\"; KEP-2400 \"let's call it TotalPodsSwapAvailable\"; Gregg \"let's try tsc\") in its legitimate first-person-plural-reasoning sense. Only the tour-guide verbs are matched. \"Deep dive\" is excluded entirely because it appears as a real AWS talk title in the corpus.",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "decorative-emoji",
+      "kind": "punctuation",
+      "regex": "[\ud83c\udf00-\ud83d\uddff\ud83d\ude00-\ud83d\ude4f\ud83d\ude80-\ud83d\udeff\ud83e\udd00-\ud83e\udeff\u2728\u2b50\ud83d\udd25]",
+      "positive_examples": [
+        "Shipped the fix \ud83d\ude80 and latency recovered.",
+        "Great work on the migration \u2728"
+      ],
+      "negative_examples": [
+        "| unscheduled Pod | \u2705 create | \u274c update |",
+        "The p99 rose from 12ms to 400ms after the deploy.",
+        "Use \u2192 to denote the state transition."
+      ],
+      "repair": "Delete. If the emoji was carrying status, use a word or a table cell that a grep can find.",
+      "source_quote": "",
+      "confidence": "medium",
+      "detection_note": "Inferred from the register, not from the source. The naive version over-fires badly: \u2705 and \u274c appear 8 times in KEP-3521's feature-gate compatibility table, which is a real Kubernetes enhancement proposal, and status checkmarks are standard in KEPs and RFCs. Those two codepoints plus \u26a1 and arrows are therefore excluded; only pictographic-decorative ranges are matched. Zero corpus false positives after the exclusion, 64 hits in the AI-prose files.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "magic-as-explanation",
+      "kind": "lexical",
+      "regex": "(?<!not )(?<!doesn't )(?<!does not )(?<!won't )(?<!will not )(?<!isn't )(?<!don't )\\bmagical(?:ly)?\\b|\\bwizardry\\b|\\bsorcery\\b|\\bsecret sauce\\b|\\b(?:it'?s|there'?s|pure|just) magic\\b|\\bsprinkle(?:d)? (?:in |some )?magic\\b",
+      "positive_examples": [
+        "The replication layer magically reconciles the divergence.",
+        "Some wizardry in the query planner picks the right index.",
+        "The secret sauce is in the admission controller."
+      ],
+      "negative_examples": [
+        "Distributed systems do not magically become consistent.",
+        "The magic number 0xCAFEBABE identifies a class file.",
+        "Magic Transit customers could not advertise their prefixes.",
+        "The value will not magically appear in the replica."
+      ],
+      "repair": "Name the algorithm: \"the query planner picks the index by comparing estimated rows scanned against the covering-index cost.\"",
+      "source_quote": "",
+      "confidence": "medium",
+      "detection_note": "Inferred. Two guards carry this rule. First, bare \"magic\" is unlintable: it appears four times legitimately in the corpus as the Cloudflare product Magic Transit and in Dan Luu's \"the magic of LLMs\", and \"magic number\", \"magic byte\", \"magic constant\" and MagicMock are core technical vocabulary - so only \"it's magic\"-style predicative frames are matched. Second, the negated forms are excluded by lookbehind, because \"does not magically become consistent\" is skeptical engineering prose asserting the opposite of the tell. The negated-form exclusion means an author writing \"never magically\" or \"rarely magically\" will still trip it; widen the lookbehind list if that shows up.",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "persona-noun-inflation",
+      "kind": "lexical",
+      "regex": "\\btapestry\\b|\\bin the realm of\\b|\\ba testament to\\b|\\brich (?:landscape|tapestry)\\b|\\bnavigate the (?:complex|intricate|challenging|treacherous)\\b|\\b(?:10x|rock ?star|ninja|guru|wizard)\\s+(?:engineer|developer|programmer|coder|dev)s?\\b",
+      "positive_examples": [
+        "The service mesh is a rich tapestry of interacting timeouts.",
+        "In the realm of distributed consensus, quorum size matters.",
+        "The uptime record is a testament to the on-call rotation."
+      ],
+      "negative_examples": [
+        "The retry landscape across our clients is inconsistent; here are the four clients.",
+        "We had to navigate a version skew between the agent and the control plane.",
+        "This is strong evidence that the on-call rotation is working."
+      ],
+      "repair": "\"In the realm of X\" is \"in X\" or nothing. \"A testament to\" is \"evidence that\", which then obliges you to say evidence of what.",
+      "source_quote": "",
+      "confidence": "low",
+      "detection_note": "Inferred, and not from this source - included because the mechanism predicts that any register-elevating word class the reward favours will saturate. The rule is deliberately tiny. The obvious longer list is unshippable: robust, crucial, pivotal, underscores, landscape and navigate all appear repeatedly and correctly in the corpus (Dynamo on crucial requirements, AWS on robust timeout mechanisms, AWS on what load shedding underscores), and banning them is exactly the over-fire that teaches an author to ignore the linter. Note \"ninja\" is only matched when it modifies a person noun, because ninja is a build system.",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence low"
+    },
+    {
+      "name": "affective-tricolon",
+      "kind": "structural",
+      "regex": "\\b\\w+ed,\\s+\\w+ed,?\\s+and\\s+(?:enjoyed|savou?red|celebrated|embraced|appreciated|relished|marvell?ed at|delighted in)\\b",
+      "positive_examples": [
+        "The strangeness must be acknowledged, analyzed, and enjoyed.",
+        "The result was measured, replicated, and celebrated."
+      ],
+      "negative_examples": [
+        "The request is validated, authorized, and logged before it reaches the handler.",
+        "Writes are batched, compressed, and flushed every 200ms.",
+        "The system must be scalable, available, and durable."
+      ],
+      "repair": "Cut the third item. \"Acknowledged and analyzed\" is the actionable pair; the affective closer is decoration and usually is not a thing the reader can do.",
+      "source_quote": "The world is complex and strange, and its strangeness must be acknowledged, analyzed, and enjoyed.",
+      "confidence": "medium",
+      "detection_note": "The trigger example is the rewarded system prompt itself, which is unusually direct evidence: the persona the reward optimised for was written in this cadence, so the cadence is in the gradient. The rule must not be generalised to tricolons as such - engineering prose is full of correct ones (validated/authorized/logged, scalable/available/durable) - so it fires only when the third member is affective rather than operational. That narrowness means it misses affective tricolons built from non -ed forms.",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "one-line-closer",
+      "kind": "rhetorical",
+      "regex": "\\bthat(?:'s|s| is| was)\\s+(?:the|where)\\s+(?:real |whole |actual |entire )?(?:win|magic|kicker|takeaway|secret|beauty|power|trick|genius|insight)\\b|^\\s*(?:and )?that'?s it\\.\\s*$",
+      "positive_examples": [
+        "That's the real win.",
+        "That is the magic: the reader never blocks.",
+        "And that's it."
+      ],
+      "negative_examples": [
+        "That is the real cost: 3.2 s added to p99.",
+        "That is where the request is dropped, between the LB and the pod.",
+        "That is the takeaway from the graph above, and here is the number: 14 ms."
+      ],
+      "repair": "Delete the closer. If it carries a claim the section has not made, replace it with the claim and its number.",
+      "detection_note": "Catches the templated closers only. The general form - any short evaluative sentence ending a section - needs a human read, or a heuristic like \"final sentence of a section, under 8 words, contains no noun that appears elsewhere in the section\". The third negative example shows the failure mode of widening the noun list: \"takeaway\" followed by evidence is fine.",
+      "source_quote": "**One-line closers and dramatic fragments** | \"That is the real win.\" after every section; \"No prior. No nostalgia.\"",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [
+        {
+          "from_pattern": "one-line-closer",
+          "sentence": "That is the takeaway from the graph above, and here is the number: 14 ms."
+        }
+      ],
+      "n_over_fires": 1,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "fires on 1 negative example(s) from the pooled adversarial set"
+    },
+    {
+      "name": "arguing-with-no-one",
+      "kind": "rhetorical",
+      "regex": "\\b(?:it'?s|this is|that'?s) not (?:really |mainly |primarily |actually )?about\\b|\\bone might be tempted to\\b|\\bsome (?:might|may|would|could) (?:argue|say|claim)\\b|\\bit (?:could|might) be argued that\\b",
+      "positive_examples": [
+        "It's not really about the database.",
+        "Some might argue the migration is too expensive."
+      ],
+      "negative_examples": [
+        "Alternatives considered: shard by user id. The hot-key distribution defeats it.",
+        "Reviewers argued the migration cost was too high; the number is 14 engineer-weeks.",
+        "The obvious fix is a bigger buffer. It fails because the producer is unbounded."
+      ],
+      "repair": "If the objection is real, attribute it and answer it with evidence. If it is invented to be knocked down, delete both halves.",
+      "detection_note": "The dangerous over-fire here is an RFC's alternatives-considered section, which legitimately raises and rejects options. The regex fires only on unattributed, unnamed objectors (\"some might argue\"), not on a stated alternative or an attributed reviewer. Named-source objections must stay.",
+      "source_quote": "**Arguing with no one** | \"This isn't mainly about...\", \"A tempting approach would be...\"",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "dash-overload",
+      "kind": "punctuation",
+      "regex": "[^.!?\\n]*\u2014[^.!?\\n]*\u2014[^.!?\\n]*\u2014",
+      "positive_examples": [
+        "institutions\u2014not the people\u2014yet this continues\u2014for now.",
+        "The queue\u2014really two queues\u2014drains slowly\u2014and never empties."
+      ],
+      "negative_examples": [
+        "The p99 \u2014 measured at the client \u2014 rose to 1.2 s.",
+        "The fix is small \u2014 bump the retry budget from 3 to 4.",
+        "Latency \u2014 the whole reason for this doc \u2014 is now bounded."
+      ],
+      "repair": "Keep one dash pair per sentence at most. Convert the rest to periods, commas, colons, or parentheses.",
+      "detection_note": "Deliberately does NOT flag the em dash. One balanced parenthetical pair (two dashes) and one trailing dash are both correct and are in the negative examples; only three or more in a single sentence fire. The source itself marks this *weak alone*, so a linter should report it at low severity, and should skip code spans, paths, and CLI flags.",
+      "source_quote": "**Dashes as the universal connector** (*weak alone*) | \"institutions\u2014not the people\u2014yet this continues\u2014\"",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "stacked-hedges",
+      "kind": "syntactic",
+      "regex": "\\b(?:could|can|may|might|will)\\s+(?:potentially|possibly|conceivably|arguably|perhaps)\\b|\\b(?:potentially|possibly)\\s+(?:could|might|may|can)\\b|\\bit (?:could|can|might) be argued that\\b|\\bmay(?:\\s+well)?\\s+(?:potentially|possibly)\\b|\\b(?:seems|appears) to (?:possibly|potentially)\\b",
+      "positive_examples": [
+        "This could potentially reduce the tail.",
+        "It might possibly be a GC pause."
+      ],
+      "negative_examples": [
+        "This may reduce p99 by up to 12%.",
+        "A potential deadlock could occur when both locks are held in reverse order.",
+        "The cause is probably the fsync, but we have no trace to confirm it."
+      ],
+      "repair": "Keep one hedge, the strongest the evidence supports: \"This cuts p99 by 12% in the replay; production is untested.\"",
+      "detection_note": "Single hedges are mandatory in honest engineering prose and never fire. Only adjacent modal + adverb stacks do. \"potential\" as an adjective is excluded by requiring the -ly adverb.",
+      "source_quote": "**Stacked qualifiers** (*weak alone*) | \"could potentially possibly be argued\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 11,
+      "expert_prose_documents": 8,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "can\npotentially"
+        },
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "can potentially"
+        },
+        {
+          "doc": "atd-challenges-hyperscale",
+          "match": "possibly can"
+        },
+        {
+          "doc": "aws-caching-challenges-strategies",
+          "match": "can potentially"
+        }
+      ],
+      "demoted": "fires 11 times across 8 documents of expert human prose"
+    },
+    {
+      "name": "agentless-operational-passive",
+      "kind": "syntactic",
+      "regex": "\\b(?:was|were)\\s+(?:rolled back|deployed|reverted|disabled|enabled|restarted|paged|escalated|mitigated|merged|approved|rotated|scaled)\\b(?![^.!?\\n]{0,120}\\bby\\b)",
+      "positive_examples": [
+        "The config was rolled back at 14:32.",
+        "The canary was disabled before the incident."
+      ],
+      "negative_examples": [
+        "The deploy was reverted by oncall at 14:32.",
+        "The buffer was allocated on the hot path, once per request.",
+        "Requests were dropped at the load balancer once the queue filled."
+      ],
+      "repair": "Name the actor: \"Oncall rolled the config back at 14:32.\" In a postmortem timeline the actor is the point of the line.",
+      "detection_note": "A blanket passive-voice check over-fires on every technical document - passive is correct when the actor is the machine or irrelevant, as in the second and third negative examples. This narrows to human-operational verbs (deploy, revert, page, approve) with no \"by\" clause in the same sentence, which is where the missing subject is actually a defect. Highest value in postmortem timelines; consider scoping the rule to those sections.",
+      "source_quote": "**Passive voice and missing subjects** (*weak alone*) | \"No configuration file needed\"",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 3,
+      "expert_prose_documents": 2,
+      "expert_prose_examples": [
+        {
+          "doc": "gcp-incident-ow5i3PPK96RduMcb1SsW",
+          "match": "was mitigated"
+        },
+        {
+          "doc": "gcp-incident-ow5i3PPK96RduMcb1SsW",
+          "match": "was mitigated"
+        },
+        {
+          "doc": "pep-0703-making-the-gil-optional",
+          "match": "was enabled"
+        }
+      ],
+      "demoted": "fires 3 times across 2 documents of expert human prose"
+    },
+    {
+      "name": "ai-vocabulary",
+      "kind": "lexical",
+      "regex": "\\b(?:delve[sd]?|delving|tapestry|a testament to|myriad of|plethora|meticulous(?:ly)?|seamless(?:ly)?|ever-evolving|fast-paced|game[- ]changer|paradigm shift|synerg(?:y|ies|istic)|holistic(?:ally)?|embark(?:s|ed|ing)? on|usher(?:s|ed|ing)? in|at the forefront of|in the realm of|the landscape of|navigate the complexities|unlock the (?:power|potential)|shed light on|dive deep into|robust and scalable)\\b",
+      "positive_examples": [
+        "We delve into the allocator's behavior.",
+        "The migration ushers in a robust and scalable platform.",
+        "This unlocks the potential of the new fleet."
+      ],
+      "negative_examples": [
+        "Set the Kerberos realm to CORP.EXAMPLE.COM.",
+        "The estimator is robust to clock skew; the test harness replays 4 hours of traffic.",
+        "Feature gating is handled by the lix; CI quality gates block the merge.",
+        "Render the report in landscape orientation."
+      ],
+      "repair": "Use the plain word, or delete the sentence if the word was carrying it: \"delve into\" becomes \"read\" or \"profile\"; \"a testament to X\" becomes the fact that made you say it.",
+      "detection_note": "The word list is curated for engineering prose: every term with a technical homograph is excluded or context-bound. Bare \"robust\", \"harness\", \"gate/gating\", \"realm\", \"landscape\", \"leverage\", \"scale\" are NOT flagged - the source itself keeps \"real technical uses, such as feature gating and CI quality gates\". \"in the realm of\", \"the landscape of\" and \"robust and scalable\" are flagged only in those exact collocations.",
+      "source_quote": "**Overused AI words** | \"delve... testament... landscape... showcasing\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/3",
+      "over_fires_on": [
+        {
+          "from_pattern": "ceremonial-filler",
+          "sentence": "We used Delve to attach to the running process."
+        },
+        {
+          "from_pattern": "slop-vocabulary-core",
+          "sentence": "Attach Delve to the running binary with dlv attach."
+        },
+        {
+          "from_pattern": "slop-vocabulary-core",
+          "sentence": "We use dlv (Delve) for stepping through the goroutine."
+        }
+      ],
+      "n_over_fires": 3,
+      "expert_prose_hits": 4,
+      "expert_prose_documents": 3,
+      "expert_prose_examples": [
+        {
+          "doc": "aws-workload-isolation-shuffle-sharding",
+          "match": "seamless"
+        },
+        {
+          "doc": "industrialempathy-design-docs-at-google",
+          "match": "embark on"
+        },
+        {
+          "doc": "tail-at-scale",
+          "match": "seamless"
+        },
+        {
+          "doc": "tail-at-scale",
+          "match": "seamlessly"
+        }
+      ],
+      "demoted": "fires 4 times across 3 documents of expert human prose"
+    },
+    {
+      "name": "inflated-significance",
+      "kind": "rhetorical",
+      "regex": "\\bmark(?:s|ed|ing) a (?:pivotal|significant|major|key|watershed|turning) (?:moment|point|milestone|chapter|shift)\\b|\\bthe future (?:looks|is) (?:bright|promising)\\b|\\bcontinues to (?:thrive|evolve|shape|grow)\\b|\\bplays? a (?:crucial|pivotal|vital|key|critical) role\\b|\\bunderscor(?:es|ing) the (?:importance|need)\\b|\\bhighlight(?:s|ing) the (?:importance|need)\\b|\\bis a testament to\\b|\\bstands as a\\b",
+      "positive_examples": [
+        "The launch marks a pivotal moment for the platform.",
+        "This underscores the importance of backpressure.",
+        "The page cache plays a critical role in read latency."
+      ],
+      "negative_examples": [
+        "The 14:02 deploy is the first change inside the window.",
+        "GC accounts for 40 ms of the 62 ms p99 budget.",
+        "This is the first release that ships the new codec by default."
+      ],
+      "repair": "Keep the fact, drop the significance, and end on the last concrete number. \"The page cache plays a critical role in read latency\" becomes \"Cold reads cost 4.2 ms; warm reads cost 90 us.\"",
+      "detection_note": "\"marks the first X\" and other plain ordinal claims are excluded by requiring an evaluative adjective before the moment-noun. The \"plays a critical role\" alternative is the one to watch: engineers do write it, but it is always replaceable by the measurement, so flagging it is a request for the number rather than a false positive.",
+      "source_quote": "**Inflated significance** | \"marking a pivotal moment\", \"Despite challenges... continues to thrive\", \"The future looks bright\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 2,
+      "expert_prose_documents": 2,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "plays a crucial role"
+        },
+        {
+          "doc": "atd-challenges-hyperscale",
+          "match": "continues to grow"
+        }
+      ],
+      "demoted": "fires 2 times across 2 documents of expert human prose"
+    },
+    {
+      "name": "vague-causal-attribution",
+      "kind": "rhetorical",
+      "regex": "\\b(?:related to|connected to|linked to|associated with|stemming from|due to issues with)\\s+(?:the\\s+)?(?:deploy(?:ment)?|rollout|change|incident|regression|outage|issue)\\b|\\bin connection with\\b",
+      "positive_examples": [
+        "The latency was related to the rollout.",
+        "The errors appear connected to the change."
+      ],
+      "negative_examples": [
+        "The regression was caused by the 14:02 deploy; the revert restored p99 in 4 minutes.",
+        "Latency is correlated with queue depth (r = 0.87, n = 1440).",
+        "Each span is associated with a trace id at ingress."
+      ],
+      "repair": "State the mechanism and the evidence: \"The rollout added a second fsync per write, which moved p99 from 240 ms to 1.2 s; reverting restored it.\"",
+      "detection_note": "Scoped to incident vocabulary so that the legitimate senses survive: statistical correlation with a coefficient, and \"associated with\" as a data-model term (a span associated with a trace). \"caused by\" is never flagged - it is a real causal claim and should be challenged on evidence, not on wording.",
+      "source_quote": "**Vague connection or association** | \"associated with the leadership of\", \"in connection with\"",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 3,
+      "expert_prose_documents": 1,
+      "expert_prose_examples": [
+        {
+          "doc": "danluu-pl-tokens",
+          "match": "related to the issue"
+        },
+        {
+          "doc": "danluu-pl-tokens",
+          "match": "related to the issue"
+        },
+        {
+          "doc": "danluu-pl-tokens",
+          "match": "related to the issue"
+        }
+      ],
+      "demoted": "fires 3 times across 1 documents of expert human prose"
+    },
+    {
+      "name": "evaluative-ing-rider",
+      "kind": "syntactic",
+      "regex": ",\\s+(?:showcasing|symbolizing|underscoring|highlighting|reflecting|cementing|solidifying|exemplifying|demonstrating the|further (?:cementing|solidifying|underscoring)|paving the way)\\b",
+      "positive_examples": [
+        "The rewrite shipped in six weeks, showcasing the platform's flexibility.",
+        "Queues grew without bound, underscoring the need for backpressure."
+      ],
+      "negative_examples": [
+        "We dropped the second copy, reducing p99 from 1.2 s to 240 ms.",
+        "fsync blocked the writer, causing the queue to back up.",
+        "The pod restarted, losing the in-memory index."
+      ],
+      "repair": "Delete the rider. If it asserts something the sentence does not show, either prove it in its own sentence or drop the claim.",
+      "detection_note": "The mechanical participial rider (reducing, causing, blocking, losing, allocating) is standard technical prose and is excluded by verb list. Only the evaluative riders - the ones that comment on the fact instead of continuing it - fire.",
+      "source_quote": "**Shallow -ing riders** | \"symbolizing... reflecting... showcasing...\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [
+        {
+          "from_pattern": "participial-significance-tail",
+          "sentence": "We pinned the kernel version, reflecting what the hosts actually run."
+        },
+        {
+          "from_pattern": "participial-significance-tail",
+          "sentence": "The flame graph is annotated, highlighting the hot path in red."
+        },
+        {
+          "from_pattern": "participial-significance-tail",
+          "sentence": "The dashboard was regenerated, reflecting the new role assignments for on-call."
+        }
+      ],
+      "n_over_fires": 3,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "fires on 3 negative example(s) from the pooled adversarial set"
+    },
+    {
+      "name": "marketing-superlatives",
+      "kind": "lexical",
+      "regex": "\\b(?:blazing(?:ly)? fast|lightning[- ]fast|rock[- ]solid|world[- ]class|best[- ]in[- ]class|unparalleled|unmatched|effortless(?:ly)?|supercharg(?:e|es|ed|ing)|turbocharg(?:e|es|ed|ing)|next[- ]generation|revolutionary|cutting[- ]edge)\\b",
+      "positive_examples": [
+        "a blazing fast, rock-solid ingest path",
+        "a cutting-edge retrieval stack"
+      ],
+      "negative_examples": [
+        "The new path is 4.1x faster at p99 (1.2 s to 290 ms).",
+        "We use the state-of-the-art baseline from Dean and Barroso (2013).",
+        "The service has run 94 days without an unplanned restart."
+      ],
+      "repair": "Replace the adjective with the measurement it is standing in for, including the conditions under which it was measured.",
+      "detection_note": "\"state-of-the-art\" is deliberately excluded: in an ML or research-adjacent RFC it names a real baseline, as in the second negative example. Measured comparatives (\"4x faster\") and uptime facts never fire.",
+      "source_quote": "**Sales language** | \"nestled within the breathtaking region\"",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 10,
+      "expert_prose_documents": 7,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-10-lessons-10-years-aws",
+          "match": "rock solid"
+        },
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "cutting edge"
+        },
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "next generation"
+        },
+        {
+          "doc": "aws-using-load-shedding",
+          "match": "next generation"
+        }
+      ],
+      "demoted": "fires 10 times across 7 documents of expert human prose"
+    },
+    {
+      "name": "copula-avoidance",
+      "kind": "lexical",
+      "regex": "\\b(?:boasts?|stands as|is home to|comes equipped with|offers up|serves as)\\b",
+      "positive_examples": [
+        "The cluster boasts 400 nodes.",
+        "The WAL serves as the source of truth."
+      ],
+      "negative_examples": [
+        "The process serves 40k QPS from a single core.",
+        "The sidecar is the source of truth for the routing table.",
+        "HTTP/2 server push serves assets ahead of the request."
+      ],
+      "repair": "Use \"is\" or \"has\": \"The cluster has 400 nodes.\" \"The WAL is the source of truth.\"",
+      "detection_note": "\"serves\" without \"as\" is a different verb and is excluded, which keeps every QPS sentence safe. \"serves as\" is the soft spot in this rule - careful engineers write it - so treat it as a style suggestion rather than a defect; \"boasts\" and \"is home to\" are never right in a design doc. \"features\" is excluded entirely because the noun sense is everywhere in ML and product prose.",
+      "source_quote": "**Avoiding is, are, and has** | \"serves as... features... boasts\"",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [
+        {
+          "from_pattern": "legacy-significance-phrase",
+          "sentence": "The sentinel value serves as a guard against double free."
+        }
+      ],
+      "n_over_fires": 1,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "fires on 1 negative example(s) from the pooled adversarial set"
+    },
+    {
+      "name": "bold-line-as-heading",
+      "kind": "structural",
+      "regex": "^\\s*\\*\\*[^*\\n]{1,60}\\*\\*:?\\s*$",
+      "positive_examples": [
+        "**Performance:**",
+        "**Rollback plan**"
+      ],
+      "negative_examples": [
+        "The fsync **must** complete before the ack.",
+        "- `--retries`: number of attempts before the budget is exhausted",
+        "### Rollback plan"
+      ],
+      "repair": "Make it a real heading (`###`) so it lands in the table of contents and anchors, or fold the label into the sentence that follows it.",
+      "detection_note": "Fires only on a line that is entirely one bold span - the pseudo-heading. The related tell, a bold label whose sentence restates the label (\"**Performance:** Performance improved\"), needs a token-overlap check between the label and the following clause, which a regex cannot do. Inline **emphasis** inside a sentence is never flagged. Skip fenced code blocks and table rows.",
+      "source_quote": "**Bold as decoration** | \"**OKRs**, **KPIs**\"; \"**Performance:** Performance improved\"",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "curly-double-quotes",
+      "kind": "punctuation",
+      "regex": "[\u201c\u201d]",
+      "positive_examples": [
+        "said \u201cthe project\u201d",
+        "run \u201cmake test\u201d"
+      ],
+      "negative_examples": [
+        "said \"the project\"",
+        "the writer\u2019s own apostrophe stays",
+        "the flag is --dry-run, not \"dry-run\""
+      ],
+      "repair": "Replace with straight quotes. In a command or config snippet this is a correctness fix, not a style one - curly quotes do not parse.",
+      "detection_note": "Only the curly DOUBLE quotes are matched. U+2019 is excluded on purpose: many authors and editors type curly apostrophes in prose deliberately, so flagging them is exactly the over-fire that gets a linter ignored. The double-quote form is worth flagging everywhere and is a hard error inside code spans and fenced blocks, so report it at higher severity there.",
+      "source_quote": "**Curly quotation marks** (*weak alone*) | `said \u201cthe project\u201d`",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 215,
+      "expert_prose_documents": 15,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-10-lessons-10-years-aws",
+          "match": "\u201c"
+        },
+        {
+          "doc": "atd-10-lessons-10-years-aws",
+          "match": "\u201d"
+        },
+        {
+          "doc": "atd-10-lessons-10-years-aws",
+          "match": "\u201c"
+        },
+        {
+          "doc": "atd-10-lessons-10-years-aws",
+          "match": "\u201d"
+        }
+      ],
+      "demoted": "fires 215 times across 15 documents of expert human prose"
+    },
+    {
+      "name": "corporate-puffery",
+      "kind": "lexical",
+      "regex": "\\b(?:seamless(?:ly)?|cutting[-\\s]edge|game[-\\s]chang(?:er|ing)|revolutioniz(?:e|es|ed|ing)|best[-\\s]in[-\\s]class|world[-\\s]class|unparalleled|robust\\s+and\\s+scalable|unlock(?:s|ing)?\\s+the\\s+(?:full\\s+)?potential|harness(?:es|ing)?\\s+the\\s+power)\\b",
+      "positive_examples": [
+        "The new pipeline unlocks the full potential of the feature store.",
+        "Migration to gRPC was seamless for downstream callers.",
+        "The team delivered a best-in-class developer experience."
+      ],
+      "negative_examples": [
+        "The scale-out was invisible to callers; no client changes were needed.",
+        "The seam between the v1 and v2 schemas is documented in Appendix B.",
+        "We benchmarked against the state-of-the-art baseline in Table 3.",
+        "The system is robust to clock skew of up to 200 ms."
+      ],
+      "repair": "Replace the claim with its evidence. 'seamless for downstream callers' -> 'no downstream caller changed a line; the 41 dependent services were rebuilt unmodified.' If you cannot state the evidence, the claim is not yet true.",
+      "source_quote": "Words to watch: boasts a , vibrant , rich , profound , enhancing , showcasing , exemplifies , commitment to , natural beauty , nestled , in the heart of , groundbreaking , renowned",
+      "detection_note": "'state-of-the-art' is intentionally excluded: in ML engineering it is a technical term with a benchmark behind it ('beats SOTA on the internal eval'), so banning it would fire on correct writing. 'robust' alone is also excluded; only the fixed collocation 'robust and scalable' fires.",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "3/3",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 7,
+      "expert_prose_documents": 4,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "cutting edge"
+        },
+        {
+          "doc": "aws-workload-isolation-shuffle-sharding",
+          "match": "world-class"
+        },
+        {
+          "doc": "aws-workload-isolation-shuffle-sharding",
+          "match": "seamless"
+        },
+        {
+          "doc": "danluu-p95-latency",
+          "match": "world class"
+        }
+      ],
+      "demoted": "fires 7 times across 4 documents of expert human prose"
+    },
+    {
+      "name": "not-only-but-also",
+      "kind": "rhetorical",
+      "regex": "\\bnot\\s+(?:only|just|merely|simply)\\b[^.\\n;]{1,120}?\\bbut\\b",
+      "positive_examples": [
+        "The change not only reduced p99 but also cut the memory floor.",
+        "This is not just a config change but a wire-format break."
+      ],
+      "negative_examples": [
+        "We could not just restart the pods; the state lives on local disk.",
+        "The scheduler does not run on the leader but on a replica.",
+        "The limit is not advisory; the kernel enforces it.",
+        "This is not just a config change."
+      ],
+      "repair": "Split into two sentences and drop the escalation: 'The change reduced p99 by 40 ms. It also cut the memory floor by 1.2 GB.' The correlative exists to make one fact feel like two.",
+      "source_quote": "It is common for LLMs to use parallel constructions involving \"not\", \"but\", or \"however\" such as \" Not only ... but ... \" or \" It is not just ..., it's ... \".",
+      "detection_note": "Requires the intensifier (only/just/merely/simply) immediately after 'not', and an explicit 'but' in the same clause. That excludes plain contrastive 'not X but Y' ('runs not on the leader but on a replica') and excludes 'could not just restart' where 'just' means 'simply' with no correlative. Residual false-positive risk: a genuine two-part factual correlative ('not only advisory but enforced by the kernel'). Treat as advisory, not blocking.",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [
+        {
+          "from_pattern": "isnt-just-x-its-y",
+          "sentence": "The timeout is not only advisory but also enforced by the kernel."
+        }
+      ],
+      "n_over_fires": 1,
+      "expert_prose_hits": 13,
+      "expert_prose_documents": 10,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "not just two but"
+        },
+        {
+          "doc": "atd-challenges-hyperscale",
+          "match": "not just bigger, but"
+        },
+        {
+          "doc": "aws-avoiding-fallback",
+          "match": "not merely run the fallback case but"
+        },
+        {
+          "doc": "danluu-metrics-analytics",
+          "match": "not just the average per time period, but"
+        }
+      ],
+      "demoted": "fires 13 times across 10 documents of expert human prose"
+    },
+    {
+      "name": "isnt-just-x-its-y",
+      "kind": "rhetorical",
+      "regex": "\\b(?:isn['\u2019]t|is\\s+not|aren['\u2019]t|are\\s+not|wasn['\u2019]t|was\\s+not)\\s+(?:just|only|merely|simply)\\b[^.\\n]{1,80}?(?:\u2014|--|;)\\s*(?:it|they|that|this)(?:['\u2019]s|\\s+is|\\s+are|\\s+was)\\b",
+      "positive_examples": [
+        "This isn't just a latency problem \u2014 it's a correctness problem.",
+        "The regression is not merely additive \u2014 it is superlinear in shard count."
+      ],
+      "negative_examples": [
+        "The bug is not in the parser; it is in the tokenizer.",
+        "The retry is not just for 5xx responses.",
+        "The timeout is not only advisory but also enforced by the kernel.",
+        "The queue is not drained by the worker; the reaper drains it."
+      ],
+      "repair": "State the second half only. 'The regression is superlinear in shard count: 2x shards cost 4.3x.' The rejected first half is a strawman the reader never proposed.",
+      "source_quote": "Another common LLM pattern is parallelisms that explicitly state that a particular item doesn't possess the first characteristic at all. Such constructions are often expressed as \" It's not ..., it's ... \"",
+      "detection_note": "The intensifier is what separates this from the ordinary corrective 'The bug is not in the parser; it is in the tokenizer', which is correct prose that locates a fault. Without 'just/only/merely/simply' the construction is a factual correction, not a rhetorical upgrade.",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "important-to-note",
+      "kind": "rhetorical",
+      "regex": "\\bIt(?:['\u2019]s|\\s+is)\\s+(?:important|crucial|critical|essential|vital|worth|necessary|useful)\\s+to\\s+(?:note|remember|consider|mention|emphasi[sz]e|highlight|understand|keep\\s+in\\s+mind)\\b|\\bIt(?:['\u2019]s|\\s+is)\\s+worth\\s+noting\\b",
+      "positive_examples": [
+        "It's important to note that the flag only applies at startup.",
+        "It is worth noting that p99 here is measured server-side."
+      ],
+      "negative_examples": [
+        "Note that the flag only applies at startup.",
+        "It is important that the lock be released before the RPC.",
+        "The distinction matters: p99 here is server-side, not client-observed.",
+        "Worth a look: the allocator changed in 1.22."
+      ],
+      "repair": "Delete the preamble and keep the clause: 'The flag only applies at startup.' The preamble is pure throat-clearing; if the fact were not worth noting it would not be in the document.",
+      "source_quote": "Words to watch: it's important/critical/crucial to note/remember/consider , worth noting , may vary",
+      "detection_note": "Requires the full 'It is <adj> to <verb>' frame. 'It is important that the lock be released' is a genuine requirement statement and does not fire, because the complement is a that-clause obligation rather than a metadiscourse verb.",
+      "confidence": "high",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 2,
+      "expert_prose_documents": 2,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "It is important to understand"
+        },
+        {
+          "doc": "rust-rfc-2094-non-lexical-lifetimes",
+          "match": "It's worth noting"
+        }
+      ],
+      "demoted": "fires 2 times across 2 documents of expert human prose"
+    },
+    {
+      "name": "doubled-hedge-speculation",
+      "kind": "lexical",
+      "regex": "\\b(?:could|may|might|can)\\s+potentially\\b|\\bit\\s+is\\s+likely\\s+that\\b|\\bmay\\s+have\\s+(?:played|contributed|served)\\b",
+      "positive_examples": [
+        "The retry storm could potentially saturate the NIC.",
+        "It is likely that the leader lease expired first."
+      ],
+      "negative_examples": [
+        "The retry storm could saturate the NIC.",
+        "The leader lease likely expired first.",
+        "This may reduce p99 by about 2 ms.",
+        "A potential cause is the clock skew on host app0003."
+      ],
+      "repair": "Drop one hedge and add the evidence or its absence. 'could potentially saturate' -> 'could saturate the NIC (25 Gbps line rate vs 31 Gbps offered at peak)' or 'we did not measure NIC saturation'. Stacked hedges signal that no measurement exists.",
+      "source_quote": "They may also pair it with text about what that information \"likely\" may be and why it is significant. This information is entirely speculative",
+      "detection_note": "Only doubled hedges fire. Single hedges ('could saturate', 'likely expired', 'may reduce') are correct and necessary in a postmortem where causation is not established, so flagging them would train the author to ignore the linter. Inferred narrowing of the source's broader speculation tell, hence medium.",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 3,
+      "expert_prose_documents": 2,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "can\npotentially"
+        },
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "can potentially"
+        },
+        {
+          "doc": "aws-caching-challenges-strategies",
+          "match": "can potentially"
+        }
+      ],
+      "demoted": "fires 3 times across 2 documents of expert human prose"
+    },
+    {
+      "name": "curly-punctuation",
+      "kind": "punctuation",
+      "regex": "[\u2018\u2019\u201c\u201d]",
+      "positive_examples": [
+        "We set the flag to \u201ctrue\u201d in staging.",
+        "The pod\u2019s restart count was 4."
+      ],
+      "negative_examples": [
+        "We set the flag to \"true\" in staging.",
+        "The pod's restart count was 4."
+      ],
+      "repair": "Normalise to straight quotes and apostrophes before commit.",
+      "source_quote": "ChatGPT and DeepSeek typically use curly quotation marks (\u201c...\u201d or \u2018...\u2019) instead of straight quotation marks",
+      "detection_note": "Weak on its own and the source says so: Google Docs, macOS, and Word all autocorrect to curly, so a doc round-tripped through any of those will be full of them, and Gemini and Claude do not produce them. Use only as a corroborating signal in a doc authored in a plain-text editor, or gate on the code-span variant below. Report as a single document-level finding, never per occurrence.",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [
+        {
+          "from_pattern": "curly-double-quotes",
+          "sentence": "the writer\u2019s own apostrophe stays"
+        },
+        {
+          "from_pattern": "curly-quote-in-code-span",
+          "sentence": "The pod\u2019s `restartCount` was 4."
+        }
+      ],
+      "n_over_fires": 2,
+      "expert_prose_hits": 722,
+      "expert_prose_documents": 22,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-10-lessons-10-years-aws",
+          "match": "\u2019"
+        },
+        {
+          "doc": "atd-10-lessons-10-years-aws",
+          "match": "\u2019"
+        },
+        {
+          "doc": "atd-10-lessons-10-years-aws",
+          "match": "\u201c"
+        },
+        {
+          "doc": "atd-10-lessons-10-years-aws",
+          "match": "\u201d"
+        }
+      ],
+      "demoted": "fires 722 times across 22 documents of expert human prose"
+    },
+    {
+      "name": "curly-quote-in-code-span",
+      "kind": "punctuation",
+      "regex": "`[^`\\n]*[\u2018\u2019\u201c\u201d][^`\\n]*`",
+      "positive_examples": [
+        "Run `kubectl get pods -l app=\u2018web\u2019` on the canary.",
+        "Set `--flag=\u201ctrue\u201d` before restart."
+      ],
+      "negative_examples": [
+        "Run `kubectl get pods -l app='web'` on the canary.",
+        "Set `--flag=\"true\"` before restart.",
+        "The pod\u2019s `restartCount` was 4."
+      ],
+      "repair": "Replace with straight quotes inside the code span. A curly quote in a shell command is not a style issue \u2014 it is a command that fails when the reader pastes it.",
+      "source_quote": "They also tend to use the curly apostrophe (\u2019) [...] instead of the straight apostrophe (')",
+      "detection_note": "Engineering-specific narrowing of the source's curly-quote tell, and the only version of it worth blocking on: a smart quote inside backticks breaks copy-paste, so this is a correctness bug regardless of who wrote the text. Note that curly quotes in the surrounding prose (third negative) are correctly ignored here.",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "adverb-associated-with",
+      "kind": "lexical",
+      "regex": "\\b(?:widely|particularly|closely|primarily|commonly|generally|often|variously|historically)\\s+associated\\s+with\\b|\\bin\\s+connection\\s+(?:with|to)\\b",
+      "positive_examples": [
+        "The service is widely associated with the checkout flow.",
+        "The dashboard was cited in connection with the capacity review."
+      ],
+      "negative_examples": [
+        "The cost associated with the extra hop is 0.4 ms.",
+        "The p99 regression is associated with GC pauses in the 14:02 window.",
+        "We connected the tracer to the sidecar.",
+        "Errors associated with the retry path are counted separately."
+      ],
+      "repair": "State the actual relation with the direction of the arrow. 'is widely associated with the checkout flow' -> 'is called synchronously by checkout on every add-to-cart'.",
+      "source_quote": "Rather than directly stating a connection or relationship between two subjects [...] LLMs will often allude vaguely to the two subjects being \"connected to\" or \"associated with\" each other",
+      "detection_note": "The adverb is load-bearing. Bare 'associated with' is correct and frequent in engineering writing in two ways the linter must not touch: as a noun modifier ('the cost associated with the extra hop') and as a deliberate correlational hedge in a postmortem ('the regression is associated with GC pauses'), where claiming causation would be the error. Only the intensified form fires.",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "bold-inline-header-list",
+      "kind": "structural",
+      "regex": "^\\s*(?:[-*\u2022\u2013\u2014]|\\d+\\.)\\s+\\*\\*[^*\\n]{1,60}\\*\\*\\s*:",
+      "positive_examples": [
+        "- **Durability**: the WAL is fsynced before ack.",
+        "1. **Historical Context**: the design predates the sharding work."
+      ],
+      "negative_examples": [
+        "- `--max-batch-size`: caps the batch at 64.",
+        "- The WAL is fsynced before ack.",
+        "- **max_batch_size** caps the batch at 64.",
+        "* Batch size: 64 by default."
+      ],
+      "repair": "If the bolded labels are the real content, use a table with real columns. If the label just restates the sentence's subject, delete the label and write the sentence.",
+      "source_quote": "AI chatbots output often includes vertical lists formatted in a specific way: an ordered or unordered list where the list marker [...] is followed by an inline boldfaced header, separated with a colon from the remaining descriptive text.",
+      "detection_note": "Needs re.MULTILINE. This regex is a LINE matcher, not a finding. Real design docs use this shape legitimately for glossaries and flag lists. Report only when four or more such lines occur consecutively AND the bolded labels are abstract category nouns rather than identifiers (flag names, class names, error codes in backticks are exempt \u2014 note the first negative).",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    },
+    {
+      "name": "title-case-heading",
+      "kind": "structural",
+      "regex": "^\\s{0,3}#{1,6}\\s+(?:[A-Z][a-z]+\\s+){2,}[A-Z][a-z]+\\s*$",
+      "positive_examples": [
+        "## Impact Of Technology And Digitalization",
+        "### Challenges And Future Directions"
+      ],
+      "negative_examples": [
+        "## Why the batch size matters",
+        "## Rollback plan and owners",
+        "## Root cause",
+        "## p99 regression in the ranking tier"
+      ],
+      "repair": "Sentence-case the heading to match the rest of the document.",
+      "source_quote": "In section headings, AI chatbots strongly tend to capitalize all main words.",
+      "detection_note": "Needs re.MULTILINE. Known false positive: '## Kafka Consumer Rebalance Storm' is a legitimate human heading made entirely of capitalised proper nouns and will fire. Many orgs also mandate title case as house style, in which case the whole rule is noise. Report only when title-case headings are a MINORITY (say under 30 percent) of the headings in the same file \u2014 the signal is inconsistency within one document, not title case itself. Low confidence because the check that makes it safe is document-level, not line-level.",
+      "confidence": "low",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [
+        {
+          "from_pattern": "decorative-heading",
+          "sentence": "## Why the retry budget ran out"
+        },
+        {
+          "from_pattern": "decorative-heading",
+          "sentence": "## Retry Budget Exhaustion"
+        },
+        {
+          "from_pattern": "canned-wrapup-heading",
+          "sentence": "## Risks and Mitigations"
+        },
+        {
+          "from_pattern": "canned-wrapup-heading",
+          "sentence": "## Background and Motivation"
+        },
+        {
+          "from_pattern": "title-case-heading",
+          "sentence": "## Why the batch size matters"
+        },
+        {
+          "from_pattern": "title-case-heading",
+          "sentence": "## Rollback plan and owners"
+        }
+      ],
+      "n_over_fires": 6,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "fires on 6 negative example(s) from the pooled adversarial set"
+    },
+    {
+      "name": "unquantified-intensifier",
+      "kind": "rhetorical",
+      "regex": "\\b(?:significantly|dramatically|substantially|drastically|markedly|considerably|vastly)\\s+(?:improv|reduc|increas|decreas|enhanc|boost|acceler|degrad)\\w*(?![^.\\n]{0,70}\\d)",
+      "positive_examples": [
+        "The change significantly improved tail latency.",
+        "Caching dramatically reduced load on the database."
+      ],
+      "negative_examples": [
+        "The change significantly improved p99, from 240 ms to 90 ms.",
+        "GC tuning substantially reduced pause time to 4 ms.",
+        "Caching reduced database QPS by 62 percent.",
+        "The rewrite improved throughput; see Table 2 for numbers."
+      ],
+      "repair": "Put the number in the same sentence: 'reduced p99 from 240 ms to 90 ms'. If there is no number, drop the intensifier and say 'improved' \u2014 or say you have not measured it.",
+      "source_quote": "",
+      "detection_note": "Inferred rather than stated in the source; it is the engineering-domain form of the source's 'superficial analyses' tell. The negative lookahead for a digit within 70 characters is what makes it safe: an intensifier backed by a measurement in the same sentence never fires, which is exactly the writing we want to leave alone. Note it does not see numbers in a following sentence or a table, so it will occasionally fire on a claim quantified one sentence later.",
+      "confidence": "low",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 7,
+      "expert_prose_documents": 5,
+      "expert_prose_examples": [
+        {
+          "doc": "atd-amazons-dynamo",
+          "match": "vastly improved"
+        },
+        {
+          "doc": "aws-timeouts-retries-backoff-jitter",
+          "match": "significantly increases"
+        },
+        {
+          "doc": "danluu-p95-latency",
+          "match": "drastically improve"
+        },
+        {
+          "doc": "danluu-p95-latency",
+          "match": "dramatically reduces"
+        }
+      ],
+      "demoted": "fires 7 times across 5 documents of expert human prose"
+    },
+    {
+      "name": "ensuring-abstract-outcome",
+      "kind": "syntactic",
+      "regex": ",\\s+(?:ensuring|enabling|allowing|fostering|facilitating|driving|promoting)\\s+(?:the\\s+|its\\s+|their\\s+|a\\s+|an\\s+|continued\\s+|long-term\\s+)?(?:\\w+\\s+){0,2}?(?:success|quality|satisfaction|relevance|integrity|excellence|growth|engagement|collaboration|innovation|efficiency|sustainability|adoption)\\b",
+      "positive_examples": [
+        "The pipeline was rolled out fleet-wide, ensuring long-term sustainability.",
+        "We added shared dashboards, fostering collaboration between the two teams."
+      ],
+      "negative_examples": [
+        "The lock is held across both writes, ensuring the updates are atomic.",
+        "The sidecar caches the token, allowing the client to skip the auth hop.",
+        "We batch the writes, improving throughput by 3x.",
+        "The reaper runs every 30 s, ensuring no lease outlives its holder."
+      ],
+      "repair": "Either name the mechanism ('ensuring no lease outlives its holder') or delete the clause. 'Ensuring long-term sustainability' asserts a guarantee nothing in the sentence provides.",
+      "source_quote": "Words to watch: highlighting/underscoring/emphasizing ... , ensuring ... , reflecting/symbolizing ... , contributing to ... , cultivating/fostering ...",
+      "detection_note": "The abstract-outcome noun list is what separates this from the correct engineering use of the same participles. 'ensuring the updates are atomic' and 'allowing the client to skip the auth hop' state real guarantees with checkable mechanisms and must never fire; 'ensuring long-term sustainability' states nothing.",
+      "confidence": "medium",
+      "n_sources": 1,
+      "fires_on_own_positives": "2/2",
+      "over_fires_on": [],
+      "n_over_fires": 0,
+      "expert_prose_hits": 0,
+      "expert_prose_documents": 0,
+      "expert_prose_examples": [],
+      "demoted": "author confidence medium"
+    }
+  ],
+  "tier3": [
+    {
+      "name": "em-dash-density",
+      "kind": "punctuation",
+      "regex": "",
+      "positive_examples": [
+        "The cache was cold \u2014 and that mattered \u2014 because the warmup path was serial \u2014 which nobody had measured.",
+        "We shipped it \u2014 fast \u2014 and paid for it later.",
+        "When WP:BLP1E says one event, it's shorthand \u2014 and the supporting essays, past precedents, and practical enforcement show that two incidents still fall under it. This isn't imagining what policy should be \u2014 it's recognizing how consensus has shaped its application.",
+        "And consensus doesn't grow from silence \u2014 it grows from critique, correction, and clarity."
+      ],
+      "negative_examples": [
+        "The retry budget \u2014 which we set at 10% of steady-state load \u2014 is enforced per client.",
+        "Two things went wrong at once \u2014 the leader election stalled while the failover timer was already running.",
+        "The window \u2014 30 s by default, 5 s on the canary \u2014 is configurable per tenant.",
+        "Two things went wrong \u2014 the lease expired and the reaper was wedged."
+      ],
+      "repair": "Convert unpaired dashes to a period or a semicolon. Keep paired dashes that bracket a genuine parenthetical.",
+      "source_quote": "the em dash",
+      "confidence": "medium",
+      "detection_note": "No regex shipped: presence cannot separate the two populations and banning the character punishes correct writers, exactly as the brief warns. Measured over the positive corpus in this repo: em dashes per 1000 words is 0.00 for all six Brooker posts and for tail-at-scale, 0.00-0.48 across Dan Luu, 0.00-1.04 across the AWS Builders' Library pieces, but 5.60 in sre-book-ch04 - professionally edited prose that uses the dash heavily and correctly. So rate alone misclassifies a known-good document. Implement as an advisory document-level counter with the threshold above 5/1000, and as a per-sentence check for an odd number of dashes (unpaired dash used as a dramatic beat before a restating clause), never as an error.",
+      "n_sources": 2
+    },
+    {
+      "name": "nonce-abstraction-compound",
+      "kind": "lexical",
+      "regex": "",
+      "positive_examples": [
+        "I am holding the logging branch to actionable-cause output, not merely non-JSON prettiness.",
+        "The generation rotation requires settled durable work before the commit-transition surface is safe."
+      ],
+      "negative_examples": [
+        "The write-ahead log is replayed before the tablet accepts reads.",
+        "Shuffle-sharding assigns each customer a random two-node subset of the fleet."
+      ],
+      "repair": "If the compound names something real, define it once and reuse the same words. If it appears exactly once in the document, it is a stand-in for a thought you have not finished - write the thought out.",
+      "source_quote": "1 in every 5 words is a novel compound word (ex: \u2018rate-adjacent\u2019) which itself is the model's invented stand-in for a metaconcept that i need to interrogate it about",
+      "confidence": "low",
+      "detection_note": "I tested the obvious mechanical version and it fails. Counting hyphenated compounds that appear exactly once per 1000 words over this repo's corpus: tail-at-scale 14.17, brooker-waiting 8.63, brooker-whats-easy-whats-hard 5.83 - all higher than the AI-slop sample at 6.86 and danluu-p95 at 1.27. Good technical writing coins compounds constantly ('tail-tolerant', 'shuffle-sharding'). The discriminator is not frequency but head-noun concreteness: coinages naming a system object are fine; coinages whose head is an abstraction ('-output', '-prettiness', '-surface', '-posture', '-framing', '-nature') and that appear once with no definition are the tell. That final judgement needs a human or an LLM pass, so no regex.",
+      "n_sources": 1
+    },
+    {
+      "name": "uniform-cadence",
+      "kind": "structural",
+      "regex": "",
+      "positive_examples": [
+        "The queue drains at a fixed rate. The producers do not observe that rate. The result is unbounded growth. The fix is a bounded buffer.",
+        "Each section opens with a claim, supports it with three bullets, and closes with a one-sentence takeaway."
+      ],
+      "negative_examples": [
+        "Little's Law. That is the whole of it: the mean number in system is arrival rate times mean time in system, and once you see it you cannot unsee it in a queueing graph.",
+        "We shed load. Specifically, the server rejects any request whose measured queue wait already exceeds the client's remaining deadline, which means the shed decision needs the deadline on the wire - and that is the part that took three quarters to land."
+      ],
+      "repair": "Vary sentence length deliberately: follow a long derivation with a four-word verdict. Break the section template - not every section needs the same three moves.",
+      "source_quote": "narrowing also makes a model's cadence and structure more predictable, leaving a fingerprint that informed readers recognize and machines can measure",
+      "confidence": "low",
+      "detection_note": "Script-checkable as a distribution, not as a match: compute the standard deviation of sentence length in words per section and the coefficient of variation of paragraph length. Low variance is the signal; the source also reports it independently at the paragraph level ('on a paragraph level, it was still too predictable'). Calibrate the threshold against this repo's positive corpus before enabling - reference docs and KEPs are legitimately uniform, so exempt spec-shaped sections and run it only over narrative prose. No regex is possible.",
+      "n_sources": 1
+    },
+    {
+      "name": "lexical-diversity-collapse",
+      "kind": "lexical",
+      "regex": "",
+      "positive_examples": [
+        "This is crucial because the mechanism is robust. The approach is crucial to reliability, and the robust design ensures the mechanism is effective.",
+        "It is important to note the tradeoff. It is important to understand the constraint. It is important to consider the failure mode."
+      ],
+      "negative_examples": [
+        "The lease is held by the primary. When the lease expires the primary steps down and a new lease is granted to whichever replica wins the election.",
+        "Shard 4 was hot. Shard 4 absorbed 38% of writes because shard 4 owned the tenant that had just been migrated."
+      ],
+      "repair": "Vary the non-domain vocabulary, not the domain vocabulary. Repeat 'lease' and 'shard' as often as needed; do not repeat 'crucial', 'robust', 'ensure', 'important to note'.",
+      "source_quote": "newer instruction-tuned models showed less syntactic and, especially, lexical diversity than older non-instruction-tuned models",
+      "confidence": "low",
+      "detection_note": "A naive type-token ratio check is actively wrong for this genre: good engineering prose deliberately repeats domain nouns because renaming the same object is a defect (see both negatives, which have low TTR and are correct). Measure TTR over a restricted vocabulary only - evaluative adjectives, hedges, and connectives - with domain nouns and identifiers excluded by frequency or by a project glossary. Also flag any evaluative adjective used three or more times in one document. Needs a word list and corpus calibration, so no regex.",
+      "n_sources": 1
+    },
+    {
+      "name": "buried-action",
+      "kind": "syntactic",
+      "regex": "",
+      "positive_examples": [
+        "The holding of the logging branch to actionable-cause output is what independent review is currently enforcing.",
+        "There is a requirement that generation rotation be preceded by the settlement of durable work."
+      ],
+      "negative_examples": [
+        "Independent review blocks the merge until the log line names the nested cause.",
+        "Rotation waits for durable work to settle."
+      ],
+      "repair": "Find the actor and the action, then make them the subject and the verb: 'review blocks the merge'. Nominalizations that already exist as domain terms (serialization, backpressure, staleness) are fine; the ones you built out of a verb in this sentence are not.",
+      "source_quote": "The action is buried beneath invented compound words, stretched metaphors, opaque contrasts, and double negatives. ... I have to return to the beginning several times and exert myself to make sense of it.",
+      "confidence": "low",
+      "detection_note": "I could not build a safe regex. The obvious proxy - '-ness/-ality/-ization' density - over-fires immediately on ordinary engineering vocabulary: robustness, correctness, freshness, staleness, liveness, observability, serialization, initialization are all everyday and all correct. The real signal is that the grammatical subject is an abstract noun derived from a verb in the same sentence, plus a copula or a light verb; catching that needs a dependency parse or an LLM pass. If you want a cheap advisory, flag sentences over roughly 35 words whose main verb is a form of 'be' and whose subject head is a deverbal noun, and expect a high false-positive rate.",
+      "n_sources": 1
+    },
+    {
+      "name": "invented-foil-contrast",
+      "kind": "rhetorical",
+      "regex": "",
+      "positive_examples": [
+        "The goal is actionable-cause output, not merely non-JSON prettiness.",
+        "We are optimizing for correctness here, not for aesthetic tidiness."
+      ],
+      "negative_examples": [
+        "We chose per-shard leases over a global lock; the global lock was the design in the v1 RFC and it serialized every write.",
+        "This shifts the cost from the write path to the read path, which is the tradeoff the team rejected last quarter."
+      ],
+      "repair": "Only contrast against a position someone actually held, and cite where. If the foil exists nowhere in the document or its review history, delete the clause and assert the claim on its own.",
+      "source_quote": "stretched metaphors, opaque contrasts, and double negatives",
+      "confidence": "low",
+      "detection_note": "The tell is a contrast whose rejected half was never proposed by anyone - the model manufactures a foil so it has something to defeat. Partially mechanizable: extract the object of 'not X', 'rather than X', 'instead of X' and check whether X's head noun appears anywhere else in the document or in the linked review thread; flag when it appears exactly once, at that site. That check is cheap but noisy, and deciding whether a real person held the position is a human read - hence no regex and low confidence. Both negatives show the correct form: the rejected alternative is named, located, and has a stated consequence.",
+      "n_sources": 1
+    },
+    {
+      "name": "rewarded-tic-frequency-outlier",
+      "kind": "structural",
+      "regex": "",
+      "positive_examples": [
+        "A design doc that uses \"surface\" as a verb nine times in four pages, in sections that share no subject matter.",
+        "A postmortem whose five section headings all open with a gerund, where the previous eleven postmortems from the same team show no such preference."
+      ],
+      "negative_examples": [
+        "A doc about the shuffle-sharding allocator that says \"shard\" forty times, because shards are the subject.",
+        "A Kubernetes KEP that repeats \"feature gate\" in every section, because the template requires that section.",
+        "An author's consistent house style across a series, e.g. Brooker's recurring use of Little's Law framing in latency posts."
+      ],
+      "repair": "Not a repair rule - a detector configuration. Ship a frequency-outlier check alongside the blocklist and feed its top hits back into the blocklist as new named rules.",
+      "source_quote": "use of \"goblin\" in ChatGPT had risen by 175% after the launch of GPT-5.1, while \"gremlin\" had risen by 52%",
+      "confidence": "low",
+      "detection_note": "This is the mechanism rather than a tell, and it is the reason a fixed blocklist will always be a release behind. The source's own detection was statistical, not lexical: nobody blocklisted \"goblin\" in advance; they measured a 175% rise against a prior baseline and a 66.7%-of-mentions concentration in 2.5% of traffic. A linter over engineering prose should implement the same shape - per-document term frequency for non-domain content words, compared against a baseline built from the author's or team's own accepted prior documents, flagging terms whose rate is an outlier AND whose occurrences spread across sections with unrelated subject matter. The two conditions together are what separate a tic from a topic: a document about sharding says shard constantly and should, whereas a tic recurs where the subject does not call for it. No regex is possible because the target vocabulary is by definition not known in advance.",
+      "n_sources": 1
+    },
+    {
+      "name": "persona-register-leak",
+      "kind": "rhetorical",
+      "regex": "",
+      "positive_examples": [
+        "A Sev1 postmortem for a four-hour data-loss incident that opens with a playful aside about the on-call engineer's coffee.",
+        "An RFC proposing a wire-format change whose migration-risk section is written in the same chatty register as its introduction."
+      ],
+      "negative_examples": [
+        "A conference talk write-up or a personal engineering blog post that is deliberately informal throughout, e.g. Brooker's \"Marc's Amateur Statistics Corner\" or Dan Luu's first-person anecdotes.",
+        "An internal design doc with one deliberate joke in a non-load-bearing section, where the risk and rollback sections stay sober.",
+        "Exclamation marks used for genuine emphasis, which appear 69 times across the engineering corpus and are not a tell."
+      ],
+      "repair": "Match register to consequence per section. The severity, blast-radius, data-loss, and rollback sections take no jokes, no asides, and no second-person address, whatever the register of the introduction.",
+      "source_quote": "The rewards were applied only in the Nerdy condition, but reinforcement learning does not guarantee that learned behaviors stay neatly scoped to the condition that produced them.",
+      "confidence": "low",
+      "detection_note": "The source's central finding is scope leak: a style rewarded in one narrow condition showed up at nearly the same relative rate outside it, and then self-amplified when the rollouts were reused for SFT. The engineering-prose analogue is that a model asked for an approachable introduction carries that register into the risk analysis, where it is wrong. This needs a human read, or at best a two-pass check that scores register per section and flags variance between a document's introduction and its severity-bearing sections - a same-document comparison, not an absolute threshold, since the correct register for a personal blog post and for a Sev1 postmortem differ. A naive absolute check is actively harmful here: banning exclamation marks would fire 69 times on this corpus, mostly on Brooker and Dan Luu writing well.",
+      "n_sources": 1
+    },
+    {
+      "name": "forced-triads",
+      "kind": "syntactic",
+      "regex": "",
+      "positive_examples": [
+        "innovation, inspiration, and insights",
+        "resilience, reliability, and resolve"
+      ],
+      "negative_examples": [
+        "atomicity, consistency, and isolation",
+        "allocation, alignment, and access are the three costs on this path",
+        "CPU, memory, and disk are all within budget"
+      ],
+      "repair": "Use the number of items the meaning needs. If the third item exists only for rhythm, delete it.",
+      "detection_note": "No shippable regex. Three-item lists are the default shape of correct technical prose. The tightest heuristic I could build - three abstract nouns (-ity/-ion/-ness/-ment/-ance/-ence) sharing an initial letter, via a backreference - still fires on \"allocation, alignment, and access\", which is legitimate. Needs a human read, or an LLM pass asking whether the third item adds a distinct claim.",
+      "source_quote": "**Forced triads** | \"innovation, inspiration, and insights\"; three examples plus a lesson",
+      "confidence": "low",
+      "n_sources": 1
+    },
+    {
+      "name": "repeated-sentence-openings",
+      "kind": "structural",
+      "regex": "",
+      "positive_examples": [
+        "She noted the spike. She noted the retry storm. She filed the ticket.",
+        "We saw the queue grow. We saw the latency rise. We saw the pods restart."
+      ],
+      "negative_examples": [
+        "The p50 held at 12 ms. The p99 rose to 1.2 s. The p999 timed out.",
+        "1. Drain the node. 2. Drain the replica. 3. Drain the shard."
+      ],
+      "repair": "Merge the sentences or change the subject: \"She traced the spike to a retry storm and filed INC-4471.\"",
+      "detection_note": "Needs sentence segmentation, not a regex: flag three or more consecutive sentences in one paragraph that share their first two tokens. Suppress when the sentences form a parallel data series (each contains a distinct numeral or a distinct metric name) or when they are numbered/bulleted steps - both are deliberate parallelism and appear in the negative examples.",
+      "source_quote": "**Repeated sentence openings** | \"She noted... She noted... She filed...\"",
+      "confidence": "medium",
+      "n_sources": 1
+    },
+    {
+      "name": "dropped-hyphenated-pairs",
+      "kind": "lexical",
+      "regex": "",
+      "positive_examples": [
+        "the team is cross-functional and solution-oriented",
+        "a data-driven, customer-obsessed roadmap"
+      ],
+      "negative_examples": [
+        "the write-ahead log is copy-on-write and lock-free",
+        "end-to-end p99 on the read-modify-write path",
+        "a zero-copy, single-threaded, non-blocking reader"
+      ],
+      "repair": "n/a - dropped.",
+      "detection_note": "DROPPED for technical prose. Hyphenated compounds are the native vocabulary of systems writing (write-ahead, copy-on-write, lock-free, zero-copy, end-to-end, read-modify-write), so both a word list and a density threshold fire on correct documents at rates that would train the author to ignore the linter. The adjectival slop pairs it would catch (cross-functional, data-driven) are better handled by the ai-vocabulary list if they matter.",
+      "source_quote": "**Hyphenated pairs everywhere** (*weak alone*) | \"the team is cross-functional\"",
+      "confidence": "high",
+      "n_sources": 1
+    },
+    {
+      "name": "heading-echoed-in-first-sentence",
+      "kind": "structural",
+      "regex": "",
+      "positive_examples": [
+        "## Performance\\nSpeed matters.",
+        "## Rollback\\nRollback is important to consider."
+      ],
+      "negative_examples": [
+        "## Retry budget\\nThe retry budget is 3 attempts over 250 ms, shared across the hedge.",
+        "## Cold start\\nCold start costs 4.2 s, of which 3.1 s is class loading."
+      ],
+      "repair": "Let the heading do the work. Open the section on the first fact the heading does not already carry.",
+      "detection_note": "Needs structure, not a regex: for each heading, take its content words and the first sentence of its body, and flag when the sentence adds no content word beyond the heading's. A naive overlap test over-fires on the negative examples, where the first sentence repeats the subject because it is attaching a number to it - so the test must be \"adds no new content word\", not \"repeats the heading\". Low confidence as a mechanical check.",
+      "source_quote": "**A heading repeated in the first sentence** | \"## Performance\" + \"Speed matters.\"",
+      "confidence": "low",
+      "n_sources": 1
+    },
+    {
+      "name": "dropped-previous-version-narration",
+      "kind": "structural",
+      "regex": "",
+      "positive_examples": [
+        "This function was added to replace the legacy parser.",
+        "This field was renamed from `ttl_ms` in the previous revision of this doc."
+      ],
+      "negative_examples": [
+        "Background: v1 used a global lock; this RFC replaces it with per-shard locks.",
+        "We reverted to the v2 codec after the incident; v3 remains disabled.",
+        "The migration removes the dual-write path added in Q2."
+      ],
+      "repair": "n/a - dropped.",
+      "detection_note": "DROPPED for technical prose. Describing what the previous version did is the entire job of an RFC's background section, a postmortem's timeline, and a migration plan, as the negative examples show. The tell only exists in reference and API documentation, where the reader wants current behaviour; if the linter can identify those files (docs/reference, generated API pages) the rule could be re-enabled scoped to them, but corpus-wide it fires on correct writing.",
+      "source_quote": "**Writing about the previous version** | \"This function was added to replace...\"",
+      "confidence": "medium",
+      "n_sources": 1
+    },
+    {
+      "name": "dropped-false-ranges-and-synonym-cycling",
+      "kind": "lexical",
+      "regex": "",
+      "positive_examples": [
+        "The fix took between four and five days.",
+        "The service, the system, the platform - each term for the same daemon."
+      ],
+      "negative_examples": [
+        "The rollout took 4-5 days depending on the region.",
+        "We call it the router in code and the gateway in the diagram; both names appear in the schema."
+      ],
+      "repair": "n/a - dropped upstream.",
+      "detection_note": "DROPPED, and dropped by the source too: version 3.0.0 removed false ranges and synonym cycling because Wikipedia now classes them as human habits. Listed here so the linter's owner knows they were considered and rejected rather than missed. Ranges and elegant variation are both ordinary in engineering prose.",
+      "source_quote": "dropped false ranges and synonym cycling, which Wikipedia now lists as human habits or historical",
+      "confidence": "high",
+      "n_sources": 1
+    },
+    {
+      "name": "rule-of-three",
+      "kind": "syntactic",
+      "regex": "",
+      "positive_examples": [
+        "The platform is fast, flexible, and future-proof.",
+        "It offers dependable, value-driven experiences that showcase the state's rich history, spiritual heritage, and natural beauty."
+      ],
+      "negative_examples": [
+        "The pipeline reads from Kafka, enriches from the feature store, and writes to Pinot.",
+        "The API must be idempotent, retryable, and observable."
+      ],
+      "repair": "Cut to the one or two members that are load-bearing, or expand each into its own sentence with evidence. A triple of evaluative adjectives is almost always one real claim padded to sound thorough.",
+      "source_quote": "LLMs overuse the rule of three . This can take different forms, from \"adjective, adjective, adjective\" to \"short phrase, short phrase, and short phrase\". [...] LLMs often use this structure to make superficial analyses appear more comprehensive.",
+      "detection_note": "No regex, and I could not construct one that survives contact with engineering prose. The 'X, Y, and Z' shape is how engineers correctly enumerate pipeline stages, dependencies, and invariants; both negative examples are exemplary technical writing in exactly that shape. Even restricting to adjective triples fires on 'idempotent, retryable, and observable'. The distinguishing feature is semantic \u2014 are the three members independently checkable facts, or three synonyms for 'good'? \u2014 which needs a human or an LLM judge, not a pattern. A weak heuristic a script can run: flag triples where all three members are evaluative adjectives drawn from the puffery lexicon.",
+      "confidence": "low",
+      "n_sources": 1
+    },
+    {
+      "name": "elegant-variation-coreference",
+      "kind": "lexical",
+      "regex": "",
+      "positive_examples": [
+        "The service accepts writes. The platform then fans them out. This solution guarantees ordering per key. The system retries on failure.",
+        "Yankilevsky faced obstacles in expressing their creativity freely, and the non-conformist artists found a community of like-minded creators."
+      ],
+      "negative_examples": [
+        "The ranking service accepts writes. The ranking service fans them out to three shards. The ranking service retries on a 503.",
+        "We compared Raft and Paxos; Raft was easier to reason about, and Paxos needed fewer round trips in the steady state."
+      ],
+      "repair": "Pick one name per referent and repeat it. In engineering prose, repetition of a proper name is a feature: it makes the text greppable and removes the ambiguity of whether 'the platform' and 'the system' are the same thing.",
+      "source_quote": "Older AI models may include a repetition penalty, meant to discourage it from reusing words too often. [...] Lexical diversity/elegant variation",
+      "detection_note": "No regex. Mechanically approximable but not as a line pattern: within a section, collect generic head nouns from a fixed set (service, platform, system, solution, component, framework, offering, tool) and flag when three or more distinct ones appear with no intervening proper noun binding them, since that is the state where a reader cannot tell how many things are being discussed. Definite-article noun phrases naming DIFFERENT real components (the second negative) must be excluded, which is why this needs a coreference judgement rather than a match. The source also warns that non-native English speakers are taught to vary vocabulary, so this is weak evidence of AI authorship even when it is a real writing defect.",
+      "confidence": "low",
+      "n_sources": 1
+    }
+  ],
+  "broken": []
+}

@@ -60,7 +60,11 @@ COMPARATIVE = re.compile(
 NUMBER = re.compile(r"(?<![\w.])\d[\d,]*(?:\.\d+)?(?:\s*%)?(?![\w])")
 EM_DASH = re.compile(r"—")
 QUOTE_LINE = re.compile(r"^\s*>")
-SO_COUNT = re.compile(r"\bso\b", re.I)
+# R2 budgets the CAUSAL "so", which is the one that can assert a consequence that does not hold.
+# A bare \bso\b also counts "so that", "so far", "just so happens", "or so", "so-called" and the
+# intensifier in "so large", none of which claim causality. Causal "so" is a coordinator: it opens
+# the sentence or follows a comma or semicolon.
+CAUSAL_SO = re.compile(r"(?:^|[,;]\s+)so\b(?!\s+(?:that|far|long|much|many|called))", re.I)
 RATHER_THAN = re.compile(r"\brather than\b", re.I)
 
 
@@ -112,10 +116,10 @@ def main() -> None:
     if dashes:
         failures.append(("R11 prose em dash", len(dashes), "use ASCII ' -- ', or preserve and label a quotation"))
 
-    # ---- FAIL: R2, more than one "so" per sentence.
-    multi_so = [s for s in sents if len(SO_COUNT.findall(s)) > 1]
+    # ---- FAIL: R2, more than one causal "so" per sentence.
+    multi_so = [s for s in sents if len(CAUSAL_SO.findall(s)) > 1]
     if multi_so:
-        failures.append(("R2 more than one 'so' in a sentence", len(multi_so), multi_so[0][:90]))
+        failures.append(("R2 more than one causal 'so' in a sentence", len(multi_so), multi_so[0][:90]))
 
     # ---- FAIL: tier-1 negative-set patterns.
     patterns = load_patterns()
@@ -132,10 +136,18 @@ def main() -> None:
             failures.append((f'tier-1 pattern: {p.get("name")}', len(hits),
                              f'{hits[0].group()[:60]!r} -> {p.get("repair", "")[:70]}'))
 
-    # ---- FAIL: R3, more than one "rather than" per document.
+    # ---- FAIL: R3. The owner's budget is one per rendered PAGE, not one per file, so a long
+    # document gets a budget proportional to its length. The interpretation is printed rather than
+    # applied silently, because reading a page-scoped house rule as file-scoped would fail every
+    # multi-page document in the corpus (the measured exemplars carry 4 to 6).
     rt = RATHER_THAN.findall(text)
-    if len(rt) > 1:
-        failures.append(("R3 'rather than' budget", len(rt), "at most one per rendered page"))
+    budget = max(1, round(words / 1000))
+    if len(rt) > budget:
+        failures.append(("R3 'rather than' budget", f'{len(rt)}/{budget}',
+                         f'one per ~1000 words (a page); {words} words allows {budget}'))
+    else:
+        reports.append(("'rather than' against R3 budget", f'{len(rt)}/{budget}',
+                        "R3 is one per rendered page; scored here as one per ~1000 words"))
 
     # ---- REPORT: claim-first share.
     claim_first = sum(1 for p in paras if is_claim_first(sentences(p)[0]))
