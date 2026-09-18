@@ -1,0 +1,28 @@
+- KEP Title: Pod Scheduling Readiness
+- SIG: sig-scheduling
+
+## Motivation
+
+The scheduler treats every pod as ready for scheduling the moment the pod object is created, and there is no way for a controller to say otherwise. `kube-scheduler` picks the pod out of the active queue, runs the filter and score plugins over the nodes, fails to find a fit, and requeues it. The pod is retried on backoff for as long as it exists. Nothing in the API distinguishes a pod that is one node away from running from a pod that is waiting on a resource nobody has created yet.
+
+Some pods are in the second state for a long time. A pod whose PVC does not exist, whose quota has not been granted, or whose accompanying gang members have not been submitted will not schedule on this attempt or on the next several hundred. Each of those attempts costs a scheduling cycle that another pod could have used, and the cycle produces no new information: the same pod fails the same predicate against the same nodes. Scheduling throughput for the rest of the queue drops in proportion to how much of the queue is in this state.
+
+The churn does not stop at the scheduler. Integrators watch what the scheduler publishes and act on it. Cluster Autoscaler reads the `{type: PodScheduled, reason: Unschedulable}` condition and treats it as a request to add capacity, which is correct for a pod that is genuinely short of nodes and wrong for a pod that is short of a PVC. A pod paused on a missing prerequisite should not appear to the autoscaler as demand.
+
+Vendors are blocked by the same gap. A hierarchical quota implementation, or any admission-time gating controller, needs somewhere to hold a pod between creation and scheduling. Today the only options are to intercept the pod before it reaches the API server or to let it enter the scheduler and fail repeatedly. Neither belongs in tree.
+
+## Goals
+
+- Add an API on the pod that marks it either scheduling-paused or scheduling-ready, so a controller can hold a pod out of the scheduling cycle and release it later.
+- Add an Enqueue extension point to the scheduling framework, so queueing behavior is customizable in the same way that filtering and scoring already are.
+- Guarantee that a paused pod is never marked Unschedulable through the `PodScheduled` condition. That condition remains the scheduler's signal that a pod needs more cluster resources, and Cluster Autoscaler and every other integrator that reads it keep the contract they have today.
+- Ship a default Enqueue plugin that implements the semantics of the new API, so the behavior is available without a custom scheduler build.
+
+## Non-Goals
+
+- Extending pod conditions to carry richer context about why a pod is paused or who paused it. The condition set stays as it is.
+- Designing for in-house consumers of the Enqueue extension point. The extension point is for out-of-tree integrators.
+
+## Future Work
+
+Permission control on individual scheduling gates is left out of this KEP. Restricting which principal may remove which gate requires a fine-grained permissions design that does not exist yet, and this proposal does not attempt one.

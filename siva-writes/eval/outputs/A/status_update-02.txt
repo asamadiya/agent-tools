@@ -1,0 +1,32 @@
+search-federator canary 2026.9.3: p99 regression, reverted
+Owner: Dan Ortiz. For the weekly engineering review and search-federator SLO owners.
+
+Status
+
+Build 2026.9.3 has been on 4 of 240 production hosts since Sep 8. It misses the service SLO. p99 response time on the canary hosts is 311 ms against 184 ms on the control fleet, an increase of 127 ms or 69 percent, and the SLO is p99 under 250 ms. p50 did not move: 42 ms on canary against 41 ms on control. That split is the shape of the problem. The typical request is unaffected; a minority of requests are paying a large fixed cost.
+
+The canary carries 1.7 percent of traffic and has consumed zero error budget. Nothing is on fire, and nothing needs to be done tonight. What matters is that the regression is real, it is understood, and the release branch is blocked until it is fixed.
+
+Cause
+
+2026.9.3 adds a gRPC interceptor that validates response payloads against a JSON schema before the response leaves the serving path. Validation is synchronous. The schemas are held in a 512-entry LRU cache; on a miss, the interceptor recompiles the schema inline.
+
+The median cost of the interceptor is 0.9 ms. Its p99 cost is 94 ms, almost all of it recompilation. So every cache miss is roughly a hundred-fold tax on the request that pays it, and misses are common: the canary's working set is about 3,400 distinct schemas against a 512-entry cache, which gives a 71 percent hit rate. At 2,900 QPS per host, 29 percent misses is on the order of 800 recompiles per second per host. The cache is not caching; it is thrashing.
+
+Why the load test missed it
+
+The pre-release load test reported a 99.6 percent hit rate. That test exercised 300 schemas. Three hundred entries fit inside a 512-entry cache with room left over, so after warmup the test could not miss, and the recompilation path it was meant to exercise was never meaningfully exercised at all. The test did not get unlucky. It was structurally incapable of finding this regression, and it would have reported a near-perfect hit rate no matter how expensive a miss was. We should treat any cache benchmark whose key space fits in the cache as unvalidated.
+
+Decision and plan
+
+Decided Sep 15, three actions:
+
+1. Revert the interceptor from the release branch. 2026.9.3 does not ship with it.
+2. Raise the schema cache from 512 to 8,192 entries. That is roughly 2.4x the observed working set, so a stable working set of 3,400 should sit comfortably inside it with headroom for growth.
+3. Put validation behind a sampling flag at 1 percent. This is the part that actually bounds the risk. Cache sizing is a bet that the working set stays near 3,400; sampling caps the exposure even if that bet is wrong, and cuts the expected interceptor cost by two orders of magnitude regardless.
+
+Re-canary is scheduled for Sep 22 on the same 4 hosts.
+
+What we will watch on the re-canary
+
+Cache hit rate and the interceptor's own p99, reported separately from end-to-end p99, so we can see the miss path directly rather than inferring it. We will also measure the distinct-schema count under production traffic rather than assuming 3,400 holds. If hit rate lands below 99 percent at 8,192 entries, the working set is larger or more churning than we think, and cache sizing is the wrong instrument.

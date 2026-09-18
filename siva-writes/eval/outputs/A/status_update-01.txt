@@ -1,0 +1,33 @@
+Pylon to Helix Migration: Q3 Status
+Owner: Priya Raghavan
+Reporting date: September 18, 2026
+
+Where we are
+
+744 of 1,240 services are running on Helix. That is 60% of the fleet, five and a half months into a program that started April 6 and is scheduled to finish December 12. 496 services remain, 118 of them tier-0.
+
+The trailing six-week burn rate is 62 services per week. At that pace the remaining work takes eight weeks and lands in mid-November, roughly four weeks ahead of the December 12 target. I do not want the QBR to take that number at face value, and neither do I. The first 744 services were the ones we chose to go first because they were simple: single-region, no custom config watchers, owned by teams with capacity. The remainder is a harder population, and the burn rate is a measurement of the easy half.
+
+What is actually in the way
+
+96 of the 496 remaining services call watchAndReload, a deprecated Pylon API that Helix does not implement. Those services cannot move until the compatibility shim lands. The shim is in code review now with an ETA of October 9. If that date holds, the 96 rejoin the queue with nine weeks to spare and the schedule absorbs them. If the shim slips past the end of October, 96 services compress into the final six weeks alongside the tier-0 tail, and December 12 stops being credible.
+
+Payments and Trust have asked for exemptions through Q1. Neither has filed a migration plan. These are the two requests I want directors to weigh in on, because an exemption is not free: it is the decision to keep both stores running, and both stores cost $310K per month in parallel infrastructure. A one-quarter exemption for two teams is roughly $930K, and it is charged to the program, not to Payments or Trust.
+
+Reliability so far
+
+Three rollbacks in 744 cutovers. All three were resolved inside 24 hours. One had customer impact: the August 27 rollback of notify-dispatch produced a nine-minute partial outage in which 12% of push notifications were delayed. Delayed, not dropped. We have since added a pre-cutover config-parity check that would have caught the notify-dispatch defect before traffic moved, and it has run clean on every cutover since.
+
+A 0.4% rollback rate on a fleet-wide migration is a rate I am comfortable with on the simple half. I expect it to rise on the tier-0 tail, and I would rather tell you that now than explain it in Q4.
+
+The deadline that matters
+
+December 12 is our target. February 28, 2027 is the deadline, because that is when the Pylon hardware lease expires and it will not be renewed. The gap between those two dates is eleven weeks of genuine buffer, and it is the reason I am not asking for a date change today. But that buffer has a price: every month past December 12 that both stores stay up costs $310K, and the buffer runs out entirely at the end of February, at which point services still on Pylon have no config store.
+
+What I need from this room
+
+First, a decision on Payments and Trust. My recommendation is to deny the Q1 exemptions and require both teams to file migration plans by October 17. If directors want to grant them, I need that made explicit, along with the $930K, so it is a funded choice rather than a schedule surprise.
+
+Second, review capacity for the shim. It is the single dependency gating 19% of the remaining fleet, and it is currently sitting in a queue behind unrelated work.
+
+I will report again at the November checkpoint with the tier-0 burn rate isolated, which is the number that will actually predict our finish.

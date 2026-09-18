@@ -1,0 +1,19 @@
+Storage Platform H2 2026: cut tiered storage to single region and hold Nov 17
+
+Cut tiered storage to single-region scope and hold the Nov 17 2026 GA date, because Q4 capacity is fixed at seven engineers no matter what we approve this week, and scope is the only term left that moves.
+
+The team is running four people short of its approved eleven, at 64% of chartered headcount. Four requisitions have been open since February, averaging 214 days of age. Two candidates declined offers on compensation, one in July and one in August. Two engineers left in Q2, and one of them was DRI for the compaction rewrite.
+
+Nothing in the hiring pipeline converts to output inside Q4. The internal transfer pipeline holds three candidates in loop with an earliest possible start of Nov 30. Ramp on this codebase has historically taken eight weeks, which puts a Nov 30 starter at productive work around Jan 25 2027, four weeks past the quarter. Approving every open req tomorrow changes Q4 output by zero engineer-weeks.
+
+The three chartered workstreams already reflect that arithmetic. Tiered storage GA has slipped from Nov 17 2026 to Feb 23 2027, fourteen weeks. Cross-region async replication is paused with zero engineers assigned and no restart date. The compaction rewrite continues with one engineer against a plan of three, and that one engineer inherited the work from the DRI who left.
+
+Borrowing two engineers from the Index team buys about ten productive engineer-weeks, not twenty-six. A quarter is thirteen weeks, and the eight-week ramp figure applies to borrowed engineers exactly as it applies to transfers, so each arrives with roughly five weeks of useful output before the loan ends. The Index team pays five weeks on its own query-planner goal for that. Two teams miss dates instead of one.
+
+Contracting the migration tooling at $480K for two quarters, $240K per quarter, moves work off the critical path but adds load back onto the seven engineers we have. A vendor writing migration tooling against our storage format needs design review, interface decisions and code review from the same people who are already carrying two workstreams with one-third staffing. The spend also does not touch compaction or replication, which are the two workstreams furthest from plan.
+
+Single-region tiered storage holds the date because cross-region is where the remaining fourteen weeks sit. Replication is already paused at zero engineers, so shipping single-region GA on Nov 17 costs us a capability we are not currently building anyway. We ship a dated, usable tiered storage product in Q4 and keep the compaction rewrite's single engineer on compaction instead of pulling him into a multi-region migration path.
+
+Two asks for the VP staff review. First, approve the single-region scope cut and the Nov 17 2026 date, with cross-region tiered storage moved to H1 2027 behind a restart of the replication workstream. Second, approve a compensation band exception for the four open requisitions. Two declines on compensation out of two offers extended is not a sourcing problem, and 214 days of average req age at the current band predicts a fifth quarter of the same result.
+
+One risk is worth stating plainly. Single-region GA in November ships a product that some customers will evaluate and reject on the cross-region requirement, and we will not have a date to give them until the replication workstream restarts. I would rather take that conversation in November with shipped software than take a fourteen-week slip conversation in February with none. If the VP staff judges cross-region to be a launch blocker for the customers in the pipeline, the Index loan is the next best option, and I will bring the Index owner into that decision before we commit her engineers.

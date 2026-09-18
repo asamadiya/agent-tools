@@ -1,0 +1,19 @@
+two-tower-v7 wrap-up: session-aware retrieval head, notifications ranking
+
+Owner: Aditi Sundaram. LIX torn down Sep 5. Decision: do not ramp.
+
+We added a session-aware retrieval head to the notifications ranking two-tower model and ramped the LIX in three stages: 2% on Jul 14, 4% on Aug 4, 10% on Aug 19. At 10% the head did not move notification CTR, cost 31% more to serve, and coincided with a significant drop in sessions per member, so the metrics council shut it down on Sep 5.
+
+Notification CTR came in at -0.11%, 95% CI -0.41% to +0.19%. The interval straddles zero and is wide enough to hold a 0.4% regression, so the honest reading is that we did not measure a gain, not that the head is neutral. Sessions per member fell 0.6% at p = 0.003. That is the only movement in the readout that clears significance, and it points downward on the metric the modeling org protects.
+
+The head made scoring materially more expensive. Daily serving cost went from 3,130 GPU-hours for control to 4,100 for treatment, a 31% increase, and p99 scoring latency went from 38 ms to 57 ms. Nineteen milliseconds on the tail of the notifications scoring path is not fatal on its own, but we were paying it for a CTR effect we could not distinguish from zero.
+
+The segment cut explains the flat aggregate. Members in the top decile by weekly session count gained +1.9% CTR. The 62% of members with fewer than three sessions a week lost 0.8%, and that group is large enough to swamp the decile gain in the aggregate number. So the head is not inert -- it is working on heavy users and hurting light ones, and the two effects nearly cancel at the population level.
+
+Our working hypothesis is that the session embedding is undefined for most members. The head appears to need roughly four prior sessions before it produces an embedding that carries signal; below that it falls back to something close to a constant vector, which flattens the ranking scores and pushes ordering back onto the remaining features with a worse-calibrated head in front of them. We have not confirmed this. The check is cheap and someone should run it before the next attempt: bucket members by prior session count from zero to eight, pull the head's output vector for each bucket, and measure the within-bucket variance. If the hypothesis holds, variance stays near zero through three sessions and rises sharply at four.
+
+The decision on Sep 5 was to tear down the LIX and keep the session embedding table in the feature store. The table now has two other teams reading it, and the storage and refresh cost is unchanged by whether notifications ranking consumes it. Nobody should read the teardown as a verdict on the embedding itself; what failed the readout is the retrieval head that sits on top of it in notifications.
+
+Two things we would do differently on a retry. First, gate on prior session count at serving time instead of letting every member through the head, which would have isolated the +1.9% decile effect and kept the light-user population on the control path. Second, power the experiment for the segment split up front. We found the crossover by cutting the data after the 10% ramp had run for two weeks, and a design that measured heavy and light members separately from Jul 14 would have surfaced the same fact in the first week at 2%.
+
+Open items: Aditi is writing up the embedding-availability check above; whoever picks up the gated variant should read the current consumers of the session embedding table before changing its refresh cadence.

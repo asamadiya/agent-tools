@@ -1,0 +1,17 @@
+Page faults cost 10% of CPU because the allocator kept throwing mappings away
+
+Page-fault handling was consuming 10% of all CPU time on a TensorFlow instance, and the cause was jemalloc calling madvise(MADV_DONTNEED) on pages the workload was still using; a rebuild against glibc brought the first round of testing back at 3%. Vadim found the first number by reading a CPU flame graph and picking out an orange kernel tower that had no business being there.
+
+Ten percent is worth a morning of flame graphs when the box is one of thousands. A tenth of the CPU across a fleet of that size is a line item, and this team will open a flame graph over a single percentage point.
+
+The faulting stacks ended in __memcpy_avx_unaligned(), which is memcpy touching data-segment mappings that were not resident. Early in a process's life that is ordinary, because the segments and the heap have no mappings yet and every first touch faults one in. This process had been running for hours, by which point RSS growth from faults should have flattened off. A steady fault rate in a warm process means something is tearing mappings down about as fast as the faults restore them.
+
+The standard suspect is a process cycling memory through mmap() and munmap(), and eBPF tracing with mmapsnoop.py recorded no such calls. That leaves the other way a live process loses a mapping.
+
+Searching the same flame graph for madvise put it at 0.8% of CPU, on a path that reached zap_page_range() -- which is where the faults were coming from. Reading the kernel's mm/madvise.c settled which flag gets there: MADV_DONTNEED is the one that sends madvise() into zap_page_range(). Put a kprobe or a tracepoint on sys_madvise() and read the flags argument if you would rather measure that than read the source; it answers the same question.
+
+The diagnosis is an optimization that backfired. jemalloc, pulled into the build by a configure option, decided pages were unneeded and handed them back; each MADV_DONTNEED threw away the virtual-to-physical mapping for those pages, and the next memcpy to the same address took a fault that made the kernel install the mapping again. The workload never stopped using the memory, so nothing about the cycle converged. The 0.8% of CPU spent in madvise() was buying 10% spent faulting, because unmapping a page is a page-table write and mapping it back is a trap into the kernel, an allocation decision, and a return through the fault handler.
+
+Vadim rebuilt the workload against glibc's allocator, and the page-fault tower is gone from the flame graph taken after the change. Testing came back at 3% of CPU in fault handling, against the 10% the team started with, which is the residual you would expect from a process that still has to fault its working set in once.
+
+Check the allocator's decay behavior before you accept steady faulting in a long-lived process as normal. The allocator was the last thing anyone on this workload had chosen deliberately, and a configure option chose it.

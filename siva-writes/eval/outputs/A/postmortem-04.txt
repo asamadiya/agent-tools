@@ -1,0 +1,48 @@
+BYOIP prefix withdrawal on 20 February 2026
+
+On 20 February 2026, Cloudflare withdrew roughly 1,100 customer-owned IP prefixes from the internet. The withdrawals began at 17:56 UTC and the last affected prefix was restored at 23:03, 5 hours and 15 minutes after the incident started at 17:48. Customers using Bring Your Own IP (BYOIP) were the ones hurt: their address space stopped being advertised, and traffic destined for it had nowhere to go.
+
+This was our fault, it was entirely avoidable, and we are sorry. What follows is what happened and what we are changing.
+
+What customers saw
+
+If you bring your own IP space to Cloudflare, your prefixes may have been withdrawn via BGP between 17:56 and 18:46. Of the 4,306 BYOIP prefixes in the 6,500 we advertise to a given peer, about 1,100 were pulled — roughly a quarter of all BYOIP prefixes.
+
+A BGP withdrawal is not a clean failure. Once the best path disappears, routers across the internet try successively worse alternatives before giving up, a behaviour known as path hunting. From the client side this does not look like a refused connection; it looks like a connection that hangs until it times out. Operators monitoring affected prefixes would have seen churn in the global table followed by unreachability, not an immediate NXDOMAIN or reset.
+
+Cloudflare's own one.one.one.one website was among the properties affected, returning HTTP 403 with an "Edge IP Restricted" message. DNS resolution over 1.1.1.1 was not affected, including DNS over HTTPS. If you use 1.1.1.1 as a resolver, it kept answering throughout.
+
+Root cause
+
+Cloudflare's Addressing API is the authoritative record of which customer IP addresses we advertise, and changes made through it propagate to our edge immediately. We recently added a sub-task to automate a manual chore: cleaning up BYOIP prefixes that customers had already queued for deletion.
+
+The sub-task asked the API for that queue by calling GET /v1/prefixes?pending_delete — with no value after the equals sign. On the server side, Query().Get("pending_delete") returns an empty string for a valueless parameter, which the handler did not treat as a filter at all. The API returned every BYOIP prefix it knew about.
+
+The sub-task took that list at face value. Every prefix in the response was, by its reasoning, queued for deletion, so it began deleting prefixes and their dependent service bindings, one after another, until an engineer killed the process. The code had been merged on 5 February at 21:53 and sat unreleased until it was deployed at 17:46 on 20 February.
+
+Two things about this are worth saying plainly. First, an empty parameter should never have widened a query from a subset to everything; failing open on a filter that governs deletions is a design error, not a typo. Second, nothing downstream questioned the size of the work it was handed. A task that expects to remove a handful of prefixes and is handed 4,306 should stop and ask.
+
+Timeline (UTC)
+
+- 2026-02-05 21:53 — Code merged.
+- 17:46 — Deployed.
+- 17:48 — Incident begins.
+- 17:56 — First prefix withdrawals; customer impact starts.
+- 18:13 — Cloudflare engages on failures observed against one.one.one.one.
+- 18:18 — Internal incident declared.
+- 18:21 — Addressing API team paged.
+- 18:46 — Runaway sub-process terminated. No further withdrawals after this point.
+- 19:11 — Mitigation in place.
+- 19:19 — Self-remediation guidance published for affected customers.
+- ~20:20 — About 800 prefixes restored.
+- 23:03 — Remaining ~300 prefixes restored manually. Incident ends.
+
+Why our testing did not catch this
+
+Our test coverage for the Addressing API is built around the customer self-service journey: a person clicks through the dashboard, and we assert the resulting state. This change was not that. It was a task runner mutating customer data with no explicit input from anyone, and we had no test shaped like it. The staging data and mocks compounded the gap — the fixtures were small and uniform enough that "all prefixes" and "the prefixes pending deletion" looked much the same, so the bug produced a plausible-looking result in staging.
+
+What we are changing
+
+We are making valueless and unrecognised filter parameters a hard error on the Addressing API rather than a no-op, so a query that fails to narrow returns nothing instead of everything. We are adding blast-radius limits to automated tasks that mutate advertised address space: a ceiling on prefixes touched per run, and a halt-and-page when a work list is larger than expected. We are extending staging fixtures so that filtered and unfiltered results are distinguishable, and adding test coverage for machine-initiated mutations of customer data, not only human-initiated ones. Finally, we are reviewing the immediate-propagation path between the Addressing API and the edge to introduce a delay window during which a bulk withdrawal can be caught and reversed before it reaches BGP.
+
+We understand what it costs you when your own address space goes dark, and we are treating this as a failure of the controls we owe you, not as a one-off bug.

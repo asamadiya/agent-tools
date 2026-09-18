@@ -1,0 +1,39 @@
+BYOIP prefix withdrawal, 20 February 2026
+
+All times UTC.
+
+Summary
+
+Cloudflare withdrew roughly 1,100 customer BYOIP prefixes from BGP between 17:56 and 18:46 on 20 February 2026, and the last of them was not restored until 23:03. The incident ran 5 hours 15 minutes from 17:48. Of the 6,500 prefixes we advertise to a given peer, 4,306 are BYOIP, so the withdrawal covered about 25% of BYOIP address space. If you bring your own IP space to Cloudflare, your traffic may have stopped arriving during that window. We are sorry. The cause was our own automation, not a peer, a transit provider, or anything you configured.
+
+What happened
+
+A new cleanup sub-task asked our Addressing API for the list of prefixes queued for deletion and received the list of all of them. The sub-task automates removal of BYOIP prefixes that customers have already released. It issued GET /v1/prefixes?pending_delete with nothing after the equals sign. In Go, Query().Get("pending_delete") returns the empty string for a parameter present with no value and for a parameter that is absent, and the API's filter treats the empty string as no filter at all. The response was every BYOIP prefix on the account. The sub-task read that response as its work queue and began deleting prefixes and the service bindings that depend on them, one after another, until an engineer killed the process.
+
+The Addressing API is the authoritative record of which IP addresses belong to which customer, and it pushes changes to the edge immediately. That design is what makes a customer's prefix live within seconds of being added. It is also why a deletion became a BGP withdrawal at the same speed, with no staged rollout and no rate limit between the API write and the global routing table.
+
+Impact
+
+A withdrawn prefix does not fail cleanly for the people trying to reach it. Networks carrying your traffic entered BGP path hunting, trying successive alternate paths as each is invalidated in turn, so client connections hung until they hit their own timeouts instead of returning an immediate error. Requests that appeared merely slow were in fact unroutable.
+
+Visitors to the one.one.one.one website received HTTP 403 with an Edge IP Restricted message, because the site's edge IP binding was removed along with the prefixes. DNS resolution on 1.1.1.1, including DNS over HTTPS, was not affected and continued to answer throughout the incident.
+
+Timeline
+
+The change merged on 5 February at 21:53 and sat unexercised for fifteen days. It deployed at 17:46 on 20 February. Prefixes began disappearing at 17:56. We engaged on the one.one.one.one failures at 18:13 and opened an internal incident at 18:18; the Addressing API team was paged at 18:21. The sub-process was terminated at 18:46, which stopped new withdrawals 50 minutes after the first one. Mitigation began at 19:11, and at 19:19 we published guidance for customers who could re-add their prefixes themselves. About 800 prefixes were back by 20:20. The remaining ~300 needed manual restoration and finished at 23:03.
+
+The 17-minute gap between first impact and our engagement, and the 25 minutes between engagement and killing the process, are both longer than they should be for a change we had just deployed.
+
+What we got wrong, and what changes
+
+Our tests covered the customer self-service journey and not a task runner that mutates customer data with no explicit input from anyone. A human deleting a prefix in the dashboard has selected it. This sub-task had selected nothing, and every test we had assumed a selection existed. Staging data and mocks were thin enough that a query returning the entire fleet looked the same as a query returning an empty set.
+
+We are making the following changes:
+
+A filter parameter that resolves to empty will be rejected by the Addressing API rather than treated as unfiltered. An unbounded destructive query should return an error, not everything.
+
+Bulk deletion in the Addressing API will be rate-limited and capped, so no single task can remove more than a small fraction of advertised prefixes before it is stopped.
+
+Deployments that touch prefix state will be gated on the volume of BGP withdrawals they produce, with automatic rollback above a threshold.
+
+We are adding staging fixtures that represent full production prefix counts, so a test that fetches everything fails loudly instead of passing quietly on three rows.

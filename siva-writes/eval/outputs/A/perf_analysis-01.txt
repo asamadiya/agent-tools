@@ -1,0 +1,53 @@
+A 30% Write Latency Regression After a CentOS-to-Ubuntu Migration
+
+We are moving services from CentOS to Ubuntu. One of the Cassandra clusters made the move and came out the other side with write latency up over 30%. Basic system stats said the same thing from a different angle: CPU consumption on the Ubuntu instances was also over 30% higher for the same work. The instances are EC2 Xen guests, and the only variable that changed was the distribution.
+
+Two numbers moving together by roughly the same amount is a useful starting shape. It suggests we are not looking at a queueing or lock problem that inflates latency while leaving the CPU alone. Something is burning extra cycles, and the latency is following the cycles.
+
+Ruling Out the Obvious
+
+The first suspicion with any distro migration is that the new image brought friends. Some monitoring daemon, some indexer, some security agent that is not in the CentOS base image and is now quietly eating a third of the box.
+
+top(1) said no. Cassandra was the only process consuming meaningful CPU. Nothing else was near the top of the list.
+
+That leaves the case where the thief is invisible to top: short-lived processes that are born, burn CPU, and die between sampling intervals. A per-second sampler will systematically miss a storm of 50ms processes. execsnoop(8) — the Ftrace version, this being 2014 — traces exec() as it happens, so it does not care how briefly the process lives. It showed nothing. No short-lived process storm.
+
+So the extra CPU is inside Cassandra itself, doing the same work it did on CentOS, just more expensively.
+
+Profiling Both Sides at Once
+
+We collected CPU flame graphs from a CentOS instance and an Ubuntu instance in parallel. The parallelism matters more than it might look. These are production instances taking production traffic, and traffic mix changes by hour. Profile one at 09:00 and the other at 14:00 and you have introduced a variable at least as large as the one you are chasing. Running them side by side means the request mix, and therefore the expected code path distribution, is as close to identical as we can arrange.
+
+The profiles had a defect we knew about going in. This predates -XX:+PreserveFramePointer, so the JVM's frame pointer omission breaks stack walking: instead of a tower of green Java frames you get one or two and then nothing. Normally that is fatal for reading a Java profile.
+
+Here it helped. With the Java frames collapsed, every call site that ended up in os::javaTimeMillis() merged into a single block rather than scattering into dozens of thin slivers, one per Java caller, each too narrow to notice. The Ubuntu flame graph had a 30.14% tower sitting in the middle of it. Searching the graph to catch the remaining fragments brought the total to 32.1%.
+
+That is the regression, to within noise of the number we started with.
+
+What Is Underneath It
+
+os::javaTimeMillis() is the JVM's wall-clock read. It calls gettimeofday(2). The frames beneath it on Ubuntu were not just the syscall — they were tracesys(), and beneath that syscall_trace_enter() and syscall_trace_exit().
+
+That is the kernel's syscall tracing slow path. Every gettimeofday() on these instances is paying for entry and exit tracing hooks. Cassandra reads the clock constantly, so a fixed per-syscall tax turns into a third of the CPU on the box.
+
+Two theories fit:
+
+(A) Syscall tracing is enabled on Ubuntu and not on CentOS. The audit subsystem and AppArmor are both plausible sources; either can install the hooks that put every syscall on the traced path.
+
+(B) Reading the time is simply slower on Ubuntu for an unrelated reason — a different library implementation, a kernel change, or a different clocksource.
+
+The frame widths favor A. The cost is concentrated in the tracing frames themselves, not spread through a more expensive time-reading implementation below them.
+
+There is a second detail that looks like evidence for B and is not. The Ubuntu profile shows a vDSO frame — the fast userspace path that is supposed to service gettimeofday() without ever entering the kernel — with the syscall still stacked above it. That is expected here: Xen's pvclock did not support vDSO at the time, so the vDSO code falls through to a real syscall. The fast path is present and failing to be fast, which is a property of the hypervisor, not of Ubuntu.
+
+The Instrument's Blind Spot
+
+One caveat belongs on this profile, and it would belong on any profile taken on a Xen guest in this era. perf(1) here is sampling on the software cpu-clock soft interrupt, not on hardware NMI, because the guest does not have access to the PMU. That means two categories of time are invisible: kernel paths that run with interrupts disabled, and everything the hypervisor does on our behalf.
+
+We found 32.1% in a profile that cannot see part of the machine. That does not weaken the finding — the found cost is real and matches the regression — but it does mean we should not read the absence of anything else in these graphs as proof of absence.
+
+Where This Sits
+
+Nothing external helped. Colleagues on other services had not hit it. Searching for os::javaTimeMillis alongside clocksource, tracesys, Ubuntu, EC2, and Xen in every combination returned nothing useful. This is the normal condition for a migration bug: the intersection of your JVM, your distro image, and your hypervisor is a place nobody has written about.
+
+The next step is confirmation rather than more profiling. Check whether auditing or AppArmor is installing syscall hooks on the Ubuntu image, disable the suspect on one instance, and re-profile against a CentOS control under matched traffic. If the tracesys tower disappears and the CPU delta closes, theory A is settled.

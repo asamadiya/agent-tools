@@ -1,0 +1,21 @@
+li-httpclient v3: 612 multiproducts left, builds start failing Dec 1
+
+To engineering leads of every team consuming li-httpclient
+
+612 of the 1,000 multiproducts that consume li-httpclient are still on v3, and v3 builds start failing on Dec 1 2026. That is 74 days from today. 388 multiproducts have moved to v4, or 38.8%, which means the migration is not quite two-fifths done with about ten working weeks left before enforcement and the library's end of life on Jan 31 2027.
+
+The reason v3 cannot simply be patched in place is worth stating once, because it determines that there is no third option. CVE-2026-31819 is an HTTP request-smuggling flaw in Netty 4.1.79, CVSS 7.5. v3 pins 4.1.79. Moving that pin forward breaks the ABI v3 publishes, so the fix cannot ship to v3 consumers under any version of v3. Every consuming multiproduct either moves to v4 or keeps running a smuggling-vulnerable HTTP stack in production.
+
+Most of the work is mechanical. The codemod rewrites 7,910 of 9,417 call sites, 84%, and for a typical team that is the entire job. The residue is 1,507 hand edits, and they are not spread evenly: 63 multiproducts hold all of them, roughly 24 edits apiece. Two things defeat the codemod. v4 renames every connection-pool configuration key, so any pool config assembled at runtime or read from a config file rather than written as a literal has to be mapped by hand. v4 also drops support for HTTP/1.0 upstreams, and 17 upstreams are known to still speak HTTP/1.0. Each of those needs a fix on the upstream owner's side or a proxy shim in front of it, and that is cross-team work with a lead time your own migration does not control.
+
+Teams that have finished took a median of 6 engineer-days. Across the 612 remaining, that is roughly 3,700 engineer-days of work still outstanding, which is the number I would ask you to look at hardest. Six days is a sprint item for one engineer, not a quarter of work, but it is six days that has to be scheduled rather than absorbed.
+
+Exemptions exist and they are not a plan. The process grants 30 days at a time. We have granted 22 so far, and 9 of those went to the same three teams, which means those teams have been renewing rather than migrating. A 30-day grant from Dec 1 lands on Dec 31, one month before v3 stops existing. There is no exemption that reaches past Jan 31 2027.
+
+What I am asking each lead to do this week:
+
+Check whether your multiproduct is one of the 63 carrying hand edits, and whether any of your upstreams is one of the 17 still on HTTP/1.0. If either is true, start now -- your six days is an underestimate and your HTTP/1.0 dependency may not be yours to fix. If neither is true, run the codemod and schedule the 6 engineer-days into the next sprint.
+
+Office hours run Tuesdays. 41 teams have attended, out of 612 remaining -- about 7%. There are roughly ten Tuesdays left before enforcement, and the session is the fastest way to get the pool-key mapping for a non-literal config or to find out who owns the HTTP/1.0 upstream you depend on.
+
+Tomasz Hejna owns li-httpclient and owns this migration. Bring the hard cases to him early, while a shim still has time to land.

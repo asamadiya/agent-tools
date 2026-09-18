@@ -1,0 +1,65 @@
+Cassandra got 30% slower on Ubuntu, and broken Java stacks are what showed us why
+
+In 2014 we moved Netflix services from CentOS Linux to Ubuntu, and one Cassandra cluster came out of
+the migration with write latency over 30% higher than its CentOS siblings. Basic stats put CPU
+consumption over 30% higher as well, which was the useful half of the pair: latency can arrive from
+anywhere in a distributed system, but a CPU delta that size is a concrete workload that somebody can
+go find. The instances are EC2 Xen guests. That detail constrains the tooling more than it first
+appears, and it comes back at the end.
+
+top(1) named exactly one CPU consumer on the box, and it was the Cassandra JVM. No Ubuntu daemon had
+ridden in with the new base image and started eating cores. That kills the cheapest explanation
+available, which is that Ubuntu simply runs more software by default than our CentOS image did. The
+extra CPU was burning inside the process we already cared about.
+
+Short-lived processes never appear in top(1), so we went after them with execsnoop(8) -- the Ftrace
+version, which is what existed at the time. It printed nothing of interest: no fork storm, no
+per-request helper binary spawning and exiting between samples. The JVM was on CPU continuously, and
+whatever it was doing, it was doing inside itself.
+
+We then collected CPU flame graphs on one CentOS instance and one Ubuntu instance in parallel. The
+parallelism is the point. Cassandra's traffic mix changes by hour, and a profile captured at 3am
+compared against one captured at noon is a comparison of two different workloads wearing the same
+hostname. Same minute, same live traffic, one variable changed.
+
+The Java stacks were broken in both profiles. This was before -XX:+PreserveFramePointer existed, and
+without frame pointers the profiler could not walk the JVM's stack: instead of a tower of Java method
+names we got one or two green frames and then nothing underneath them.
+
+That breakage is what handed us the answer. With frame pointers gone, every os::javaTimeMillis()
+call site collapsed into one identical stack instead of scattering into dozens of thin slivers a
+pixel wide each. On the Ubuntu graph the collapsed block sat in the middle of the profile at 30.14%
+of samples, and searching the symbol across the whole graph brought the total to 32.1%. Broken stacks
+normally hide the hot path. Here they merged it into a block wide enough to read across the room.
+
+os::javaTimeMillis() is the JVM's wall-clock read, and it calls gettimeofday(2). Above that call on
+the Ubuntu profile the stack runs through tracesys(), then syscall_trace_enter() and
+syscall_trace_exit(). Those are the kernel's syscall tracing hooks, and they are not free: they run
+on entry and again on exit, for every single one of those clock reads.
+
+Two theories fit that stack. Theory A says syscall tracing is switched on under Ubuntu and was not
+under CentOS, by auditing or apparmor or some default we inherited with the image. Theory B says
+fetching the time is simply slower on Ubuntu, through a different libc path or a kernel and
+clocksource change. The frame widths favor A. The tracing frames and their children account for the
+bulk of the 30.14% block, and the gettimeofday work underneath them is comparatively narrow.
+
+The Ubuntu profile also carries a vDSO frame with the syscall still sitting above it. A working vDSO
+turns gettimeofday(2) into a userspace memory read with no kernel transition at all, which is exactly
+what should have made this call cheap. Xen's pvclock did not support vDSO at the time, so the fast
+path fell through to the real syscall -- and the real syscall is the one being traced. Both costs
+land on the same call.
+
+One limit applies to every number above. The profile was taken with perf(1) using software cpu-clock
+soft interrupts, not hardware NMI sampling, because this is a Xen guest without PMU access. Kernel
+paths that run with interrupts disabled cannot be sampled that way, and all hypervisor time is
+invisible to the guest profiler. If the real cost were hiding in either place, this flame graph would
+not show it. What it does show is 32.1% of sampled on-CPU time in one clock read, which is more than
+enough to act on.
+
+Nobody we asked had seen this. Colleagues had migrated their own services to Ubuntu without a latency
+change, and searching for os::javaTimeMillis alongside clocksource, tracesys, Ubuntu, EC2 or Xen
+returned nothing -- no bug report, no mailing list thread, no blog post. Read that absence as
+evidence about scope: this is not a general Ubuntu regression, it is a specific interaction between
+our base image, a JVM that reads the clock constantly, and a paravirtualized guest with no vDSO clock
+path. Profile your own instance in parallel with its predecessor before you assume you have the same
+bug.

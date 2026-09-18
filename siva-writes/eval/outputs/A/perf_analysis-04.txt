@@ -1,0 +1,19 @@
+Ten Percent of the CPU, Spent Undoing an Optimization
+
+Vadim was reading a CPU flame graph from a TensorFlow workload when he noticed an orange tower that had no business being there: page-fault handling, ten percent of all CPU time on the box.
+
+Ten percent is worth a morning. We will open a flame graph over a single percentage point, because a point across a fleet of thousands of instances is real money; a tenth of every CPU is a line item.
+
+The faulting stacks led to __memcpy_avx_unaligned(). A memcpy was touching data segment mappings that were not resident, and each touch trapped into the kernel to fault a page in. That is perfectly ordinary behavior early in a process's life, when the segments and the heap have no mappings yet and the process is warming up. This process had been running for hours. By then the growth of RSS from faults should have flattened, and the fault tower should have shrunk to noise. It had not.
+
+The usual suspect for sustained faulting is a process cycling memory through mmap() and munmap(), handing address space back to the kernel and then asking for it again. eBPF tracing with mmapsnoop.py said no: the process was not making those calls.
+
+Searching the same flame graph for madvise turned up the answer. madvise() accounted for 0.8% of CPU, and its stacks descended into zap_page_range() -- the kernel routine that tears down page table entries. Faults were being manufactured by the process itself. Reading mm/advise.c settled which flag was responsible: MADV_DONTNEED is the one that routes madvise() into zap_page_range(). Tracing the flags argument to sys_madvise() with a kprobe or the syscall tracepoint would have answered the same question without the source dive; the source was faster to reach.
+
+That gave us the diagnosis. An optimization was eating itself. The allocator was declaring pages unneeded that the workload was still using. Each MADV_DONTNEED discarded the virtual-to-physical mapping, and the next access -- that memcpy -- took a fault so the kernel could put the mapping back. The allocator paid 0.8% to hand the kernel a job that cost the fault path ten times as much. All of that work, on both sides, produced nothing: the same pages went out and came back.
+
+The allocator was jemalloc, pulled in by a configure option that nobody had revisited. jemalloc is a good allocator, and on many workloads its decay-based purging is exactly right; on this one, with this access pattern, it was wrong. Vadim rebuilt the workload against glibc's allocator and the behavior cleared.
+
+The first round of testing measured a 3% improvement, not the 10% we had in mind. The gap is worth naming rather than hiding: the CPU freed from the fault path is not all recovered as throughput, and the fixed flame graph shows the fault tower gone. Three percent across the fleet still pays for the afternoon.
+
+The general lesson is smaller than the number. A tower in a flame graph that should have decayed and did not is a question, not a cost of doing business -- and the thing generating the work is sometimes the thing installed to avoid it.

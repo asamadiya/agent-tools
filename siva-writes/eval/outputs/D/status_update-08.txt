@@ -1,0 +1,19 @@
+Unauthenticated gRPC endpoints: September burndown
+
+At the current rate of 26 endpoints per week we close the last of the 243 open findings on Nov 23, three weeks past the Oct 31 P2 deadline, and the board has one decision that moves that date.
+
+We have remediated 1,189 of the 1,432 endpoints the red team found in June, which is 83% across the 318 services in scope. All 96 P1 endpoints, the ones reachable from outside the service mesh, were closed by the Aug 15 deadline. The fix on each endpoint is mTLS plus a per-endpoint ACL, and a team that owns its service and has the certificate plumbing already in place lands it in a single change. Median time to fix is 11 days.
+
+The remaining 243 are not the same work as the 1,189 already done, which is why p90 time to fix is 74 days against that 11-day median. 61 of the 243 sit in services with no registered owner, and 12 more are in systems already declared end-of-life. For those 73 there is no team to file the change against, so they do not consume engineering weeks -- they sit at the tail and stay there until someone decides for them. The 170 with owners are moving at the measured rate.
+
+Hiroshi Tanabe owns the burndown and Dana Ruiz is the security partner on it. Run the arithmetic on 26 per week and Sep 18 is 9.4 weeks from Nov 23; Oct 31 is 6.1 weeks out, which is 160 endpoints of capacity against 243 open. The gap is 83 endpoints and it does not close by working harder on the 170 that have owners.
+
+The Oct 6 proposal closes 61 of those 73 with no code change: switch the mesh ingress to deny-by-default for the orphaned services. An endpoint behind a deny-by-default ingress is unreachable from any caller that has not been allowlisted, which is the same exposure outcome as an ACL without anyone writing one. It is known to break four cross-team callers, and three of those teams have not answered outreach since the first message. Approving it means accepting three breakages we cannot schedule, which the callers will discover at the moment their traffic starts failing.
+
+Approving Oct 6 alone still misses Oct 31. It leaves 182 endpoints against 160 weeks-of-capacity, landing Nov 6. Hitting the deadline needs the ingress change and a lift from 26 to 30 endpoints per week, or the ingress change plus a decommission decision on the 12 end-of-life systems, which drops the requirement to 28 per week. Neither number is far from where we are, and both are outside what the last eight weeks of run rate demonstrate.
+
+We are asking the board for three things on Oct 6. Approve deny-by-default for the 61 orphaned services and accept the three unresponsive callers as breakage. Name a decommission date for the 12 end-of-life systems or move them into scope with an owner. Fund the four-per-week rate lift, or set Nov 6 as the revised P2 date and record the miss now instead of on Oct 31.
+
+The alternative the board can choose is to take no action and carry the exposure to Nov 23. That is 243 unauthenticated endpoints today, 61 of which nobody is assigned to fix, held open for nine more weeks past a deadline the P1 population met. The P1 result shows the rate is achievable when the endpoints have owners and a date; the P2 tail is slow because 30% of it has neither.
+
+Next report Oct 16, with the post-Oct-6 endpoint count and the realized weekly rate against the 30 per week the deadline requires.

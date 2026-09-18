@@ -49,6 +49,13 @@ CORPUS = {  # from corpus/measurements-train.json, train split, n=30 documents
     "sent_over_30_pct": 22.77, "para_over_120_pct": 17.23,
     "numbers_per_100w_mean": 1.334, "numbers_per_100w_sd": 1.267,
     "hedges_per_100w_mean": 1.383,
+    # Measured over the eval corpus, per 1000 words. These exist because R2 and R3 were found to
+    # produce the constructions they license: with the full skill, causal "so" ran at 3.46 against
+    # 0.80 in the train corpus and 1.14 in held-out human writing, and "instead of" ran at 1.29
+    # against 0.36, having absorbed the "rather than" the rule suppressed.
+    "causal_so_per_1000w_train": 0.798, "causal_so_per_1000w_human": 1.137,
+    "instead_of_per_1000w_train": 0.355, "instead_of_per_1000w_human": 0.239,
+    "rather_than_per_1000w_train": 0.186, "rather_than_per_1000w_human": 0.060,
 }
 
 # A comparative claim with no quantity anywhere in its sentence. This is the "quantified claims"
@@ -66,13 +73,27 @@ QUOTE_LINE = re.compile(r"^\s*>")
 # the sentence or follows a comma or semicolon.
 CAUSAL_SO = re.compile(r"(?:^|[,;]\s+)so\b(?!\s+(?:that|far|long|much|many|called))", re.I)
 RATHER_THAN = re.compile(r"\brather than\b", re.I)
+INSTEAD_OF = re.compile(r"\binstead of\b", re.I)
 
 
 def load_patterns() -> dict:
+    """Fail closed. A missing or malformed pattern file silently disabled every pattern check and
+    still printed 'FAIL none', which is the most dangerous output this script can produce."""
     path = SKILL / "references" / "negative-set.json"
     if not path.exists():
-        return {"tier1": [], "tier2": [], "note": "negative-set.json absent; pattern checks skipped"}
-    return json.loads(path.read_text())
+        raise SystemExit(f"negative-set.json missing at {path}; pattern checks cannot run")
+    spec = json.loads(path.read_text())
+    broken = []
+    for tier in ("tier1", "tier2"):
+        for p in spec.get(tier, []):
+            if p.get("regex"):
+                try:
+                    re.compile(p["regex"])
+                except re.error as exc:
+                    broken.append(f'{tier}:{p.get("name")}: {exc}')
+    if broken:
+        raise SystemExit("negative-set regexes do not compile:\n  " + "\n  ".join(broken))
+    return spec
 
 
 def code_spans(text: str) -> list[tuple[int, int]]:
@@ -148,6 +169,21 @@ def main() -> None:
     else:
         reports.append(("'rather than' against R3 budget", f'{len(rt)}/{budget}',
                         "R3 is one per rendered page; scored here as one per ~1000 words"))
+
+    # ---- REPORT: the constructions R2 and R3 license. Measured on the eval: the skill drives
+    # causal "so" to 4.3x the train-corpus rate, and displaces "rather than" into "instead of".
+    # A per-sentence cap cannot see this - a document with one causal "so" in every sentence passes
+    # R2 cleanly while running four times the human rate.
+    per1000 = lambda rx: round(1000 * len(rx.findall(text)) / max(1, words), 3)
+    so_rate, io_rate, rt_rate = per1000(CAUSAL_SO), per1000(INSTEAD_OF), per1000(RATHER_THAN)
+    reports.append(("causal 'so' per 1000 words", so_rate,
+                    f'train {CORPUS["causal_so_per_1000w_train"]}, human {CORPUS["causal_so_per_1000w_human"]}'
+                    + ('  <- R2 licenses this construction; over 2.0 means it is becoming a tic' if so_rate > 2.0 else '')))
+    reports.append(("'instead of' per 1000 words", io_rate,
+                    f'train {CORPUS["instead_of_per_1000w_train"]}, human {CORPUS["instead_of_per_1000w_human"]}'
+                    + ('  <- R3 displaces "rather than" into this; check it is a real comparison' if io_rate > 0.8 else '')))
+    reports.append(("'rather than' per 1000 words", rt_rate,
+                    f'train {CORPUS["rather_than_per_1000w_train"]}, human {CORPUS["rather_than_per_1000w_human"]}'))
 
     # ---- REPORT: claim-first share.
     claim_first = sum(1 for p in paras if is_claim_first(sentences(p)[0]))

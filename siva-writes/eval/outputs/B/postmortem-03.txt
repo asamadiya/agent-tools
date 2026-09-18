@@ -1,0 +1,19 @@
+HTTP 500 errors from the Cloudflare WAF, 5 December 2025
+
+All times are UTC.
+
+Between 08:47 and 09:12 on 5 December 2025, Cloudflare returned HTTP 500 to requests that should have been served normally. The incident lasted about 25 minutes and touched roughly 28% of all HTTP traffic we serve. This was not an attack and it was not a capacity problem. We caused it ourselves, with a configuration change that reached the whole fleet in seconds and hit a latent bug in our Lua proxy. We are sorry. Below is what happened, why it happened, and what we are changing.
+
+The trigger was work to protect customers against CVE-2025-55182, a critical React Server Components vulnerability. Our WAF buffers HTTP request bodies in memory so it can inspect them, and that buffer had been 128KB. Bodies exploiting this CVE can be larger, so we began raising the buffer to 1MB, matching the Next.js default request limit. That first change shipped through our gradual deployment system, which moves in stages and gave us the signal we expected.
+
+During that rollout an internal WAF testing tool turned out not to support the larger buffer. The tool inspects no customer traffic and serves no customer request, so disabling it looked like a safe and narrow action. An engineer disabled it. The disable went out through our global configuration system, not through gradual deployment: global configuration performs no staged rollout and propagates to every machine in the fleet within seconds. That is the first mistake, and it is a process mistake rather than a coding one. A change that cannot be canaried should be reserved for changes that must be instant.
+
+The disable was implemented as a killswitch in our rulesets system, and that is where the latent bug lived. A rule carries an action -- block, log, skip, or execute -- and execute means the rule triggers evaluation of a sub-ruleset. A killswitch turns the rule's action into skip. No killswitch had ever been applied to a rule whose action was execute. The skip itself was honoured correctly: the sub-ruleset did not run. But the code that processes results afterwards still reached for rule_result.execute, a field that a skipped rule never produces. Indexing nil in Lua raises, the error surfaced at init.lua line 314 inside the FL1 proxy, and the request terminated as an HTTP 500.
+
+The blast radius follows directly from which proxy served the request. Customers on FL1 with the Cloudflare Managed Ruleset deployed saw every request fail, with the exception of a few internal endpoints such as /cdn-cgi/trace that bypass the affected path. Traffic served by our China network was unaffected. FL2, the Rust reimplementation of the proxy, does not contain this bug and never returned these errors. The defect had sat undetected in FL1 for years because no operator had produced the one combination -- killswitch plus execute -- that reaches the bad dereference.
+
+Automated alerts declared the incident at 08:50, three minutes after the first errors. We reverted the global configuration change at 09:11 and propagation completed at 09:12, at which point error rates returned to normal.
+
+Four changes are underway. We are auditing the rulesets result-processing code for every other action-and-killswitch combination that can leave a field unset, and fixing them in FL1 rather than waiting for FL2 migration to retire the code. We are restricting the global configuration system so that changes to rule actions must go through gradual deployment. We are adding a test matrix that applies a killswitch to a rule of each action type. And we are accelerating the migration of remaining FL1 traffic to FL2.
+
+If you were affected and want detail specific to your zone, contact your account team or open a support ticket referencing this incident.

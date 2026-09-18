@@ -1,0 +1,69 @@
+Cloudflare outage of 5 December 2025
+
+On 5 December 2025, between 08:47 and 09:12 UTC, roughly 28% of the HTTP traffic Cloudflare
+serves returned HTTP 500 errors. If you saw failures from our network during that window, this
+is what happened and why. It was not an attack, and no customer data was exposed or lost. It was
+our own change, and we are sorry.
+
+What we were doing
+
+CVE-2025-55182 is a critical vulnerability in React Server Components. To protect customers
+against it, our WAF needs to inspect request bodies large enough to carry an exploit. The WAF
+buffers those bodies in memory, and that buffer had long been capped at 128KB. We began raising
+it to 1MB, which matches the Next.js default request limit, so that the new protection would see
+the whole request.
+
+That change went out the way risky changes are supposed to go out: through our gradual deployment
+system, one slice of the fleet at a time.
+
+What went wrong
+
+Part way through the rollout we found that an internal WAF testing tool did not support the
+larger buffer. The tool plays no part in serving customer traffic, so disabling it looked like a
+small, safe cleanup. We disabled it through our global configuration system rather than the
+gradual deployment system. Global configuration does no staged rollout; it reaches every machine
+in the fleet within seconds.
+
+The disable was expressed as a killswitch in our rulesets system. A rule in that system carries
+an action: block, log, skip, or execute. An execute action means "evaluate this sub-ruleset".
+Killswitches had been applied to rules many times, but never to a rule whose action was execute.
+
+The skip itself worked correctly. The code that processes results afterwards, however, still
+reached for rule_result.execute, which is not present on a skipped rule. In Lua, indexing that
+missing field raised an error, at init.lua line 314 in our FL1 proxy. The proxy could not
+complete the request, so it returned a 500.
+
+The flaw had been in that code path for years, latent, because nothing had ever taken this exact
+combination. Our newer Rust proxy, FL2, does not share the bug.
+
+Who was affected
+
+Customers served by FL1 with the Cloudflare Managed Ruleset deployed. For those zones essentially
+every request returned 500 for the duration; a handful of endpoints that bypass the affected path,
+such as /cdn-cgi/trace, kept working. Traffic on our China network was not affected.
+
+Timeline, all times UTC
+
+08:47 — impact begins as the global configuration change propagates.
+08:50 — automated alerts fire and an incident is declared.
+09:11 — the configuration change is reverted.
+09:12 — the revert finishes propagating; error rates return to normal.
+
+What we are changing
+
+The core mistake was not the latent Lua bug. It was routing a change around the system built to
+catch exactly this class of failure. A change that is safe in intent is not automatically safe in
+mechanism, and "this only touches an internal tool" was the reasoning that let a global,
+instantaneous push feel acceptable.
+
+We are making three changes. First, killswitches and other rulesets changes move onto staged
+propagation, so no single configuration edit can reach the whole fleet at once. Second, we are
+auditing FL1's result-processing code for other fields read without checking the action that
+produced them, and adding tests that exercise every action against every control, including the
+combinations nobody has used yet. Third, we are tightening the criteria for what may travel
+through the global configuration system at all, so the decision does not rest on a judgement call
+made mid-incident-response.
+
+Twenty-five minutes of 500s on a quarter of our traffic is a serious failure, and the fact that we
+caused it while shipping a security protection does not soften that. We will publish follow-up
+detail as the remediation work lands.

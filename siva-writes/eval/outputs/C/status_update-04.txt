@@ -1,0 +1,18 @@
+li-httpclient v3 deprecation: 612 multiproducts left, 74 days to build enforcement
+
+To: engineering leads of every li-httpclient consuming team
+From: Tomasz Hejna, li-httpclient owner
+
+612 of the 1,000 multiproducts that consume li-httpclient still build against v3, and v3 builds start failing on Dec 1 2026. 388 have moved to v4, which is 38.8% of consumers after the full ramp to date. Dec 1 is 74 days out, about 10.6 weeks, so clearing the remaining 612 means roughly 58 multiproducts finishing per week from now until enforcement. That rate is the number to hold your own plan against.
+
+The deadline exists because of CVE-2026-31819, a request-smuggling flaw in Netty 4.1.79 rated CVSS 7.5. v3 pins 4.1.79 and cannot move off it without an ABI break, so the patched Netty ships only inside v4. v3 reaches end of life on Jan 31 2027 and receives no further security work after that date.
+
+Budget six engineer-days. That is the median for teams that have already finished, measured end to end from first codemod run to merged change. The codemod rewrites 7,910 of 9,417 call sites across the fleet, 84%, which leaves 1,507 call sites needing hand edits. Those hand edits are not spread evenly: they concentrate in 63 multiproducts. If yours is one of the 63, the median understates your cost and you should plan against your own call-site count instead.
+
+Two changes in v4 fall outside what the codemod can rewrite. First, v4 renames every connection-pool configuration key, so any pool tuning held in config files, environment overrides, or deployment templates has to be renamed by hand and re-verified against your current pool sizes. Second, v4 drops support for HTTP/1.0 upstreams. 17 upstreams across the fleet still speak HTTP/1.0, and each one needs either a fix from the upstream owner or a proxy shim in front of it. Pull your upstream list and diff it against the 17 today. An HTTP/1.0 dependency you discover in November is an inter-team negotiation, not a code change you can land in a sprint.
+
+Exemptions buy 30 days at a time and cannot carry a team to the far side of end of life. 22 exemptions have been granted so far, and 9 of them went to the same three teams. Do the arithmetic on the calendar: an exemption granted on Dec 1 expires Dec 31, a second one runs to Jan 30, and Jan 30 is one day before v3 goes end of life. Two consecutive grants exhaust the process. Treat an exemption as cover for a scheduling conflict you have already resolved, and file it with the date your migration actually lands.
+
+Office hours run every Tuesday and 41 teams have attended. Bring your call-site count, your pool configuration, and your upstream list, and we will tell you within the hour whether you are a median six-day migration or one of the 63 that needs more. Teams that come to office hours before starting the codemod hit fewer surprises in the config rename, which is the step that generates most of the questions we field afterward.
+
+Three asks for this week. Run the codemod against your multiproduct and record how many of your call sites it leaves behind. Check your upstreams against the HTTP/1.0 list. Reply with a target date, and reply even if that date is after Dec 1, because a known late team is a problem we can staff and a silent one is a build break on the morning of enforcement.

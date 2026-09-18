@@ -40,16 +40,43 @@ SMOOTH_K = 0.5
 
 TOKEN = re.compile(r"[a-z][a-z'’\-]*|\d[\d.,]*")
 
+# Content-blind stylometry. The surface n-gram score below is reported first and is NOT a style
+# measurement: run over this corpus it ranks the real human documents as the MOST over-represented,
+# because their top trigrams are iostat column headers ("wkb s avgrq-sz", "w await svctm"). It is
+# measuring subject matter, and the conditions differ in subject matter only by accident.
+#
+# The function-word variant is the standard fix (Koppel et al.): map every content word to a single
+# placeholder and keep function words as themselves, so what remains is syntactic rhythm - how
+# clauses are joined, where prepositions fall, how often a sentence turns on "but" or "so". Two
+# documents about completely different systems can then be compared.
+FUNCTION_WORDS = set("""
+a an the this that these those there here and or but so yet for nor because since although though
+while whereas if unless until when whenever where wherever as than then thus hence therefore however
+moreover furthermore also too very much many few more most less least own same such no not only just
+in on at by to from with without within into onto upon over under above below between among across
+through during before after against about around behind beyond beside despite toward towards off out
+up down near per via of is are was were be been being am do does did doing have has had having will
+would shall should can could may might must ought it its it's they them their theirs we us our ours
+you your yours i me my mine he him his she her hers who whom whose which what when why how all any
+both each either neither every some none one two three first second next last other another
+""".split())
+CONTENT = "<w>"
+
 
 def tokens(text: str) -> list[str]:
     return TOKEN.findall(text.lower())
+
+
+def stylometric(toks: list[str]) -> list[str]:
+    """Function words kept, everything else collapsed, so content cannot drive the score."""
+    return [t if t in FUNCTION_WORDS else CONTENT for t in toks]
 
 
 def ngrams(toks: list[str], n: int) -> collections.Counter:
     return collections.Counter(tuple(toks[i:i + n]) for i in range(len(toks) - n + 1))
 
 
-def reference_distribution() -> dict[int, tuple[collections.Counter, int]]:
+def reference_distribution(mode: str = "surface") -> dict[int, tuple[collections.Counter, int]]:
     manifest = json.loads((ROOT / "corpus" / "manifest.json").read_text())
     train = set(manifest["split"]["train"])
     out: dict[int, tuple[collections.Counter, int]] = {}
@@ -59,25 +86,34 @@ def reference_distribution() -> dict[int, tuple[collections.Counter, int]]:
         if d["status"] == "ok" and d["family"] in train
     )
     toks = tokens(corpus)
+    if mode == "stylometric":
+        toks = stylometric(toks)
     for n in NGRAM_SIZES:
         counts = ngrams(toks, n)
         out[n] = (counts, sum(counts.values()))
     return out
 
 
-def brief_ngrams() -> dict[int, set[tuple[str, ...]]]:
+def brief_ngrams(mode: str = "surface") -> dict[int, set[tuple[str, ...]]]:
     """n-grams the briefs themselves contain; every condition inherits these equally."""
     briefs = [json.loads(l) for l in (ROOT / "eval" / "prompts.jsonl").read_text().splitlines()]
     blob = " ".join(b["prompt"] + " " + " ".join(f'{f["key"]} {f["value"]}' for f in b.get("facts", [])) for b in briefs)
     toks = tokens(blob)
+    if mode == "stylometric":
+        # In stylometric space the briefs collapse to the same shapes as everything else, so
+        # subtracting them would remove ordinary English syntax from every condition equally.
+        return {n: set() for n in NGRAM_SIZES}
     return {n: set(ngrams(toks, n)) for n in NGRAM_SIZES}
 
 
-def score(texts: list[str], reference: dict, excluded: dict) -> dict:
+def score(texts: list[str], reference: dict, excluded: dict, mode: str = "surface") -> dict:
     result = {}
+    toks_all = tokens(" ".join(texts))
+    if mode == "stylometric":
+        toks_all = stylometric(toks_all)
     for n in NGRAM_SIZES:
         ref_counts, ref_total = reference[n]
-        cand = ngrams(tokens(" ".join(texts)), n)
+        cand = ngrams(toks_all, n)
         cand = collections.Counter({g: c for g, c in cand.items() if g not in excluded[n]})
         cand_total = sum(cand.values())
         if not cand_total:
@@ -113,7 +149,9 @@ def main() -> None:
     parser.add_argument("--out", default=str(ROOT / "eval" / "results-metric4.json"))
     args = parser.parse_args()
 
-    reference, excluded = reference_distribution(), brief_ngrams()
+    modes = ["surface", "stylometric"]
+    refs = {m: reference_distribution(m) for m in modes}
+    excl = {m: brief_ngrams(m) for m in modes}
     root = pathlib.Path(args.outputs)
     conditions = sorted(p.name for p in root.iterdir() if p.is_dir()) if root.exists() else []
     if not conditions:
@@ -122,7 +160,9 @@ def main() -> None:
     results = {}
     for condition in conditions:
         texts = [p.read_text(encoding="utf-8", errors="replace") for p in sorted((root / condition).glob("*.txt"))]
-        results[condition] = {"n_documents": len(texts), **score(texts, reference, excluded)}
+        results[condition] = {"n_documents": len(texts),
+                              **score(texts, refs["surface"], excl["surface"], "surface"),
+                              "stylometric": score(texts, refs["stylometric"], excl["stylometric"], "stylometric")}
 
     payload = {
         "method": {
@@ -131,23 +171,25 @@ def main() -> None:
             "min_candidate_count": MIN_CANDIDATE_COUNT,
             "smoothing_k": SMOOTH_K,
             "reference": "train split only",
-            "brief_ngrams_excluded": {str(n): len(excluded[n]) for n in NGRAM_SIZES},
+            "brief_ngrams_excluded": {str(n): len(excl["surface"][n]) for n in NGRAM_SIZES},
+            "surface_caveat": "Surface n-grams rank the real human documents as MOST over-represented "
+                              "because their top trigrams are iostat column headers. Surface mode "
+                              "measures subject matter. Read the stylometric column.",
         },
         "conditions": results,
     }
     pathlib.Path(args.out).write_text(json.dumps(payload, indent=2))
 
-    print(f'{"condition":14s}{"docs":>6s}{"2gram over%":>13s}{"3gram over%":>13s}{"headline":>10s}')
+    print(f'{"condition":12s}{"docs":>6s}{"surface%":>11s}{"STYLOMETRIC%":>14s}   (surface measures subject matter)')
     for condition, r in results.items():
-        print(f'{condition:14s}{r["n_documents"]:6d}'
-              f'{r["2gram"].get("over_represented_mass_pct", 0):13.4f}'
-              f'{r["3gram"].get("over_represented_mass_pct", 0):13.4f}'
-              f'{r["headline_over_represented_mass_pct"]:10.4f}')
+        print(f'{condition:12s}{r["n_documents"]:6d}'
+              f'{r["headline_over_represented_mass_pct"]:11.4f}'
+              f'{r["stylometric"]["headline_over_represented_mass_pct"]:14.4f}')
     print(f"\n-> {args.out}")
     for condition, r in results.items():
-        top = r["3gram"].get("top", [])[:6]
+        top = r["stylometric"]["3gram"].get("top", [])[:6]
         if top:
-            print(f'\n{condition} most over-represented trigrams:')
+            print(f'\n{condition} most over-represented STYLOMETRIC trigrams:')
             for t in top:
                 print(f'   x{t["ratio"]:<8.1f} cand={t["candidate_n"]:<4d} train={t["train_n"]:<4d} {t["ngram"]}')
 

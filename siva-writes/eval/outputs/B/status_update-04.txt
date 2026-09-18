@@ -1,0 +1,19 @@
+li-httpclient v3 deprecation: status and what your team owes
+
+To: engineering leads of every multiproduct consuming li-httpclient
+
+612 of the 1,000 multiproducts that consume li-httpclient still build against v3. 388 are on v4, which is 38.8% of consumers after the campaign so far. v3 builds start failing on Dec 1 2026 and the library reaches end of life on Jan 31 2027. Counting from today, Sep 18, the build cutoff is 74 days out, so clearing the remaining 612 by then requires about 8.3 multiproduct migrations per day, every day, including the December holiday weeks.
+
+The driver is CVE-2026-31819, an HTTP request-smuggling flaw rated CVSS 7.5 in Netty 4.1.79. v3 pins that Netty version and cannot move off it without an ABI break, so there is no patched v3 and there will not be one. Migrating to v4 is the only path that removes the exposure.
+
+An automated codemod covers 84% of call sites, 7,910 of 9,417. The remaining 1,507 need hand edits and they are not spread evenly: 63 multiproducts hold all of them, roughly 24 edits each. If you own one of those 63, the codemod will run, report partial success, and leave you with real work. Run it early enough to see what it leaves behind.
+
+Two changes in v4 are outside what any codemod can fix. v4 renames every connection-pool configuration key, so any pool tuning you carry in config needs to be re-expressed by hand and re-validated under load. v4 also drops support for HTTP/1.0 upstreams. 17 upstreams are known to still speak HTTP/1.0, and each one needs either a fix on the upstream owner's side or a proxy shim in front of it. Check the protocol version your service negotiates with its upstreams before you schedule the migration, because an upstream fix is cross-team work and will not fit inside a single sprint's slack.
+
+Teams that have finished report a median of 6 engineer-days. That number comes from completed migrations only and is therefore biased toward the easier cases: teams with few hand-edit sites and no HTTP/1.0 upstreams finished first. Plan above the median if you are in the 63 or if any of the 17 upstreams is yours.
+
+The exemption process grants 30 days at a time. 22 exemptions have been granted, and 9 of those went to the same three teams, which is three teams consuming 41% of the total exemption volume through repeat renewals. An exemption moves your build failure date. It does not move the Jan 31 2027 end of life, and it does not remove CVE-2026-31819 from your service for the 30 days it buys you.
+
+What we need from each lead in the next two weeks: name the engineer who owns the migration for each of your multiproducts, and post an intended completion date. If you own one of the 17 HTTP/1.0 upstreams, tell us which of the two remediations you are taking, because the consuming teams are blocked on that decision and cannot plan around silence.
+
+Office hours run Tuesdays and 41 teams have attended. Bring the codemod output and the list of sites it could not rewrite; that is the fastest conversation we have found. Tomasz Hejna owns the deprecation and is the escalation point for exemption requests, upstream coordination, and any case where the migration cost looks materially above 6 engineer-days.

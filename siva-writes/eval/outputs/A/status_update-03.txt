@@ -1,0 +1,39 @@
+graph-store capacity status and hardware request
+For the September 2026 capacity review board
+Owner: Mei-Lin Chao
+
+Where the fleet stands
+
+graph-store runs on 2,100 hosts across three regions and serves a peak of 1.8M QPS, or 857 QPS per host. Load testing puts the redline at 1,050 QPS per host, which gives the current fleet a ceiling of 2.2M QPS. We are at 82% of that ceiling today.
+
+Growth has been steady enough to plan against. Trailing nine-month peak growth is 4.2% per month compounded, and no single month since January has come in more than 0.4 points off that rate. This is not a forecast built on one quarter of noise; it is nine consecutive months of the same slope.
+
+When we run out
+
+Hold 4.2% and peak crosses the 2.2M ceiling in late February 2027, roughly five months from now. By June 2027 peak reaches 2.6M QPS. Serving 2.6M at redline takes 2,476 hosts.
+
+The crossing date is the part worth sitting with. Late February is not when the fleet degrades gracefully; it is when peak traffic meets the number that load testing says the hosts cannot exceed. Every month past that point we are either shedding load at peak or running above redline and hoping the tail behaves.
+
+The request
+
+400 additional hosts, bringing the fleet to 2,500. At $7,250 per host per year that is $2.9M annualised.
+
+2,500 hosts covers the June 2027 requirement of 2,476 with 24 hosts of margin — about one week of growth at the current rate. That is deliberately thin. It buys headroom through the first half of 2027 and no further, which means this request does not silently pre-buy capacity for 2028.
+
+The date that actually matters
+
+Hardware lead time is 14 weeks. Working backward from the late-February crossing, the purchase order has to be signed by November 3, 2026 for hosts to be racked before we hit the ceiling. That is the decision this board is being asked to make, and it is six weeks out.
+
+If the PO slips past November 3, the hosts do not arrive late by the length of the slip — they arrive after the crossing, and we spend the gap serving peak traffic above a redline we established for a reason.
+
+The alternative, and why it is not one yet
+
+Moving the read path to the new columnar serialization is estimated to cut CPU per query by 18%. That would push the crossing from late February to August 2027 and would make this purchase unnecessary this cycle.
+
+It has no engineer assigned. It has had no engineer assigned for two quarters.
+
+I am not arguing the work is wrong — an 18% CPU reduction is better value than $2.9M of hardware, and if it were staffed today it would be the right call. But an unstaffed project is not a capacity plan. Two quarters of no assignment is the relevant evidence about how likely it is to land in the next five months, and it would need to land, ship, and be validated in production well before February to change the hardware decision.
+
+If the board wants to staff it instead of buying, that is a legitimate choice, but it needs an owner and a date at this meeting, not after it. Absent that, the 400 hosts are the plan.
+
+Ask of the board: approve 400 hosts ($2.9M annualised) with the PO signed by November 3, 2026 — or name an owner for the columnar read path today and I will bring back a revised forecast.

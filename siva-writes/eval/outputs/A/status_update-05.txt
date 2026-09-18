@@ -1,0 +1,44 @@
+two-tower-v7 experiment wrap-up: session-aware retrieval head, notifications ranking
+
+Owner: Aditi Sundaram
+Status: shut down Sep 5. Decision: do not ramp.
+
+What we tested
+
+two-tower-v7 added a session-aware retrieval head to notifications ranking. The head builds a per-member embedding from recent session history and feeds it into the retrieval tower, on the theory that knowing how a member has been using the product lately should sharpen which notifications we send them.
+
+Ramp history: 2% on Jul 14, 4% on Aug 4, 10% on Aug 19, teardown Sep 5.
+
+Results at 10%
+
+The headline CTR number is nothing. Notification CTR came in at -0.11%, 95% CI -0.41% to +0.19%. That interval straddles zero comfortably; after seven weeks and a 10% ramp we cannot distinguish this treatment from control on the metric it was built to move.
+
+Downstream is worse than nothing. Sessions per member fell 0.6% at p = 0.003. That is a real regression, and it is the metric we care about more than CTR.
+
+The cost side is unambiguous. Serving cost rose 31%: 4,100 GPU-hours per day against 3,130 for control. p99 scoring latency went from 38 ms to 57 ms. We were prepared to pay that for a win. We were not going to pay it for a flat CTR and a sessions regression.
+
+Why the aggregate is flat
+
+The segment cut is the interesting part of this experiment and the reason we think we understand the miss rather than just recording it.
+
+Members in the top decile by weekly session count gained +1.9% CTR. The 62% of members with fewer than three sessions a week lost 0.8%. That majority segment dominates the aggregate, so a genuine gain for heavy users is swamped by a smaller per-member loss spread across far more members.
+
+Working hypothesis: the session head needs roughly four prior sessions before it produces a useful embedding. Below that it falls back to a near-constant vector. A near-constant vector does not encode "we know nothing about this member's recent behavior" — it encodes a specific point in embedding space that every light member shares, which flattens the ranking signal for them. So we did not ship a neutral feature that light users ignore; we shipped one that actively degrades their ranking by pushing them all toward the same neighborhood.
+
+This is a hypothesis, not a finding. We have not run the ablation that would confirm it. The shape of the segment split is consistent with it, and the four-session threshold matches where the sequence encoder's receptive field starts producing variance, but nobody has isolated the fallback path and measured it directly.
+
+Decision
+
+Taken Sep 5 with the metrics council: do not ramp, tear down the LIX. Both are done.
+
+We are keeping the session embedding table in the feature store. Two other teams now read it, and the table is useful independent of whether our head was the right consumer of it. It stays on the existing refresh cadence; if that changes we will notify the readers rather than let it go stale underneath them.
+
+What we would do differently
+
+Two things.
+
+First, we should have cut by session count at 2%, not at 10%. The segment split was visible in the data long before Aug 19. We ramped on an aggregate that was flat and treated flat as "needs more power" when it was actually two populations moving in opposite directions.
+
+Second, a cold-start fallback that emits a shared constant is a design defect, not an implementation detail. If we revisit this, the fallback needs to be either a gate that routes light users to the v6 path entirely, or a learned prior that varies with whatever signal we do have. Any future model with a history-dependent encoder should specify the below-threshold behavior before it ramps.
+
+No follow-up experiment is scheduled. If we pick this up again it will be as a heavy-user-gated treatment, sized against that segment rather than the full population.

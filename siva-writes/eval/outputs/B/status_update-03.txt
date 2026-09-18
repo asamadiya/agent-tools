@@ -1,0 +1,18 @@
+graph-store capacity status and hardware request
+September 2026 capacity review. Owner: Mei-Lin Chao.
+
+We are asking the board to approve 400 additional graph-store hosts, $2.9M annualised, with the purchase order signed by Nov 3 2026.
+
+The fleet today is 2,100 hosts across three regions carrying a peak of 1.8M QPS, or 857 QPS per host. Load testing puts the redline at 1,050 QPS per host, which sets the fleet ceiling at 2.2M QPS. We are running at 82% of that ceiling.
+
+Traffic has grown 4.2% per month compounded over the trailing nine months, and every month since January has landed within 0.4 points of that rate. Nine consecutive months inside a 0.8-point band is the reason we are treating 4.2% as a planning input instead of a trend line. Held at 4.2%, peak reaches the 2.2M ceiling 4.9 months from now, in late February 2027, and 2.6M QPS by June 2027.
+
+Serving 2.6M QPS at redline takes 2,476 hosts. Rounding to 2,500 gives the 400-host request at $7,250 per host per year. Hardware lead time is 14 weeks, so a PO signed Nov 3 2026 puts hosts in racks around Feb 9 2027, roughly two weeks before the crossing. Every week of slip past Nov 3 is a week the fleet spends above redline in February, and we have no measurement of what graph-store does above 1,050 QPS per host beyond the load test that established the number.
+
+This request buys about nine months, not two years. A 2,500-host fleet at redline ceilings at 2.625M QPS, which the 4.2% curve reaches in early July 2027. The board should read this as the first of two orders under current growth, and we will bring the second forecast to the March 2027 review with three more months of rate data behind it.
+
+One alternative exists and it is unstaffed. Moving the read path to the new columnar serialization is estimated to cut CPU per query by 18%, which raises the effective per-host redline to about 1,280 QPS and the fleet ceiling to 2.69M QPS. Recompute the crossing at the same 4.2%: the curve reaches 2.69M in early July 2027, not the August 2027 figure carried in the forecast. Either way the deferral is roughly four to five months, worth about 400 hosts of spend. The work has had no engineer assigned for two quarters.
+
+That gap is the decision in front of the board. Staffing the columnar read path now does not remove the need for hardware, because the 18% is an estimate against a production workload nobody has measured, and the engineering would have to land, bake and be validated before Nov 3 for us to cancel the order on its strength. Ten weeks is not enough runway for a serialization change on the read path. Our recommendation is to approve the 400 hosts and staff the columnar work in parallel, and if the 18% holds in production we defer the next order rather than this one.
+
+Three things could move these numbers. Growth departing the 4.2% band in either direction changes the crossing date by weeks per point. A redline revision from new load testing moves the ceiling directly, and we have not re-run that test since the current serialization shipped. Regional imbalance is not modelled here at all: the 857 QPS per host figure is a fleet average across three regions, and a region running hot crosses before the fleet does.

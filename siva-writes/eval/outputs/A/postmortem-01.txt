@@ -1,0 +1,25 @@
+Root cause
+
+This was not an attack. The outage on 18 November 2025 began with a permissions change we made to one of our own ClickHouse database clusters, and everything that followed was our software behaving exactly as it was written to behave on input it had never been given before.
+
+At 11:05 UTC we deployed a change so that users querying ClickHouse could see metadata for the underlying tables in the r0 database, rather than only the metadata for the default database that fronts them. This was a visibility improvement, and on its own it broke nothing.
+
+One of the things that reads ClickHouse metadata is the job that regenerates the Bot Management feature file. That file is rebuilt every five minutes and shipped to the proxy, where the bot-scoring model uses it to decide how bot-like a request looks. The regeneration job builds the feature list with a query over system.columns. That query filtered on table name. It did not filter on database name.
+
+Before 11:05, the absence of a database filter had no consequence, because the querying user could only see one database's worth of columns. After 11:05 it could see two. The same logical column now came back twice, once for the default database and once for r0, and the feature file roughly doubled in size.
+
+The proxy does not treat that file as arbitrary input. The bots module preallocates memory for the features it expects and refuses to load more than 200 of them. The model uses roughly 60 features at runtime, so in the entire life of this code the 200 limit had never been within reach. It was a bound nobody had cause to think about. The doubled file carried more than 200 features and crossed it.
+
+In our newer Rust proxy engine, FL2, the code path that loads the file handled that condition by unwrapping a Result that was now an Err. The thread fl2_worker_thread panicked. A panic there means the request cannot be served, and the proxy returned HTTP 5xx. This is the direct cause of the errors our customers saw: not saturation, not a dependency failing, but a panic on a file we generated ourselves.
+
+Two details made the failure much harder to read from the inside than this description makes it sound.
+
+The first is that the ClickHouse permissions change rolled out gradually, node by node. For a period, whether the five-minute regeneration produced a good file or a bad one depended on which node answered the query. Good and bad files alternated. The network would fail, then recover, then fail again on the next cycle. Repeated automatic recovery is not what a bad deploy usually looks like. It is what an external attack looks like, and it cost us time.
+
+The second is that the two proxy generations failed differently, and only one of them failed loudly. FL2 customers got 5xx. FL1 customers got no errors at all. Instead, the bot module scored every request bot=0 — the score assigned to traffic judged definitely human. Customers whose rules block on bot score saw no outage; they saw their own rules quietly stop matching. Customers running rules that challenge or block above a threshold were unaffected in the other direction. If you run bot rules on FL1 and saw an unusual pattern of false positives on 18 November, this is why.
+
+Separately and by coincidence, our status page went down in the same window. That page is hosted independently of Cloudflare infrastructure precisely so it can stay up when we do not. Its failure was unrelated to this incident, but arriving when it did, it pushed our responders further toward the wrong hypothesis: that we were being hit by a large Aisuru-style DDoS against both our network and our status page. We were not.
+
+Impact began at 11:28 UTC. Automated detection fired at 11:31 and we opened an incident call at 11:35. Because the early evidence pointed at an attack, our first substantive mitigations were defensive: at 13:05 we bypassed Workers KV and Access from the affected path. Once we identified the feature file as the source, we stopped propagation of the bad file at 14:24 and core traffic was normal by 14:30. Remaining services were fully restored and the incident closed at 17:06.
+
+This was Cloudflare's worst outage since 2019, and we are sorry. A query missing one filter clause should not be able to take the network down, and the sections that follow describe what we are changing so that it cannot.

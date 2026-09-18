@@ -1,0 +1,23 @@
+Concurrency control and consistency defaults for a new transactional datastore
+
+Two defaults
+
+We propose two defaults for the datastore: optimistic concurrency control, and strong consistency. Both are decisions about what an application gets when nobody on the team has thought about the question yet, which is most of the time, so they should be the choices that fail least badly under load.
+
+Optimistic concurrency control
+
+We choose optimistic concurrency control for throughput and for one isolation property: under it, a client is never in a position to block another one. A pessimistic engine hands a client a lock and then waits on that client's own health. The stock illustration is a process that stops for garbage collection while holding a write lock. Everything queued behind the lock stops too, and the stall propagates to clients that share nothing with the stalled one except a row. At scale this becomes client-to-client performance cross talk, and cross talk is a large driver of tail latency in applications sitting on pessimistic relational engines.
+
+The operational record is what makes this more than a preference. Lock contention, and the retries that follow a failed lock acquisition, turn up repeatedly in Amazon's outage history, and they turn up specifically as causes of metastable failure -- the state where load that originally triggered the problem has receded and the system stays down anyway, sustained by its own retries. Recoveries from that state are long. Retries against a contended lock are a feedback loop: each failed acquisition adds load, which lengthens the critical section, which fails more acquisitions.
+
+Two design objectives follow. Keep applications out of metastable failure, which is the sharp failure. Blunt the duller failures that come from badly behaved clients and client code, which is the common one. Optimistic concurrency control serves both by removing the shared resource whose queue does the amplifying.
+
+Aurora DSQL is the existence proof that the throughput cost is acceptable. Figure 6 of the DSQL paper plots SELECT and UPDATE latency against load, and both stay fast with the database running across regions.
+
+Strong consistency as the default
+
+We propose strong consistency as the default, and we expect almost no application on this datastore to be better served by eventual consistency. That position contradicts the received reading of the Dynamo paper (2007) and Werner Vogels' Eventually Consistent (2009), which held that cloud-scale systems had to give up strong consistency to reach their availability and latency targets.
+
+Four things have shifted since. Time is distributed differently, data-centre networks are built differently, power and cooling are provisioned differently, and distributed protocols do more than they did. The 2000s conclusion was correct given the 2000s cost of coordination. We are asking readers to re-derive it against current costs, not to discard it.
+
+Eventual consistency remains available. It stops being what you get by not choosing.

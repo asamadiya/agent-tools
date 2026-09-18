@@ -1,0 +1,43 @@
+Where to Invest Engineering Effort, 2026-2036
+
+Three claims about cost
+
+Start with what has already happened, because the strategy falls out of it.
+
+First: turning written business logic into code now costs approximately zero. Given a clear specification of what a rule is supposed to do, producing a correct implementation is no longer the expensive step. It was expensive for sixty years. It is not anymore.
+
+Second: plumbing costs approximately zero. Wiring a service to a queue, a queue to a store, a store to a dashboard; adapting one library's types to another's; writing the client, the retry policy, the serialiser. This was a large fraction of what most engineers did most days, and it has collapsed on the same curve as the first claim.
+
+Third: building efficient, reliable, secure, end-to-end systems is getting cheaper, but slowly. Not zero. Not close to zero. The gap between the first two claims and the third is the entire subject of this document.
+
+Two readings of the moment
+
+The pessimistic reading is that programming is ending as a high-value economic craft, joining weaving, ploughing, and coopering. It is not a stupid reading and we should not pretend it is.
+
+It is worth remembering how long these transitions take. One of our advisors, mostly retired now, is an expert in analog circuit design. In the late 1960s he and some friends founded a hardware company on an explicit bet: serious customers would reject digital logic. The 74 series had just launched, and they found it graceless, unreliable, and full of problems. Measured by the ratio of transistors in digital versus analog circuits today, that bet was wrong by ten or more orders of magnitude. He still made a small fortune, enough to keep his children comfortable. The world changes slower than anyone would like, including the people betting against it and the people betting on it.
+
+So the pessimistic reading may be directionally right and still leave a long, profitable runway. That is not a plan, though. It is a consolation.
+
+The optimistic reading is that new tools bring new industries, new research fields, and new careers, and that the interesting question is not whether work disappears but where it moves. Amdahl's Law tells us where. Speed up one portion of a problem and that portion becomes a shrinking share of total time. Drive it to zero and it is no longer where anything is decided. Everything that used to hide behind implementation cost is now exposed: what the system should do, whether it survives contact with reality, whether anyone can be persuaded to use it.
+
+What stays sticky
+
+Three things resist the curve, and they are the things we should staff for.
+
+Real-world feedback loops. A system that touches the physical world, or money, or regulated processes, cannot be validated by reading it. It has to run, be measured, and be corrected. The loop is bounded by the world's clock, not ours, and no amount of generation speed shortens it. Observability, experimentation infrastructure, and the discipline of measuring rather than inspecting are now core competencies rather than platform hygiene.
+
+Human stubbornness. Adoption, migration, organisational change, and taste. People do not switch because the new thing is better; they switch when switching is cheaper than not switching, and that calculation is social. This is unautomatable in the near term and we chronically underinvest in it.
+
+Adversaries. Occasional, but expensive. Security is a live opponent, not a checklist, and cheap code generation arms both sides. Our exposure grows with the volume of code we ship, which is now much larger.
+
+What to do about it
+
+Stop hiring and promoting primarily for implementation throughput. Integration, translation, straightforward analysis, and small-scale synthesis are solved problems. Compensating people for them is compensating them for the shrinking term in Amdahl's fraction.
+
+Invest instead in the judgement layer: people who can specify correctly, decompose a problem so that the cheap parts are actually cheap, and recognise when a generated answer is plausible and wrong. This is a real skill, it is scarce, and it does not come from the same training pipeline as implementation skill.
+
+Fund genuinely new ideas disproportionately. As the lever from idea to working system lengthens, the value of having a good idea to put on the end of it rises. A research function that would have been unaffordable at previous implementation costs is now cheap in absolute terms and the highest-leverage spend we have.
+
+Build the verification and operations substrate deliberately. If generation is free and validation is not, validation capacity becomes the binding constraint on how fast we can ship. Treat test infrastructure, staged rollout, and rollback as products with owners, not as overhead.
+
+Assume a decade, not a quarter. Our advisor was wrong by ten orders of magnitude and still had twenty good years. Plan for a transition that is directionally certain and temporally slow. The failure mode is not moving too late; it is thrashing early and having nothing left when the change actually arrives.

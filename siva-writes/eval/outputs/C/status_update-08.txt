@@ -1,0 +1,19 @@
+Unauthenticated internal gRPC endpoints: monthly burndown
+
+Owner: Hiroshi Tanabe. Security partner: Dana Ruiz. Reporting date: September 18, 2026.
+
+We have closed 1,189 of the 1,432 endpoints the red team found in June, or 83%, leaving 243 open across the 318 services in scope. All 96 P1 endpoints -- those reachable from outside the service mesh -- closed before the August 15 deadline. The P2 deadline is October 31, and at the current rate we will miss it.
+
+The remaining 243 are not one population. Sixty-one sit in services with no registered owner, so there is no team to assign the work to. Twelve belong to systems already declared end-of-life, where the fix competes with a decommission that removes the endpoint anyway. The other 170 have an owner and a path to closure. Every plan below turns on how the board wants the first two groups handled.
+
+The fix is mTLS plus a per-endpoint ACL. Median time to fix is 11 days and p90 is 74 days. The p90 governs the schedule: 74 days from September 18 lands on December 1, so any endpoint that starts late and runs to the tail misses October 31 regardless of run rate.
+
+Run rate decides the date. We are closing 26 endpoints per week. 243 at 26 per week is 9.3 weeks, which puts completion at November 23, 23 days past the deadline. Hitting October 31 at the current scope means clearing 243 endpoints in the 6.1 weeks remaining, or 40 per week, a 52% increase in throughput with no added headcount identified.
+
+The October 6 mesh proposal changes that arithmetic. Switching mesh ingress to deny-by-default for the 61 orphaned services closes their exposure with no code change from any team. By October 6 the current rate will have cleared roughly 67 more endpoints, leaving 176; dropping the 61 orphans leaves 115 across the 3.6 weeks to October 31, or 32 per week. That is a 24% lift over today's rate instead of a 52% one.
+
+The proposal breaks four known cross-team callers, and three of those teams have not answered outreach. Dana and I have sent two rounds. Deny-by-default will fail those callers at the ingress with no warning to their on-call, and we cannot bound the blast radius for the three silent teams, because their traffic runs through orphaned services we have not attributed to a product surface.
+
+We need two decisions from the board this month. Approve or reject the October 6 deny-by-default change, and if you approve it, set the escalation path for the three unresponsive teams; absent other direction we escalate to their directors on September 25. Second, rule on the 12 end-of-life endpoints: exclude them from the P2 count against a documented decommission date, or fund mTLS work on systems scheduled for deletion.
+
+Even with the mesh change approved, 32 per week leaves no margin for the p90 tail. Check us on October 6 and again on October 20. If the weekly close count has not reached 32 by the first checkpoint, we will bring a revised completion date to the November board instead of a recovery plan.

@@ -1,0 +1,27 @@
+BYOIP prefix withdrawal, 20 February 2026
+
+An empty query parameter sent by an internal cleanup task caused Cloudflare to withdraw about 1,100 customer BYOIP prefixes over 50 minutes, because our Addressing API answered a filter with no value as though no filter had been asked for. Impact began at 17:48 and the last prefixes were restored at 23:03, 5 hours 15 minutes later. All times are UTC. We are sorry. Your address space is yours, and we took it off the internet.
+
+What broke
+
+The defect is in one line of query handling. A new cleanup sub-task, written to automate removal of BYOIP prefixes that customers had queued for deletion, issued GET /v1/prefixes?pending_delete with nothing after the equals sign. Query().Get("pending_delete") returns an empty string in that case, indistinguishable from the parameter being absent, and the handler read an empty filter as no filter at all. The API returned every BYOIP prefix it holds: 4,306 of the 6,500 prefixes we advertise to a given peer. The sub-task treated that entire response as the deletion queue and began removing prefixes along with their dependent service bindings, working through the list until an engineer terminated the process at 18:46.
+
+The blast radius was set by how fast the queue drained, not by any check. The Addressing API is the authoritative source for customer IP address state and pushes changes to the edge immediately, so each deletion became a BGP withdrawal within seconds of the record disappearing. About 1,100 prefixes, roughly 25% of all BYOIP prefixes, were withdrawn between 17:56 and 18:46. Nothing in the path between the sub-task and the global routing table asked whether removing a quarter of all customer address space in 50 minutes was a plausible thing to be doing.
+
+What customers saw
+
+Customers on Bring Your Own IP saw their prefixes withdrawn via BGP, and a withdrawal fails slowly. Withdrawal triggers BGP path hunting: transit providers try successive alternate paths for a destination that no longer has one, and client connections hang searching for a route until they reach their own timeout, typically tens of seconds. Traffic to the affected prefixes did not bounce to a working Cloudflare edge, because from the routing system's point of view the address space was gone.
+
+Visitors to the one.one.one.one website received HTTP 403 with an Edge IP Restricted message. DNS resolution over 1.1.1.1 was not affected, including DNS over HTTPS, and continued to serve for the duration of the incident.
+
+Timeline
+
+The code merged on 2026-02-05 at 21:53 and sat unexercised for 15 days. It deployed at 17:46, first impact landed at 17:56, and Cloudflare engaged on the one.one.one.one failures at 18:13. We declared an internal incident at 18:18 and paged the Addressing API team at 18:21. The sub-process was terminated at 18:46, 50 minutes after first impact. Mitigation began at 19:11 and we published self-remediation guidance at 19:19. About 800 prefixes were restored around 20:20. The remaining roughly 300 needed manual restoration and completed at 23:03.
+
+Why our tests did not catch this
+
+Our test suite covers the customer self-service journey and had no case for a task runner that mutates customer data with no explicit input. Every test that touched the prefixes endpoint supplied a filter value, because a customer clicking through the dashboard always supplies one. Staging data and mocks were thin enough that an unfiltered response would have looked small and unremarkable even if a test had produced one. The failing behaviour required three conditions together: a caller that constructs its own query string, an empty value that reads as absent, and a consumer that interprets a full list as a work queue. None of the three was independently tested.
+
+What we are changing
+
+The Addressing API will reject a present-but-empty filter value rather than widening the query, and list endpoints reachable by automated callers will require an explicit filter. We are adding a rate limit and an absolute ceiling on prefix deletions per task run, so a single runaway process cannot withdraw more than a small fraction of customer address space before it stops itself. Prefix withdrawals originating from automation will require a confirmation step against the customer's declared deletion queue, not against whatever list the API returns. We are extending test coverage to internal task runners that mutate customer data, with staging fixtures large enough that an over-broad query is visible as one.

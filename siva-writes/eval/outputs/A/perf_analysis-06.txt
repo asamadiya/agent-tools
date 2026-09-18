@@ -1,0 +1,60 @@
+Diagnosis: the page cache, and what falls out of it
+
+The first useful number came from free -m on the problem instance:
+
+    total 64414, used 15421, free 349, buff/cache 48643, available 48409, swap 0
+
+Sixty-four gigabytes of memory, 48 of it page cache, 349 megabytes free. Nothing here is a fault
+in itself; a healthy Linux box fills memory with cache and reports almost nothing free. What made
+it interesting was the pairing with the file sizes. Forty-gigabyte uploads finished in minutes and
+fit inside 48 gigabytes of cache. Hundred-gigabyte uploads took hours and did not. The theory was
+cache busting: the service makes multiple passes over the file, and once the working set exceeds
+what the cache can hold, every pass after the first re-reads from disk instead of from memory.
+
+A theory about the page cache is easy to state and awkward to confirm, because Linux does not
+export a hit ratio. The tool that closed the gap was cachestat, originally written for Ftrace and
+since ported to bcc/eBPF, which reports page cache hits, misses, and the resulting ratio per
+second.
+
+On a 100-gigabyte upload, cachestat showed hit ratios of 74.1%, 9.7%, 6.5%, 12.0%, 34.5%, 7.0%,
+11.1% across successive seconds, with misses climbing from 632 to 23,341. BUFFERS_MB was 17 and
+CACHE_MB roughly 48,000 -- the cache was full and staying full. A healthy workload of this shape
+sits in the upper 90s. Single-digit and low-double-digit ratios mean nearly every read is going to
+disk, and that is where the hours were going.
+
+The control test settled it. Uploading a 32-gigabyte file, cachestat reported a 100.0% hit ratio
+with zero misses in every second sampled, hits ranging from 33,424 to 65,158. BUFFERS_MB was 41,
+CACHE_MB about 33,680 -- the whole file resident. free -m on that run showed used 18,421, free
+11,218, buff/cache 34,773, with headroom to spare. iostat showed almost no disk I/O at all. The
+smaller file is read from disk once and then processed entirely from memory, however many passes
+the code takes over it. The larger file gets no such luck: it is read from disk on every pass.
+
+Two file sizes, the same code, the same instance type, and the difference between 100% and 7% hit
+ratio. The size where behavior changes is the cache size, which is the signature of the problem
+rather than a coincidence of it.
+
+Recommendations
+
+The quickest fix is a larger-memory instance -- one whose page cache comfortably holds a
+100-gigabyte file. That is a config change, it can ship today, and it buys back the multi-hour
+tail without anyone touching application code. It is also a ceiling: the next size class of input
+puts you right back here, and you will pay for the memory whether or not the workload needs it.
+
+The durable fix is in the application. The code makes multiple passes over the entire file, which
+is only cheap while the entire file is cached. Reworking it to process the file in parts -- doing
+all the required work on a chunk that fits comfortably in memory before moving to the next -- makes
+runtime scale with file size instead of falling off a cliff at the cache boundary. Same total bytes
+read, but read once.
+
+Do both, in that order. The instance change removes the pain now; the code change removes the
+dependence on a memory constant that nobody wrote down.
+
+A note on the tooling
+
+cachestat was the killer tool here and it is still experimental. It was built under real
+constraints: low overhead, and the Ftrace function profiler as the only available mechanism. I
+argued at the LSFMMBPF 2019 keynote in Puerto Rico, with Linux mm kernel engineers in the room,
+that page cache statistics are needed often enough that they belong in /proc. The engineers pushed
+back with substance -- these are hot-path counters, and providing them properly is not free. That
+is a fair objection. It also means that for now, diagnosing a cache-busting workload depends on a
+tool that carries a caveat.

@@ -1,0 +1,27 @@
+Cloudflare 500 errors on 5 December 2025
+
+Cloudflare returned HTTP 500 for roughly 28% of the HTTP traffic we serve between 08:47 and 09:12 UTC on 5 December 2025, because a configuration change that disabled an internal testing tool reached a code path in our Lua proxy that had never executed before. This was not an attack. We are sorry for the disruption, and the detail below is what we owe you.
+
+The work that led here was a security fix. CVE-2025-55182 is a critical vulnerability in React Server Components. Our WAF buffers HTTP request bodies in memory in order to inspect them, and that buffer held 128KB. Protecting customers against the CVE requires inspecting bodies up to 1MB, the Next.js default limit, so we began raising the buffer to 1MB. That change went out through our gradual deployment system, which moves a change across the fleet in stages and gives us time to observe each one.
+
+An internal WAF testing tool turned out not to support the larger buffer, and during the rollout we disabled that tool. The tool carries no customer traffic and its state is invisible to your requests. We shipped the disable through our global configuration system, which performs no staged rollout and reaches every machine in the fleet within seconds.
+
+The disable was a killswitch in our rulesets system, and a killswitch works by forcing a rule to skip. A rule's action is one of block, log, skip, or execute, where execute triggers evaluation of a sub-ruleset. No killswitch had ever been applied to a rule whose action is execute. The skip itself was honoured correctly, and the rule did not run. Result-processing code downstream still dereferenced rule_result.execute, a field that is populated only when the sub-ruleset actually evaluates and therefore did not exist on this skipped rule, and that nil index raised a Lua error at init.lua line 314 in FL1, our older proxy. Every request reaching that line returned 500.
+
+The blast radius was every FL1 customer with the Cloudflare Managed Ruleset deployed. Those zones 500ed on all requests, with the exception of a few endpoints answered before ruleset evaluation such as /cdn-cgi/trace. Traffic on our China network was unaffected. FL2, the Rust reimplementation of the proxy, does not contain this bug and did not serve errors.
+
+Automated alerts declared the incident at 08:50, three minutes after the first 500. We reverted the configuration change at 09:11, propagation completed at 09:12, and error rates returned to baseline immediately. Customer impact lasted 25 minutes.
+
+The bug sat undetected for years because one of four rule actions was never combined with a skip. That combination was unreachable in practice until this week, and unreachable is a weaker property than tested.
+
+What we are changing:
+
+We are moving killswitches and the rest of request-path configuration onto the gradual deployment system. A change capable of producing 500s must not reach the whole fleet in seconds, whatever its own stated blast radius. The tool we disabled was harmless; the mechanism we used to disable it was not.
+
+We are auditing FL1 result processing across every combination of rule action and killswitch state, rather than the combinations that production traffic happens to generate. Four actions and two killswitch states is eight cases, and we had coverage for six of them.
+
+We are accelerating the migration of remaining FL1 zones to FL2, which is written in Rust and rejects this class of error at compile time.
+
+We are testing internal tooling against a pending configuration change before that change begins its rollout, instead of discovering the incompatibility partway through. Nothing about the 1MB buffer required an emergency response; the tool gap made it feel like one.
+
+If you saw 500s during this window and have questions about your own traffic, contact Cloudflare Support and we will pull the specific request data for your zones.

@@ -1,0 +1,33 @@
+## What frame pointers actually cost
+
+The objection to frame pointers has always been the same one: you are giving up a register, and the compiler has to spend instructions maintaining it, so everything gets slower. That is true. The question is by how much, and the answer from rolling this out across Netflix production — with frame pointers compiled into everything, libc and Java both — is that the cost normally lands under 1%. On plenty of workloads it was too small to measure at all: the difference disappeared into run-to-run variance, and no amount of repeated testing pulled a signal out of the noise.
+
+One workload broke that pattern and came in at 10%. It is worth being specific about what that service was, because the shape of the outlier matters more than the number.
+
+### The 10% outlier
+
+It was an unusual service, generated through Groovy, whose stack traces ran more than a thousand frames deep. Deep enough that Linux's perf profiler could not walk them. Arnaldo Carvalho de Melo at Red Hat added a new sysctl, `kernel.perf_event_max_stack`, specifically so that this one Netflix workload could be profiled at all. When a single service forces a kernel tunable into existence, it is not the service you should be generalizing from.
+
+There is a second problem with that measurement, and it is the reason the 10% should be read as an upper bound rather than a result. The instance was a virtual machine with no low-level hardware profiling available. Without cycle analysis there was no way to attribute the 10% — no way to show that all of it, or even most of it, came from frame pointers rather than from anything else that differed between the two builds. The number is real; the causal claim behind it was never established.
+
+### Microbenchmarks are the bad end of the range
+
+Independent reports from outside Netflix have come in at roughly 1% and roughly 2%. Microbenchmarks sit at the pessimistic end and will readily show 10%, and that is exactly what you should expect them to do.
+
+A microbenchmark reduces to one small function executed in a loop. Adding instructions to that function is not a small perturbation of a large system; it is a large perturbation of the only thing being measured. Push the hot function past L1 instruction cache warmth, or spill it over a cache line boundary, and throughput falls off a step. The benchmark is not lying — it is faithfully reporting what happens when the working set no longer fits. It is just not reporting anything about your production service, where the same function is one of thousands and the instruction footprint is dominated by everything else.
+
+So a microbenchmark regression is the start of an investigation, not the end of one. Judging it takes observability analysis: cycles, instructions, PMU counters, PMCs, PEBS. The headline percentage tells you that something changed. Only the counters tell you what.
+
+### The Python case, run to ground
+
+Python produced the other 10% outlier: `scimark_sparse_mat_mult`. Andrii Nakryiko at Meta did the work of chasing it into the generated code, and the cause turned out to have nothing to do with the theoretical cost of maintaining a frame pointer.
+
+In one large function, gcc had switched from `%rsp`-relative addressing to offsets computed off `%rbp`. The `%rbp` form needs more bytes to encode. That is the entire mechanism: a code-size increase in a hot function, from a codegen choice, not from the frame pointer's own bookkeeping. It has since been fixed, which is why Python has been able to turn frame pointers back on by default.
+
+This is what a properly diagnosed outlier looks like, and it is the argument for demanding that diagnosis before accepting any 10% figure. Two workloads hit 10%. One was traced to a fixable compiler behavior and no longer regresses. The other was measured on a VM where attribution was impossible.
+
+### What you get for the money
+
+Set these costs against what frame pointers buy: working stack traces, and therefore CPU profiles that lead to performance wins in the 5% to 500% range. A cost under 1%, or even 1 to 2%, is repaid by the first real find.
+
+Zero overhead would obviously be better, and the technologies that promise it — SFrame, ORC-style unwinding, and whatever follows — may eventually deliver. Until they do, nothing available finds those wins as reliably. Paying 1% to see the other 99% is not a close call.

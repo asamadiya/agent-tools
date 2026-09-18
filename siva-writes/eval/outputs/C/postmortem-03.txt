@@ -1,0 +1,34 @@
+Cloudflare incident report: HTTP 500 errors, 5 December 2025
+
+Summary
+
+On 5 December 2025, between 08:47 and 09:12 UTC, requests through Cloudflare returned HTTP 500 errors for a large share of our customers. About 28% of all HTTP traffic we serve was affected over those 25 minutes. This was not an attack, and no customer data was exposed or lost. We caused this ourselves, with a configuration change that we pushed globally in seconds, and we are sorry.
+
+All times below are UTC.
+
+What you saw
+
+If you were affected, essentially every request to your zone returned a 500 for the duration. A small number of Cloudflare-internal endpoints such as /cdn-cgi/trace continued to answer, which is why some health checks stayed green while real traffic failed. The failure was confined to customers served by our FL1 proxy with the Cloudflare Managed Ruleset deployed. Zones on FL2, and all traffic on our China network, were unaffected.
+
+What happened
+
+The trigger was a WAF buffer size increase we shipped to protect customers against CVE-2025-55182, a critical React Server Components vulnerability. Our WAF buffers HTTP request bodies in memory so it can inspect them, and that buffer had been capped at 128KB. Next.js allows request bodies up to 1MB by default, so a body between those two sizes could carry an exploit past inspection. We began raising the buffer to 1MB, and that change went out through our gradual deployment system as intended.
+
+During the rollout we found that an internal WAF testing tool did not support the larger buffer. The tool handles no customer traffic. We disabled it, and that is where the incident started: the disable was made through our global configuration system, which performs no staged rollout and reaches every machine in the fleet within seconds. A change with no customer-facing purpose was therefore delivered with less safety than the change it was clearing the way for.
+
+The disable was implemented as a killswitch in our rulesets system. A rule in that system carries an action, one of block, log, skip, or execute, where execute means the rule triggers evaluation of a sub-ruleset. The killswitch works by forcing a skip. No killswitch had ever been applied to a rule whose action was execute. The skip itself was honoured correctly, but the code that processes results afterwards still reached for rule_result.execute, a field that a skipped rule does not produce. In Lua that is a nil index error, raised at init.lua line 314, and the FL1 proxy failed the request with a 500.
+
+That bug had been in FL1 for years without ever being reached, because the one input that reaches it had never been supplied. Our Rust reimplementation of the proxy, FL2, does not have it; the equivalent code cannot compile with an unchecked field access.
+
+Timeline
+
+08:47 -- Global configuration change applied; 500s begin.
+08:50 -- Automated alerts fire and we declare an incident.
+09:11 -- We revert the configuration change.
+09:12 -- The revert finishes propagating and error rates return to baseline.
+
+What we are changing
+
+We are removing the asymmetry that caused this. Changes through the global configuration system will move to the same staged, health-gated rollout that code and WAF rule changes already use, so that a change reaching 100% of the fleet in seconds is a deliberate emergency action rather than the default path.
+
+We are also fixing the specific defect and the class it belongs to. The FL1 result-processing path now checks the action before reading action-specific fields, and we are auditing the rulesets code for every other field read that assumes a rule ran. Separately, we are adding coverage for killswitches against each of the four rule actions, including execute, which no test exercised before this week. Migration of remaining FL1 zones to FL2 continues.

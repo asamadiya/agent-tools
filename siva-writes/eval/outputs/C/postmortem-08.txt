@@ -1,0 +1,41 @@
+Cloudflare congestion affecting customer origins in AWS us-east-1
+
+21 August 2025. All times UTC.
+
+Summary
+
+Between 16:27 and 20:18 on 21 August 2025, requests Cloudflare made to origins in AWS us-east-1 saw elevated latency, connection timeouts and reduced throughput. The cause was congestion on the network paths between Cloudflare and AWS in the Ashburn (IAD) metro, which lasted three hours and fifty-one minutes. Impact was regional and global Cloudflare services were unaffected. This was not an attack and not a BGP hijack. We are sorry for the disruption, and for the 78 minutes it took us to raise a customer-impact incident.
+
+What happened
+
+A single customer began requesting large volumes of cached objects from AWS us-east-1 at about 16:27. The response traffic doubled total Cloudflare-to-AWS traffic and saturated every direct peering link between the two networks. Two pre-existing conditions had already narrowed the headroom that would otherwise have absorbed part of the surge: one direct peering link was running at half capacity after an earlier failure, and the Data Center Interconnect to an offsite interconnection switch was already queued for a capacity upgrade.
+
+At 16:37 AWS began withdrawing BGP advertisements on the congested private network interconnects to shed load. Those withdrawals steered the traffic onto peering links reached through the offsite interconnection switch, and that path saturated in turn. The withdrawals also removed AWS prefixes from paths that were not congested, so the routes our traffic engineering would have shifted onto no longer existed. Router queues grew and edge routers dropped packets, including packets we classify as high priority and normally protect under load.
+
+Customer impact
+
+Requests to AWS us-east-1 origins returned slowly, timed out, or completed at low throughput. We measure this with synthetic origin requests, and the share of those requests missing the latency SLO tracked the packet drop rate closely throughout the event. Latency stayed elevated for a period after the drops stopped, because both networks were renormalizing prefix advertisements during that window and paths were still shifting. Traffic to origins outside AWS us-east-1 was not affected.
+
+Timeline
+
+16:27 -- Customer request volume rises; direct peering links between Cloudflare and AWS saturate.
+16:37 -- AWS begins withdrawing BGP advertisements on congested PNIs.
+16:44 -- Our network team is alerted to congestion in IAD, 17 minutes after onset.
+16:45 -- Responders determine that uncongested paths no longer carry AWS prefixes.
+17:22 -- Dropped traffic increases.
+17:45 -- A customer-impact incident is raised.
+19:05 -- Rate-limiting the customer reduces congestion.
+19:27 -- Traffic engineering fully resolves congestion.
+19:45 -- AWS begins reverting the withdrawals.
+20:07 -- AWS finishes normalizing announcements over IAD PNIs.
+20:18 -- Impact ends.
+
+What we are changing
+
+Our capacity planning treated the degraded peering link and the pending DCI upgrade as separate items on separate schedules. Neither was urgent alone. Together they removed the spare capacity that a single large traffic shift needed, and we are changing how we account for that: a link running degraded now counts against available headroom for the metro, and a DCI upgrade blocking a saturated path is escalated rather than queued.
+
+We are adding per-customer egress rate limits that trigger automatically. Rate-limiting the customer at 19:05 reduced congestion within minutes, and we reached that action two hours and thirty-eight minutes after onset.
+
+We are working with AWS on a load-shed procedure that preserves advertisements on uncongested paths. Withdrawing prefixes globally to shed load on one set of interconnects removed our ability to route around the problem at 16:45, which is the point where this incident became long.
+
+We are shortening the gap between a network alert and a customer-impact incident. The 61 minutes between 16:44 and 17:45 were spent diagnosing the network, not the customer path, and origin SLO data was available the whole time.

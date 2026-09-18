@@ -1,0 +1,27 @@
+Design doc: request queuing for a multi-tenant RPC service
+
+Problem
+
+One customer's traffic surge currently delays every other customer's requests. Our service admits requests into a single FIFO queue, so a caller that issues ten thousand requests per second occupies the queue ahead of a caller issuing ten, and the small caller waits behind the large one's backlog. Queue depth is shared state, and it is the state a noisy neighbour captures first. We want a caller's latency to depend on its own offered load and on aggregate utilization, not on which other customer happened to burst.
+
+Baseline: fair queuing keyed on customer id
+
+Fair queuing solves this by refusing to share the queue. Keep one FCFS queue per conversation and service the queues round-robin, bit by bit; a conversation that exceeds its fair share accumulates delay and drops in its own queue while the others proceed. McKenney's 1990 Stochastic Fairness Queuing paper describes the construction for network conversations keyed on source-destination address pairs. The same mechanism transfers to RPC by changing the key. Key on authorized customer id and each customer gets its own queue and its own share of dequeue slots.
+
+The cost is the reason we are not proposing this directly. Per-conversation queuing is O(customers) queues and O(customers) work per round-robin sweep. For a service with a large and churning customer set, that means allocating and reclaiming queue objects as customers appear and go idle, and walking a list whose length is set by our customer roster instead of by our concurrency. We would pay that walk on every dequeue, on the request path.
+
+Proposal: hashed queues with periodic perturbation
+
+SFQ keeps the isolation and drops the per-customer cost. Allocate a fixed number of queues, hash the customer id into that set, and enqueue there. Queue count is O(1), independent of how many customers we serve, and both enqueue and dequeue are O(1). Two customers that hash to the same queue share it and interfere, which is the price of the fixed allocation.
+
+Collisions are not a fairness problem if they move. A fixed hash function pins the same two customers together indefinitely, and the quiet one of the pair is then permanently underserved. McKenney's remedy is to perturb the hash periodically: pick a new hash parameter each period, so a pair colliding in one period is unlikely to collide in the next. Interference becomes a transient that any individual customer sees for a fraction of periods rather than a standing tax.
+
+We propose the shuffle-sharded variant. Map each customer to a subset of the queues -- two is enough for the effect we want -- enqueue each request into the shorter of that customer's two queues, and perturb the subset assignment on the same period schedule. Best-of-two lets a customer route around a queue that a noisy peer is currently filling, without the customer knowing anything about its peers. Full interference now requires collision on both of a customer's queues at once.
+
+The isolation holds under an assumption we should state plainly: only a small portion of customers are noisy at any moment. If most customers burst simultaneously, both members of a subset are likely to be occupied and best-of-two has nowhere to route. That is a capacity problem, and queuing cannot fix it.
+
+Placement
+
+The same scheme runs at two levels. On a single host it schedules the worker pool; across hosts the queue index becomes a load-balancing target and the subset becomes the shuffle shard. We propose starting on the host, where we can measure per-customer wait time under a synthetic noisy tenant before changing routing.
+
+Open questions: how many queues, what perturbation period, and whether to key on customer id or on a finer authorization principal.

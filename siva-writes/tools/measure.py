@@ -39,19 +39,40 @@ MIN_PARAGRAPH_WORDS = 25
 CONCRETE_MIN = 4.0
 COINAGE_MAX_COUNT = 2
 
-# Sentence splitting. A period is a boundary unless it sits inside a decimal, an abbreviation,
-# or an initial. These guards matter for this corpus specifically: it is full of "3.35 TB/s",
-# "Fig. 4", "vs.", "i.e." and "p99.9". Python's re rejects variable-width lookbehind, so the
-# protected periods are swapped for a sentinel, the split runs, and the sentinel is restored.
+# Sentence splitting. Three defects were found by an independent review and are fixed here.
+#
+# Requiring a capital after the boundary lost every sentence starting with a lowercase identifier,
+# a number or a backtick: "Latency fell to 4 ms. p99 stayed flat." scored as one sentence, and this
+# corpus is full of p99, kubelet, iostat and `memory.swap.max`.
+#
+# Abbreviation protection applied unconditionally, so "We checked logs, traces, etc. The queue was
+# full." also scored as one. An abbreviation followed by a capital is usually a sentence end; one
+# followed by lowercase is usually not. That is a heuristic and it is wrong on "i.e. The", which is
+# rare enough to accept.
+#
+# Single-letter initials are protected only inside a run of initials, so "J. R. R. Tolkien" holds
+# together while "The service runs in the U.S. It handles writes." splits.
 ABBREVIATIONS = (
-    "Mr Mrs Ms Dr Prof Sr Jr St vs etc cf al Fig Figs Eq Eqs No Nos Inc Ltd Co Corp approx "
-    "ca resp Ch Sec Vol pp Ref Refs Jan Feb Mar Apr Jun Jul Aug Sep Sept Oct Nov Dec i.e e.g"
+    "vs cf al Fig Figs Eq Eqs No Nos Inc Ltd Co Corp approx "
+    "ca resp Ch Sec Vol pp Ref Refs Jan Feb Mar Apr Jun Jul Aug Sep Sept Oct Nov Dec"
 ).split()
 DOT = "\x00"
-PROTECT_ABBREV = re.compile(r"\b(" + "|".join(a.replace(".", r"\.") for a in ABBREVIATIONS) + r")\.", re.I)
+# Case-insensitivity is scoped to the abbreviation alternation. Applying re.I to the whole pattern
+# made the lowercase-only lookahead match capitals too, so "etc. The" was protected and the
+# sentence never split. Personal titles are omitted: "Ms." is always followed by a capitalised
+# name, which this lookahead already refuses to protect, and keeping it made "4 ms. p99" match.
+PROTECT_ABBREV = re.compile(
+    r"\b(?i:(" + "|".join(ABBREVIATIONS) + r"|i\.e|e\.g|etc|U\.S|U\.K|E\.U))\.(?=\s+[a-z0-9(])")
 PROTECT_DECIMAL = re.compile(r"(\d)\.(?=\d)")
-PROTECT_INITIAL = re.compile(r"\b([A-Z])\.(?=\s*[A-Z])")
-SENT_SPLIT = re.compile(r"[.!?]+[\"')\]]*\s+(?=[A-Z\"'(\[])")
+# A run of SPACE-SEPARATED single-letter initials: "J. R. R. Tolkien". The spacing requirement is
+# what separates it from a dotted acronym - "U.S." is written closed up and is handled above, where
+# a following capital correctly ends the sentence. "J.R.R." written closed up will split, which is
+# the rarer case in technical prose and is the residual limitation here.
+INITIAL_RUN = re.compile(r"\b(?:[A-Z]\.\s+){1,}[A-Z]\.")
+SENT_SPLIT = re.compile(r"[.!?]+[\"'’”)\]]*\s+(?=[A-Za-z0-9\"'“(\[`])")
+# A boundary may be followed by a capital, a quote, a bracket, a lowercase identifier, a digit or
+# a backtick. Requiring a capital was the single largest source of missed boundaries.
+SENT_SPLIT = re.compile(r"[.!?]+[\"'’”)\]]*\s+(?=[A-Za-z0-9\"'“(\[`])")
 
 WORD = re.compile(r"[A-Za-z][A-Za-z'’\-]*")
 # A numeric literal: integers, decimals, thousands-separated, percentages, versions, times.
@@ -135,7 +156,7 @@ def paragraphs(text: str) -> tuple[list[str], int]:
 def sentences(paragraph: str) -> list[str]:
     guarded = PROTECT_ABBREV.sub(lambda m: m.group(1) + DOT, paragraph)
     guarded = PROTECT_DECIMAL.sub(lambda m: m.group(1) + DOT, guarded)
-    guarded = PROTECT_INITIAL.sub(lambda m: m.group(1) + DOT, guarded)
+    guarded = INITIAL_RUN.sub(lambda m: m.group().replace(".", DOT), guarded)
     # Slice at the boundary rather than consuming it: the terminator has to stay attached to the
     # sentence it ends, or a paragraph-opening question loses its question mark and the claim-first
     # classifier counts it as a claim.
@@ -156,7 +177,18 @@ def stdev(values: list[float]) -> float:
 
 
 def is_claim_first(first: str) -> bool:
-    if first.rstrip().endswith("?"):
+    """A LEXICAL PROXY, not a semantic judgement. Read the name as "survives four exclusions".
+
+    An independent review supplied counterexamples this returns the wrong answer on, and two of them
+    are voice.md's own teaching examples: "Before discussing the retry policy, it is worth
+    considering..." and "There are a number of factors that influence..." both pass. It does not
+    establish that the sentence states a claim, only that it does not open with a connective, does
+    not take the document as its subject, is not a question, and is not very short.
+
+    Anything derived from this is a statement about that filter, not about paragraph organisation.
+    """
+    stripped = first.rstrip().rstrip("\"'’”)]")
+    if stripped.endswith("?"):
         return False
     if len(WORD.findall(first)) < 5:
         return False

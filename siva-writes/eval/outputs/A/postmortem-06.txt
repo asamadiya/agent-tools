@@ -1,0 +1,31 @@
+Cloudflare Dashboard and API outage on 12 September 2025
+
+On 12 September 2025, for roughly 75 minutes, the Cloudflare Dashboard was largely unusable and a substantial share of public API calls returned 5xx errors. If you tried to change a configuration during that window, you probably could not. If you were only serving traffic through us, you almost certainly saw nothing: the control plane and the data plane are strictly separated, so our network services kept running normally throughout. All times below are UTC.
+
+The failure was ours, and it began in our own Dashboard code.
+
+What happened
+
+The Tenant Service API sits in the authorization path for API requests. Every API call, including every call the Dashboard makes on your behalf, needs an authorization decision from it. When Tenant Service cannot answer, we cannot evaluate whether a request is permitted, and the request fails with a 5xx. That single dependency is why a problem in one internal service became an outage across the Dashboard and much of the public API.
+
+At 16:32 we shipped a Dashboard release containing a bug. A React useEffect hook had a dependency array holding an object that was recreated on every state or prop change. React compares those dependencies by identity, so it saw a new object every render and re-ran the effect every time. The result was a call to /organizations firing repeatedly during a single render cycle, with retries layered on top whenever a call failed. Each open Dashboard tab became a small load generator.
+
+At 17:50 a new version of the Tenant API Service deployed. By 17:57 Tenant Service was overwhelmed by the combination of that deployment and the Dashboard's request volume, and Dashboard availability began to drop.
+
+We added pods to Tenant Service, which runs as a Go process on Kubernetes in a subset of our datacenters, and by 18:17 the API had recovered to 98% availability. The Dashboard did not recover with it. Restarting Tenant Service meant every open Dashboard had to re-authenticate at the same moment, and the retry loop in the Dashboard amplified that thundering herd into sustained pressure rather than a brief spike.
+
+At 18:58 we shipped a change intended to remove the erroring codepaths. It made API impact worse. At 19:01 we published a temporary global rate-limiting rule to shed load. At 19:12 we reverted the 18:58 change, and Dashboard availability returned to 100%.
+
+What went wrong beyond the bug
+
+Two things extended the incident past the initial trigger.
+
+We had not yet adopted Argo Rollouts for Tenant Service. Argo Rollouts automatically rolls back a deployment when it detects errors, and it would have caught the bad update at 18:58 and reverted it without a human in the loop. Other services already had this protection; Tenant Service did not.
+
+Our telemetry could not distinguish retries from new requests. Responders watching request volume climb could not tell whether they were seeing more users, a retry storm, or both, which slowed the work of identifying the Dashboard loop as the amplifier.
+
+What we are changing
+
+We are fixing the Dashboard's retry behavior so that failed calls back off instead of hammering a struggling dependency, and correcting the useEffect dependency that caused the loop. We are completing the Argo Rollouts adoption for Tenant Service so that a bad deployment reverts itself. We are instrumenting our API telemetry to separate retries from first attempts, so the next responder can see the difference immediately. We are also revisiting the capacity and isolation of Tenant Service given its position in the authorization path.
+
+We know how much you rely on being able to change your configuration when you need to. We are sorry for the disruption.

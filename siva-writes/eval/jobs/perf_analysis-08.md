@@ -1,0 +1,11 @@
+Measured cost of turning frame pointers back on, from Netflix production rollout work and the many overhead tests run during it. Headline result: with frame pointers compiled into everything - libc and Java both - the cost normally came in under 1%, often too small to measure at all. One workload broke that pattern, at 10%.
+
+That 10% came from an unusual service whose stack traces ran more than 1000 frames deep, generated through Groovy, deep enough that Linux's perf profiler could not cope with them. Arnaldo Carvalho de Melo at Red Hat added a new sysctl, kernel.perf_event_max_stack, specifically so that one Netflix workload could be profiled. The instance was also a virtual machine with no low-level hardware profiling available, so there was no way to run cycle analysis and establish that the entire 10% came from frame pointers.
+
+How much it costs depends on the workload. Independent reports have come in at roughly 1% and roughly 2%. Microbenchmarks sit at the bad end and can show 10%, which is unsurprising: a microbenchmark reduces to one small function executed in a loop, and any instructions added to that function risk pushing it past L1 cache warmth or over a cache line, at which point throughput drops. Judging a microbenchmark result calls for observability analysis - cycles, instructions, PMU, PMCs, PEBS - not the headline number.
+
+One more outlier came out of Python: scimark_sparse_mat_mult also touched 10%. Andrii Nakryiko at Meta ran it down to a large function in which gcc had moved from %rsp-relative addressing to offsets computed off %rbp, and the %rbp form needs more bytes to encode. That has since been fixed, which lets Python turn frame pointers back on by default.
+
+Set those costs against what frame pointers find: performance wins in the range 5% to 500%. A cost under 1%, or even 1 to 2%, is easily paid for by that. Zero would be better, and later technologies may get there; for now, nothing available finds those wins as reliably.
+
+Write the overhead-analysis section of a technical blog post for systems and performance engineers.

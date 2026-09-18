@@ -1,0 +1,39 @@
+Congestion between Cloudflare and AWS us-east-1 on 21 August 2025
+
+On 21 August 2025, between 16:27 and 20:18 UTC, customers whose origins sit in AWS us-east-1 saw elevated latency, timeouts and reduced throughput on traffic between Cloudflare and that region. The cause was network congestion on the links between the two networks, made worse by an automated attempt to relieve it. This was not an attack, and it was not a BGP hijack. Cloudflare's global network was unaffected; the impact was confined to paths into and out of us-east-1.
+
+What happened
+
+At approximately 16:27 UTC a single customer began requesting cached objects from us-east-1 in large volume. The responses roughly doubled total Cloudflare-to-AWS traffic and saturated every direct peering link between the two networks. Two conditions that predated the event narrowed the headroom we had. One direct peering link was running at half its normal capacity following an earlier hardware failure, and the Data Center Interconnect to an offsite interconnection switch was already scheduled for a capacity upgrade it had not yet received.
+
+At 16:37 UTC, AWS began withdrawing BGP advertisements on congested private network interconnects in order to shed load. This is a standard response, and in isolation a reasonable one. In this case it moved traffic onto peering links reached through the offsite interconnection switch, which then saturated as well. The withdrawals also removed AWS prefixes from paths that were not congested, so the traffic engineering options normally available to us were narrowed at the moment we most needed them.
+
+Router queues grew on both sides. Our edge routers began dropping packets, including packets we classify as high priority. Customers experienced this as slow connections to origin, request timeouts, and low throughput. Our own synthetic monitoring of origin requests shows the share of requests missing the latency SLO tracking the packet drop rate closely throughout the event.
+
+Timeline (UTC)
+
+16:27 — Customer traffic to us-east-1 begins ramping; direct peering links saturate.
+16:37 — AWS begins withdrawing BGP advertisements on congested PNIs; traffic shifts to the offsite interconnection switch, which also saturates.
+16:44 — Our network team is alerted to congestion in Ashburn (IAD).
+16:45 — Responders determine that otherwise uncongested paths are no longer carrying AWS prefixes as a result of the withdrawals.
+17:22 — Dropped traffic increases.
+17:45 — A customer-impact incident is declared.
+19:05 — Rate-limiting applied to the customer whose traffic triggered the event; congestion begins to fall.
+19:27 — Traffic engineering fully resolves congestion on our side.
+19:45 — AWS begins reverting the BGP withdrawals.
+20:07 — AWS completes normalization of announcements over the IAD PNIs.
+20:18 — Impact ends.
+
+Latency remained elevated for a period after packet drops subsided. That gap is expected: both networks were renormalizing prefix advertisements, and traffic settled back onto its usual paths gradually rather than all at once.
+
+What we are doing about it
+
+Three things went wrong here, and each gets its own remedy.
+
+Capacity. The half-capacity peering link and the pending DCI upgrade both removed margin that would have absorbed this surge. We are restoring the degraded link to full capacity and accelerating the DCI upgrade to the offsite switch.
+
+Detection. Forty-four minutes is too long to reach the responding team. We are tightening alerting on interconnect utilization so congestion between us and a major cloud provider pages before queues build, and we are adding alerting on sudden prefix withdrawals from a peer so that the second-order effect is visible immediately rather than discovered during triage.
+
+Blast radius. A single customer's request pattern should not be able to saturate an interconnect shared by everyone. We are extending per-customer rate controls on origin-bound traffic so that this kind of surge is shaped automatically, well before it becomes an incident, instead of requiring a manual intervention two and a half hours in.
+
+We are also working with AWS on load-shedding behavior that does not remove the alternate paths both networks depend on during congestion. We regret the disruption, and we are treating the detection gap in particular as the part of this we most need to fix.

@@ -1,0 +1,43 @@
+Where We Invest Engineering Effort, 2026-2036
+
+Status: proposal for org-level planning. Owner: platform leadership.
+
+Three cost claims
+
+Turning written business logic into code now costs us approximately zero. A specification precise enough to argue about is already close enough to compile; the model fills the gap. The same holds for plumbing. Wiring a service to a queue, a store, and three internal libraries used to be a week of a mid-level engineer's time, and it is now an afternoon of review.
+
+Building an efficient, reliable, secure, end-to-end system is getting cheaper more slowly. The cost that remains sits in the parts that touch the world: capacity planning under real traffic, failure modes that only appear at the ninety-ninth percentile, key rotation, the migration nobody can roll back. These costs are falling. They are not falling at the rate the first two did.
+
+Two readings of that moment
+
+Reading one says programming stops being a high-value economic craft, and joins weaving, ploughing, and coopering. A mostly retired analog circuit designer I know founded a hardware company with friends in the late 1960s on the bet that serious customers would reject digital logic. The 74 series had just launched; they found it graceless, unreliable, and full of problems. Measured by the ratio of transistors fabricated in digital versus analog circuits in 2026, that bet was wrong by ten or more orders of magnitude. He still made a small fortune, enough to keep his children comfortable, because the world changes slower than anyone would like.
+
+Reading two says new tools open new industries, research fields, and careers. Both readings can be true on different clocks, and the ten-year horizon of this document sits inside the gap between them. We plan for reading two and we staff for the lag.
+
+Amdahl's Law names where the value goes
+
+Speeding up one portion of a problem makes that portion a shrinking share of total time. Assume code production was 40% of the calendar time to ship a service, a figure we should measure instead of assuming. Drive it to zero and the team ships 1.67x faster, and every further improvement to code generation is bounded by the 60% it never touched. A tenfold improvement on a portion already near zero returns nothing. The leverage has moved into the remaining 60%, and that is where the next decade of headcount belongs.
+
+Measure your own ratio before accepting ours. Take the last three launches. Split the calendar days into hours spent producing code and hours spent on everything else -- design argument, load testing, security review, incident response, and the meetings that changed the requirement. The second number is the one that now determines when you ship.
+
+What stays expensive
+
+Three things resist the tools. Real-world feedback loops stay expensive because you cannot generate the traffic, the customers, or the regulator; you have to go and get the signal, and the loop runs at the speed of the world. Human stubbornness stays expensive because requirements move for reasons no specification contains. Adversaries stay expensive because they adapt to whatever we shipped, which makes security a game against a reasoning opponent instead of a checklist.
+
+Integration, translation, simple analysis, and small-scale synthesis are solved. Genuinely new ideas are not, and they grow more valuable as the lever lengthens: an idea that a team of six can now build in a quarter was a two-year program in 2020.
+
+Where we invest
+
+Shift the ratio of the organisation toward the sticky 60% over three planning cycles. Concretely:
+
+Grow production engineering and security, not application teams. Every application team gets faster with tooling we already buy. Reliability and adversarial work do not, and they are where our unshipped capacity accumulates.
+
+Fund measurement infrastructure as a first-class product. Faster feedback loops are the only lever on the constraint that the tools cannot touch, and a loop that closes in a day instead of a week is worth more than a further 2x on code generation.
+
+Hire and protect people who generate original ideas, and give them the leverage. One good hypothesis now converts into a running system in weeks. Judge these teams on hypotheses tested per quarter, not on lines shipped.
+
+Stop staffing against code volume. Team sizing that keys off estimated engineering-weeks of implementation is measuring the portion we just drove to zero.
+
+How we will know this is wrong
+
+Track the split from the measurement above quarterly. If hours outside code production fall below 50% of delivery time within two years, the third cost claim is wrong, the tools are eating reliability and security faster than we predicted, and this plan over-staffs a shrinking problem. If the split holds above 70%, we are under-investing in the constraint and should move faster than three cycles.

@@ -10,6 +10,107 @@ discoverable as a skill.
 
 ---
 
+## r2 -- 2026-09-18 -- six blockers from an independent review, all verified before acting
+
+`gpt-6-astra` at max effort reviewed the skill and returned **BLOCKERS: 6**. I re-derived every
+checkable claim myself before changing anything, and **it was right on all of them**. Full review at
+`reports/astra-round-1.md`.
+
+### The one that matters most: a rule was manufacturing its own tic
+
+Measured across the 160 generated eval outputs, causal *so* per 1000 words:
+
+| | train corpus | held-out human | no skill | rules only | +exemplars | **full skill** |
+|---|---|---|---|---|---|---|
+| causal *so* | 0.80 | 1.14 | 2.66 | 2.92 | 3.14 | **3.46** |
+| *instead of* | 0.36 | 0.24 | 0.41 | 0.99 | 0.80 | **1.29** |
+| *rather than* | 0.19 | 0.06 | 2.17 | 0.69 | 1.09 | 0.54 |
+
+R2 licenses *so* for causality, and the skill drives it monotonically to **4.3x the corpus rate**.
+The per-sentence cap could never see this: a document with one causal *so* in every sentence passes
+R2 cleanly. R3 works on its literal target -- *rather than* falls 4x -- and displaces the
+construction into *instead of*, which rises 3.2x.
+
+Both rules now carry the measurement, and `prose-check.py` reports all three rates against the
+corpus and human figures.
+
+### Instrument defects that were setting the rules
+
+- **The sentence splitter required a capital after the boundary**, so *"Latency fell to 4 ms. p99
+  stayed flat."* scored as one sentence. In a corpus full of p99, kubelet and `memory.swap.max` that
+  is a systematic undercount. Fixing it moved every sentence-derived number.
+- **`re.I` applied to the whole abbreviation pattern** made its lowercase-only lookahead match
+  capitals, so *"etc. The"* was protected and never split; and `Ms` matched the unit `ms`.
+- **`is_claim_first` is a lexical proxy and was presented as a measurement.** The review supplied
+  counterexamples, and two of them are **voice.md's own "before" examples**: both bad openings pass
+  the classifier that is supposed to detect them. The rule stands; the number is now labelled as
+  survival of four exclusions, and the 0.742 minimum as an observed minimum rather than a floor.
+- **A quoted question defeated the question check**: `"Why did every replica reject writes?"` with a
+  closing quote scored as a claim.
+
+### Numbers corrected
+
+| claimed | actual |
+|---|---|
+| 167,000 words | **161,966** retained |
+| PEP claim-first 0.92 | **0.93** |
+| *Design Docs at Google* hedges highest in corpus | highest **family mean**; highest document is SRE's SLO chapter at 2.881 |
+| mechanism:evaluative n=30 | **n=27** -- three GCP reports have zero evaluative sentences, so the ratio is undefined |
+| danluu-postmortem-lessons 7.40, highest in corpus | highest among the **selected exemplars**; corpus max is 9.556 |
+| 22.77% of sentences over 30 words | **21.67% document-weighted, 20.92% pooled** -- the estimand is now labelled everywhere |
+
+### Technical errors in my own teaching examples
+
+Five of voice.md's "after" examples were wrong, and one was worse than its "before":
+
+- *"its p99 sets the floor for the p99 of every downstream call"* -- false. A 12 ms component can
+  call a 1 ms dependency. Replaced with the serial-path budget claim, which is what was meant.
+- **40 x 200 = 8,000, not 4,000.** Both before and after carried the contradiction. The pool now
+  exhausts at instance 21, which is what the arithmetic says.
+- 1/28 is the probability of drawing the *identical* pair, not the fraction degraded; any overlap
+  occurs for 13/28.
+- *"the only safe action is to give up"* without idempotency -- status queries and read-back exist.
+- *"the exponent changes"* past on-chip capacity -- the operation count's exponent does not change;
+  what sets runtime does.
+
+Rule 5's third pair demonstrated qualification rather than length variation, and both of Rule 6's
+pairs were bracketed instructions rather than prose. All three replaced with real pairs.
+
+### Provenance: the held-out claim was too strong, and is withdrawn
+
+**Nine negative-set patterns cite held-out documents in their exclusion rationales** -- Brooker,
+KEP-2400, KEP-3521, Cloudflare and Gregg. The negative-set extraction agents had read access to the
+whole corpus and used test-family text to decide what a pattern must *not* fire on. My firewall was
+written into the eval-building workflow and not into that one.
+
+What this does and does not affect: the exclusions make patterns more conservative, so they do not
+inflate any condition's score, and the frozen eval questions and answers were never exposed. But the
+claim "rules were developed without touching held-out data" is false as stated and is withdrawn. The
+tiering control is train-only, and the affected patterns are tier-2 and tier-3, which flag rather
+than fail.
+
+### Other fixes
+
+- `prose-check.py` **fails closed**: a missing or non-compiling pattern file used to disable every
+  pattern check while still printing "FAIL none".
+- `install_skill.sh` runs the gate on **all ten exemplars** and asserts zero tier-1 hits, instead of
+  smoke-testing the one that passes.
+- The brief no longer claims to be the sole container of every fact: it governs the argument, and
+  source material remains the authority for supporting detail.
+- Exemplar precedence narrowed -- they outrank the descriptive rules, not R1-R12, not correctness,
+  and not house style, since five of the ten fail this skill's own gate.
+- *"Fixing 4 of 7 sites is worse than fixing 0"* was an unsupported universal. Replaced with the
+  actual obligation: sweep for every site first, and disclose what remains.
+
+### Still open after r2
+
+- Metric 1 needs your 60 labels. Metric 3 needs your edits. Both harnesses are built.
+- The mechanism and evaluative classifiers are lexical and unvalidated against annotated text.
+- The paragraph filter drops every block under 25 words, so "paragraphs average 84.4 words" is
+  conditioned on that.
+
+---
+
 ## r1 -- 2026-09-18 -- installed and usable
 
 **Status: usable now, not validated.** No eval has run and no independent review has happened. The

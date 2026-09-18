@@ -1,0 +1,25 @@
+Architecture for a disaggregated data service
+
+Goal
+
+The service should remove scale, reliability, durability, and multi-region fault tolerance from the list of things an application builder thinks about. That is the bar Aurora DSQL set for itself: a database of first resort, simple enough to adopt at low scale, and able to grow with the application without the application growing new operational concepts to match. We are not chasing a benchmark number here. We are chasing the property that a team can pick this up on day one and still be running it, unchanged in shape, at a thousand times the load.
+
+This matters more than it used to, because a growing share of the applications calling us are written by agents. Agents build well. They are weak at long-horizon tasks, and database operations -- capacity planning, failover drills, index maintenance, a migration that spans weeks -- are long-horizon tasks. Every operational concept we decline to expose is a concept an agent cannot get wrong six months from now.
+
+Decomposition
+
+Split the system into independent services, each owning a small number of well-defined concerns. DSQL is not the first OLTP database built this way; Aurora and DynamoDB both disaggregated storage from compute and have been operated at scale for years. DSQL's addition is to go further, separating replication from transaction isolation and both of those from storage, so that a component can be scaled or replaced without the other two agreeing to it.
+
+Three lessons from operating the predecessors should constrain the design directly.
+
+Avoid large caches. A large cache is a large warm-up, and a large warm-up makes failovers slow and read scaling lumpy -- you cannot add a reader and get its full throughput until it has seen enough traffic to fill. A small cache fails over in the time it takes to notice.
+
+Offer strongly consistent scalable reads. This is a correctness feature that pays out as an operational one. When every replica can serve a read that is as good as the leader's, the hot-key problem and the read-partition problem both stop existing, because there is no privileged copy to crowd around.
+
+Push expensive operations into storage. Run scans where the SSD is. Moving a predicate to the data costs a few hundred bytes; moving the data to the predicate costs the scan.
+
+Multi-tenancy
+
+Pack tenants onto shared machines, because the economics of the service are set by the gap between peak and average. Cost scales with peak -- we buy the machine for its worst minute -- while revenue scales with average. Independent loads sharing a machine smooth each other, and the peak-to-average ratio falls at roughly the rate of the square root of the number of loads: a hundred workloads on one box carry about a tenth the excess peak that one workload carries alone. The Firecracker paper makes the same argument for microVMs, which is some evidence that the effect is a property of the packing and not of the database.
+
+The corollary is that isolation is not a feature we add later. Packing is where the margin comes from, so the blast radius between tenants is the thing we design first and measure continuously.

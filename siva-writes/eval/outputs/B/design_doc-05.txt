@@ -1,0 +1,23 @@
+Concurrency control and consistency defaults
+
+Decision
+
+We default to optimistic concurrency control and to strong consistency. A transaction reads a snapshot, buffers its writes, and validates once at commit time; at no point does it hold a lock that another session must queue behind. Aurora DSQL made both choices for a multi-region relational database, and its published results are the main external evidence we lean on. This document gives the reasoning and the conditions under which we would revisit either default.
+
+Why optimistic concurrency control
+
+Under OCC a client is never in a position to block another client. We want that isolation property ahead of the throughput argument, which is real but secondary. On a pessimistic engine one slow session exports its slowness to everything queued behind its locks. The stock illustration is a process that stops for garbage collection while holding a write lock: the pause has nothing to do with the waiting transactions, and they pay for it anyway. At scale this client-to-client cross talk is a large driver of tail latency.
+
+Amazon's operational record carries more weight than the illustration. Lock contention, and the retries that follow a failed lock acquisition, turn up repeatedly as causes of outages and of metastable failure, the state in which retry load sustains an overload after its trigger is gone and recovery runs long. Two design objectives follow. Keep applications out of metastable failure, and blunt the duller failures that come from badly behaved clients and client code.
+
+OCC does not make conflict free. It relocates the cost from a waiting queue inside the engine to a retry in the application, which is a cost we can bound, observe per workload, and shed. A queue of blocked sessions is none of those things.
+
+Why strong consistency is the default
+
+The Dynamo paper (2007) and Werner Vogels' Eventually Consistent (2009) held that cloud-scale systems had to give up strong consistency to reach their availability and latency targets. That was an accurate reading of the hardware and protocols of the 2000s. Four things have shifted since: how time is distributed, how data-centre networks are built, how power and cooling are provisioned, and what distributed protocols can do. Figure 6 of the DSQL work plots SELECT and UPDATE latency under OCC, and both stay fast with the database running across regions.
+
+So strong consistency becomes the default here. Eventual consistency remains available as an explicit per-workload opt-in, and we expect almost no application to be better served by it, because the reasoning required to stay correct under weak reads is paid by every engineer who later touches that code.
+
+What would change our mind
+
+Run the workload at target concurrency and measure the abort rate per transaction class. If a class aborts often enough that its retry budget exceeds the latency we save by not queueing, that class needs a different design, not a different engine default.

@@ -1,0 +1,31 @@
+Where engineering value moves when code costs nothing
+
+Two of the three things we pay engineers to do now cost approximately zero, the third has barely moved, and our investment over the next decade should follow the third.
+
+The three costs
+
+Turning written business logic into code costs approximately zero today. Someone who can state the rule -- this discount applies to these accounts under these conditions -- can have a correct implementation of it in minutes, in whatever language the surrounding system is written in. Integration costs approximately zero as well. The plumbing between a service and a library, a queue and a consumer, an API and its client, was for decades a real fraction of a project's schedule, and it is now a fraction of an afternoon.
+
+Building an efficient, reliable, secure end-to-end system is getting cheaper, and slowly. This is the residual: the part that stays expensive after the first two collapse. It is not a separate activity from writing code and wiring services together. It is what remains once those two stop being the hard part -- knowing what the system does under load it has not seen, what it does when a dependency returns wrong answers instead of no answers, and what it does when someone is paid to make it fail.
+
+Amdahl's Law says where the value goes
+
+Amdahl's Law is the whole argument, applied to an engineering organization instead of a processor. Speeding up one portion of a problem makes that portion a shrinking share of the total, and the unimproved portion becomes the cost. If translation and plumbing were half of a project's elapsed time and now cost approximately nothing, the remaining half is now approximately the entire schedule. A further tenfold improvement in code generation moves that schedule by almost nothing, because there is almost nothing left in the part it improves.
+
+The corollary is the uncomfortable one. Our organization's throughput over the next decade is set by how fast we get through the residual, and every planning conversation that assumes otherwise is optimizing a term that has already gone to zero. Measure it before funding against it: take a recently shipped project, and count how much of its elapsed time went to writing the logic, how much to integration, and how much to the loop of deploy, observe, be surprised, and correct.
+
+What stays expensive, and why
+
+Three things resist the tools, and each resists for a different reason. Real-world feedback loops are bounded by the real world: a system's behavior under production traffic is observable only after it meets production traffic, and generating the code faster does not make the week of observation shorter. Human stubbornness is bounded by people, who do not adopt a workflow because a better one exists, and who will route around an interface that is correct and unfamiliar. Adversaries are bounded by an opponent who adapts: the cost of defending a system is set by whoever is attacking it, not by how quickly we can implement the defense.
+
+Genuinely new ideas are the fourth, and they move the other way. Integration, translation, simple analysis, and small-scale synthesis are solved, and the value of an idea rises as the cost of executing it falls, because execution was the thing rationing which ideas got tried. A team that can test ten designs in the time it used to take to build one is limited by how many designs it can think of.
+
+The transition is slower than the argument
+
+A wrong bet on a technology transition can pay for decades, which is the reason to move deliberately instead of abruptly. In the late 1960s, an analog circuit designer I know founded a hardware company with friends, on the explicit bet that serious customers would reject digital logic. The 74 series had just launched, and they found it graceless, unreliable, and full of problems. Measured by the ratio of transistors in digital versus analog circuits in 2026, that bet was wrong by ten or more orders of magnitude. He is mostly retired, and he made a small fortune, enough to keep his children comfortable.
+
+There are two readings of our moment, and the honest answer is that both are consistent with the evidence. One reading is the end of programming as a high-value economic craft, following weaving, ploughing, and coopering. The other is that new tools bring new industries, research fields, and careers, and the second reading has held for every general-purpose tool so far. The timescale is the part we can act on: the world changes slower than anyone would like, and a decade is the planning horizon, not a quarter.
+
+What changes
+
+Fund the residual and stop funding the collapsed portion. Concretely: staff for production feedback loops, adversarial testing, and design exploration, and treat headcount justified by the volume of code a team must write as headcount justified by a number that is going to zero. Retrain people into the residual on a multi-year schedule instead of a reorganization, because the old craft keeps paying while the new one is being learned. And measure the split again in two years, because the boundary of what costs approximately zero is the thing that is actually moving.

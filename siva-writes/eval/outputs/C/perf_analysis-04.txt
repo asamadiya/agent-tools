@@ -1,0 +1,42 @@
+Ten percent of CPU in page-fault stacks
+
+A colleague of mine, Vadim, was reading a CPU flame graph from a TensorFlow workload and picked out
+an orange kernel tower that had no business being there: page-fault handling, 10% of all CPU time on
+the box. Ten percent of one instance is not, by itself, an emergency, but the workload runs across
+thousands of instances, and a tenth of the CPU across a fleet that size is an expensive thing to be
+spending on bookkeeping. We will open a flame graph over a single percentage point, so ten was going
+to get looked at.
+
+The faulting stacks bottomed out in __memcpy_avx_unaligned(), which means memcpy was touching data
+segment mappings that were not resident. Early in a process's life that is exactly what you expect,
+because the segments and the heap have no mappings behind them yet and every first touch costs a
+fault. This process had been up for hours. By then the fault-driven growth of RSS should have
+flattened out, and a process that is still paying fault costs hours in is either mapping new memory
+or losing the mappings it already had.
+
+The standard explanation for the first case is a process cycling memory through mmap() and munmap(),
+which was easy enough to check. eBPF tracing with mmapsnoop.py recorded no such calls at all, which
+ruled that out and left the second case.
+
+A flame-graph search on madvise put the madvise() path at 0.8% of CPU, small enough to miss by eye
+but visible once searched for, and the path ran through zap_page_range(). That is where the faults
+were being manufactured. Reading mm/madvise.c settled which flag was responsible: MADV_DONTNEED is
+the one that sends madvise() into zap_page_range() to tear mappings down. Tracing the flags argument
+to sys_madvise() with a kprobe or a tracepoint would have answered the same question, and would have
+been the better move on a kernel whose source you do not have open in another window.
+
+The diagnosis is an optimization that ran backwards. The allocator was telling the kernel it no
+longer needed pages that the workload was in fact still using; each MADV_DONTNEED threw away the
+virtual-to-physical mapping for those pages, and the next touch took a fault to put the mapping
+back. The 0.8% spent in madvise() was buying the 10% spent in the fault handler, which is a poor
+trade even before you count the TLB and the zeroing.
+
+The allocator turned out to be jemalloc, pulled in by a configure option that nobody had thought
+hard about for this workload. Vadim rebuilt against glibc's allocator and the problem cleared. The
+first round of testing came back at 3%, against the 10% we started with, and the fixed flame graph
+shows the tower gone. That is one round of measurement on one configuration, not a fleet rollout,
+and the remaining 3% has not been chased.
+
+The transferable part is not jemalloc, which is a good allocator that was making a reasonable
+guess about a workload it guessed wrong about. It is that a 0.8% entry on a flame graph can be the
+cause of a 10% one, and that the search box is how you find it.

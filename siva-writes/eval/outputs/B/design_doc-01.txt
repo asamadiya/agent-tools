@@ -1,0 +1,33 @@
+Design doc: pricing latency work with the latency Lorenz curve
+
+Status: proposal. Owner: Capacity and Performance.
+
+The decision
+
+Every quarter we choose between buying machines and making slow requests faster, and we argue that choice on percentile targets that carry no cost term. A p99 of 10 s is a fact about one request in a hundred. It says nothing about how much hardware those requests are holding. This document proposes that we compute the latency Lorenz curve for each tier and use it as the conversion between a percentile and the fraction of the fleet that percentile occupies.
+
+The measure
+
+The empirical Lorenz curve L(P) gives the share of total mean latency contributed by requests faster than percentile P, so its complement 1-L(P) is the share contributed by requests at or above P. Compute it from sorted raw samples: with n samples and k = P*n, L = sum(sorted(x)[:k]) / sum(x). That is exact. From a stored quantile vector you must interpolate between the recorded points and extrapolate past the last one; a power-law fit on the tail is one workable choice, and it is an estimate, not the curve.
+
+A worked example
+
+Take quantiles [1, 10, 200, 10000, 20000] ms recorded at percentiles [0, 0.5, 0.9, 0.99, 0.999]. The complement is 1-L = [1, 0.9938, 0.9308, 0.5171, 0.1034]. Read the fourth entry: requests at or above p99 contribute 51.71% of mean latency, and the other 99% of requests contribute 48.29% between them. The slowest one request in a thousand contributes 10.34%. Halving the p99 population's service time moves mean latency about as far as halving everything else combined.
+
+Why this is a cost number
+
+Little's law turns that share into occupied capacity: if 1-L(P) = k in a threaded service, then 100k% of busy threads are held by requests that will finish at or above the Pth percentile. In the example, 51.71% of busy threads serve that top 1% -- 103 of a 200-thread pool. Fleet size is set by concurrency, not by the median. Values of 1-L(0.99) above 0.5, and often above 0.75, are common in our tiers, which is why tail work and machine purchases are substitutes.
+
+Constraints on the number
+
+Two conditions bound what the curve proves. The tail index alpha must exceed 1 or the mean is not estimable and L is undefined, so we fit alpha before reporting and we suppress the curve when the fit returns alpha <= 1. Measured percentiles are themselves estimates, and their uncertainty grows with the percentile: p999 from a one-minute window of a few thousand requests is a handful of samples. Report 1-L(0.99) with a confidence interval from bootstrapped samples and treat anything past p999 as directional.
+
+Proposed use
+
+Each tier reports 1-L(0.99) and 1-L(0.999) weekly beside its QPS and instance count. Prioritise a latency investigation over a capacity request when 1-L(0.99) exceeds 0.5, because at that point the top percentile holds more than half the concurrency the fleet is provisioned for, and a fix returns hardware. Below 0.25, buy the machines and move the engineers elsewhere.
+
+Work required
+
+Sampling is the gap. Our metrics pipeline stores quantile vectors only, which forces interpolation at exactly the region we care about. We propose reservoir-sampling 10,000 raw latencies per tier per five-minute window, which supports an exact L up to p999 with roughly 10 samples in the last bucket, and computing the curve in the existing rollup job. Estimated cost is one additional column per tier and one batch step.
+
+Open question: whether to weight the curve by request cost class before aggregating tiers that mix cheap and expensive endpoints.

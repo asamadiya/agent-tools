@@ -1,0 +1,19 @@
+search-federator canary 2026.9.3: p99 at 311 ms, interceptor reverted, re-canary Sep 22
+
+The 2026.9.3 canary misses the p99 SLO because its new gRPC validation interceptor recompiles JSON schemas synchronously on the serving path, and we reverted the interceptor on Sep 15. The canary has run on 4 of 240 production hosts since Sep 8. Owner: Dan Ortiz.
+
+The four canary hosts serve p99 at 311 ms against 184 ms on the control fleet, an increase of 127 ms or 69%. The SLO is p99 under 250 ms, which the canary misses by 61 ms. p50 moved from 41 ms to 42 ms.
+
+A 512-entry LRU cannot hold the working set. Production traffic touches roughly 3,400 distinct schemas against 512 cache slots, and the measured hit rate on canary is 71%. At 2,900 QPS per host, the 29% miss rate puts about 840 schema recompilations per second on each canary host, every one of them on the request's own thread before the response goes out.
+
+Recompilation costs the tail, not the median. The interceptor's own median cost is 0.9 ms and its p99 cost is 94 ms, almost entirely recompilation -- a cache hit is a hash lookup and a walk of an already-compiled validator. A 0.9 ms median addition is invisible at a 41 ms p50, which is what the p50 numbers show. The 127 ms p99 delta exceeds the interceptor's 94 ms p99 by 33 ms; that gap is consistent with requests queueing behind compiling ones on a busy host, and we have not measured it directly.
+
+The pre-release load test could not have caught this. That test exercised 300 distinct schemas, all of which fit in the 512-entry cache with room left over, and it reported a 99.6% hit rate. The load test measured the cache-hit path and reported that the interceptor was cheap, which is true on the path it measured. The variable that decides the cost is working-set size against cache size, and the test held that variable at 300 against 512 while production runs it at 3,400 against 512.
+
+Nothing has burned. The canary carries 1.7% of traffic on 4 hosts, fleet-wide p99 stayed inside the SLO, and error budget consumed is zero.
+
+Three changes land before the next canary, decided Sep 15. We reverted the interceptor from the release branch. We raised the schema cache to 8,192 entries, which holds the observed 3,400-schema working set with 2.4x headroom and absorbs growth. We moved validation behind a sampling flag set to 1%, so a future miss-rate surprise costs 1% of requests the recompile instead of all of them. Re-canary is Sep 22.
+
+Two numbers decide whether the re-canary passes, and we will report both at next week's review. Read the cache hit rate on canary hosts under production traffic: at 8,192 entries it should exceed 99% unless the working set is larger than 3,400 or churns faster than the LRU evicts. Read p99 delta against the control fleet: at a 1% sampling rate and a 94 ms p99 interceptor cost, the interceptor should be undetectable in end-to-end p99, and a visible delta means the cost is somewhere other than recompilation.
+
+Open question for the SLO owners: we sized 8,192 from one week of canary traffic on 4 hosts. If the schema working set varies by host class or by day of week, 3,400 is a sample and not a bound. Tell us if you want the full-fleet schema cardinality measured before Sep 22.

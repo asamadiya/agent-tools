@@ -1,0 +1,18 @@
+Trim: monthly programme status, September 2026
+Owner: Renee Alvarez. Finance partner: Sanjay Kothari.
+
+Trim has booked $16.4M of the $28M annualised infrastructure savings targeted for end of FY27, which is 59% of the target. Three workstreams produced it: $9.1M from right-sizing 6,800 over-provisioned pods, $4.2M from deleting 41 PB of object storage untouched for more than three years, and $3.1M from converting 62% of the steady-state fleet to reserved instances. Finance has validated all three figures against the billing feed. The remaining $11.6M sits in two workstreams that have not yet booked a dollar.
+
+Right-sizing cut the median CPU request from 4.0 cores to 1.5, a 62% reduction, and returned roughly $1,340 per pod per year. It also caused five incidents, four SEV-3 and one SEV-2. All five were CPU throttling on services whose p99 CPU sat close to the new request, so the cut left no headroom for normal peaks. We did not catch this in review because the proposals were sized against mean CPU, and the mean on those services understated p99 by a wide margin.
+
+A guardrail shipped Aug 20 now blocks any cut where measured p99 CPU exceeds 70% of the proposed request. It has rejected 410 of 1,100 candidate cuts since, or 37%. No right-sizing incident has occurred after Aug 20. The rejection rate is the number to watch: it says that better than a third of what the old pipeline would have shipped was unsafe, and it also says the remaining right-sizing headroom is thinner than the first $9.1M suggested. We are not carrying further right-sizing savings in the plan for that reason.
+
+The storage deletion and the reserved-instance conversion are complete and are not at risk. Storage returned $4.2M on 41 PB, about $102 per TB per year at list. The reserved-instance conversion covers 62% of steady-state capacity; the untouched 38% is fleet we expect to reshape during the datacenter hall decommission, and committing it to a one-year or three-year term now would strand the commitment.
+
+GPU bin-packing carries $7.0M, 60% of the remaining gap, and it is blocked. Cluster utilization is 38% today against a 65% target. Reaching 65% requires a scheduler change owned by another org, and that org has given no committed date. The $7.0M is not a forecast we can defend at any particular date until that date exists. Treat the $7.0M as unscheduled, not as late.
+
+Decommissioning three legacy datacenter halls carries the other $4.6M and is scheduled for June 2027, which leaves no slack inside FY27. Migration planning for the workloads in those halls starts in October. A slip of one quarter on the halls moves $4.6M out of FY27 entirely.
+
+What the business review should decide. First, whether to escalate the scheduler dependency to the level where a date can be committed, because $7.0M of a $28M target cannot sit behind an uncommitted dependency for another month. Second, whether the 70% p99 guardrail threshold is the right one now that we have three weeks of data behind it. Loosening it to 80% would readmit some of the 410 rejected cuts and would also readmit the incident class we just closed; we do not recommend changing it before we have a quarter of clean operation.
+
+Booked at end of FY27 if nothing changes: $16.4M plus $4.6M from the halls, which is $21.0M, 75% of target. Closing the last $7.0M depends entirely on the scheduler date. Renee will bring a revised FY27 landing number to the October review once the scheduler owners respond to the escalation.

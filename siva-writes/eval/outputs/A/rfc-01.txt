@@ -1,0 +1,56 @@
+## Motivation
+
+A container's CPU and memory allocation is decided once, at admission, and cannot be revised.
+`Pod.Spec.Containers[i].Resources` is immutable, so the only way to give a container more memory,
+or take back CPU it never used, is to delete the pod and create a replacement carrying the new
+numbers.
+
+Three situations produce that need, and they are not rare. Load rises past what was provisioned,
+and the container throttles or is OOM-killed. Load falls, and the difference between what was
+requested and what is used stays reserved, counted against quota and against the scheduler's view
+of free capacity, for as long as the pod lives. Or the numbers were wrong on the first day and
+nobody has had a safe moment to correct them.
+
+What recreation costs depends entirely on the workload. A Deployment with fifty stateless replicas
+absorbs a rolling replacement without anyone noticing. The workloads that most need a correction
+are usually the ones least able to pay for it: a service running two or three replicas loses a
+meaningful share of its serving capacity for the duration; a stateful pod pays for lost local
+state, re-warmed caches and re-elected leaders; a batch job that has been running for six hours
+discards those six hours and starts again. In practice this pushes operators toward permanent
+overprovisioning, because the correction is more expensive than the waste.
+
+We propose that the resources in the pod spec become *desired* state rather than a fixed record of
+what was admitted, and that `PodStatus` be extended to report the resources a container has
+actually been given. Kubelet reconciles the two. With that split, a resize is an update to an
+existing pod rather than a replacement of it, and callers can observe whether the change landed.
+
+Three gaps in the CRI have to be closed for kubelet to do this reliably:
+
+* `UpdateContainerResources` takes a Linux-shaped resources parameter. It does not describe Windows
+  containers, and leaves no room for runtimes that are neither.
+* There is no CRI call by which kubelet can read back the CPU and memory limits a runtime has
+  applied. Kubelet can ask for a change but cannot confirm one.
+* The behavior expected of a runtime that receives a resource update is not written down anywhere,
+  so runtimes are free to differ and callers cannot depend on any of it.
+
+## Goals
+
+* Resize a running container's CPU and memory allocation without necessarily restarting it, and
+  without recreating its pod.
+* Let whoever initiated the resize — a user, VPA, a StatefulSet controller, a JobController — decide
+  what should happen when the resize cannot be done in place. The right answer is workload-specific
+  and does not belong in kubelet.
+* Let users declare, per container, which containers are safe to resize, so that a resize request
+  against a pod does not become an unbounded restart of every container in it.
+* Extend the CRI so the resource parameter is not Linux-specific, kubelet can read applied limits
+  back, and runtime behavior on update is specified.
+
+## Non-Goals
+
+* Changing a pod's QoS class. A pod's class is what it was admitted as.
+* Resizing init containers that cannot be restarted.
+* Evicting lower-priority pods to free room for a resize that does not fit.
+* Resource types other than CPU and memory.
+* CPU manager and memory manager policies other than `None`.
+* Resolving races between a resize and a concurrent scheduling decision. Both read the same node
+  capacity; reconciling them is separate work.

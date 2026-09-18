@@ -1,0 +1,27 @@
+Measuring availability and recovery from the customer's clock
+
+Problem
+
+Two of our recurring disputes with customers are arithmetic, not disagreement. A service reports a mean request time of 100ms while a user reports a mean wait of 1s. A service reports MTTR under 1 minute while a user reports a mean outage of 1 hour. Both numbers are correct measurements of different things. We count events: one request, one outage, one row in the incident log. The customer samples elapsed time, and the number of customers who land inside a given outage grows with that outage's length. A ten-hour outage collects roughly 600 times the arrivals of a one-minute outage and contributes the same single row to our average.
+
+The size of the gap
+
+The customer does not sample our distribution f(t). She samples a t-weighted version of it, so her expected wait is
+
+  E_a[X] = E[X^2] / (2 E[X]) = 0.5 * (E[X] + Var(X)/E[X])
+
+The excess over half the operator mean is Var(X)/E[X], and for recovery times Var(X) is large. Fit a log-normal to a median TTR of 30 minutes and a p99 of 600 minutes (sigma = 1.29): the operator MTTR is 69 minutes, and the customer-experienced mean is 180 minutes. The customer number is 2.6 times MTTR, not a correction to it. Push the tail harder and the factor explodes. Our simulator (lognormal failure_mu=1.0, failure_sigma=3.0, Poisson client arrivals at rate 100, 1000 samples) has a customer-to-operator mean ratio of exp(sigma^2)/2 = 4051, and that ratio depends on sigma alone.
+
+Proposal
+
+Report three quantities per service and retire the single MTTR figure.
+
+1. Time-weighted unavailability: total customer-seconds spent inside an incident, divided by total customer-seconds in the window. This is the number the customer experiences, and it needs no distributional assumption.
+2. Recovery-time quantiles: p50, p90, p99 of TTR, published beside the event count. A quantile set survives the tail that a mean hides.
+3. E[X^2]/(2 E[X]) computed from the empirical TTR sample, labeled customer-experienced recovery. Publish it next to MTTR so the two are read together.
+
+Instrumentation is the work. Time-weighted unavailability needs arrival counts bucketed inside the incident window, which our request logs already carry; the incident log needs machine-readable start and end timestamps, which today are hand-entered in about 40% of incidents.
+
+What this does not fix
+
+Timeout-and-retry hides some of the service-time tail, so request-latency SLOs can stay event-counted with a retry-aware definition. Nothing hides recovery-time tail. A customer waiting out a ten-hour outage cannot retry her way past it, and every availability number we publish for recovery must be time-weighted.

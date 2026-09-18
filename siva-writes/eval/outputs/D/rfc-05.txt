@@ -1,0 +1,46 @@
+Computing the container swap limit
+==================================
+
+A container's swap limit is its share of node physical memory multiplied by the swap left over after
+the system reservation, `ContainerMemoryProportion * TotalPodsSwapAvailable`, and the kubelet
+computes both factors from values it already has rather than reading a field the user sets.
+
+`ContainerMemoryProportion` is the container's memory request divided by the node's total physical
+memory. The denominator is physical memory, not allocatable memory and not the sum of requests
+currently scheduled on the node. A container's allowance then depends only on what it asked for and
+what the machine has, and it does not move when a neighbouring pod is scheduled or evicted. The
+proportions of the containers on one node sum to at most 1, because the scheduler admits memory
+requests only up to node capacity in the first place.
+
+A container whose memory request equals its memory limit has its proportion defined as zero, and the
+product is therefore a swap limit of zero. This is how the restriction to Burstable QoS is
+implemented: a Guaranteed container has request equal to limit by definition, and a BestEffort
+container requests nothing, so both fall out of the same multiplication at zero. Implement the
+denial through the proportion, not through a QoS-class branch ahead of the formula, because a second
+code path is a second thing to test and the formula already returns the right answer.
+
+`TotalPodsSwapAvailable` is the total swap on the system minus the configured system-reserved
+memory. That subtraction is what keeps swap available to system-critical daemons. cgroup v2 gives
+the kubelet `memory.swap.max`, which caps a cgroup's swap, and no `memory.swap.min`, which would
+guarantee a floor to one, so the only instrument available is to shrink the pool before dividing it
+among pods. The reserved quantity is a memory figure applied to swap, which is deliberate: it sizes
+the residue against what the system daemons are expected to need resident.
+
+Worked example
+--------------
+
+Take a node with 40 GB of physical memory, 40 GB of swap, and `system-reserved` memory configured at
+2 GB, running a Burstable pod whose container A requests 20 GB and whose container B requests 10 GB.
+The proportions are 20/40 = 0.5 and 10/40 = 0.25. `TotalPodsSwapAvailable` is 40 GB - 2 GB = 38 GB.
+Container A gets a swap limit of 0.5 x 38 GB = 19 GB and container B gets 0.25 x 38 GB = 9.5 GB.
+
+Testing
+-------
+
+Four cases cover the calculation. Set request equal to limit on a container and assert its
+`memory.swap.max` is 0. Change only `system-reserved` from 2 GB to 4 GB on the example node and
+assert A drops from 19 GB to 18 GB; that checks the reservation reaches the limit through
+`TotalPodsSwapAvailable`. Schedule a second pod onto the node and assert A's 19 GB is unchanged,
+which checks the denominator is physical memory. Configure a node with 40 GB of memory and 8 GB of
+swap, and assert A gets 0.5 x 6 GB = 3 GB. That last case checks the proportion rescales against the
+swap the node actually has.

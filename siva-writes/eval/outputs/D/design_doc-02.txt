@@ -1,0 +1,13 @@
+Measuring availability and recovery
+
+We should report a length-weighted mean recovery time next to MTTR, because MTTR counts events while our customers accumulate elapsed time, and the two numbers can differ by a multiple. A service reports a mean request time of 100 ms and a user reports that her mean wait is 1 second. A service reports MTTR under 1 minute and a user reports a mean outage of 1 hour. Both parties compute correctly from the data in front of them, and neither number is a rounding error on the other.
+
+A customer hits a given outage in proportion to that outage's length, so she samples a t-weighted version of the recovery-time distribution and not f(t) itself. The operator records one row per outage. The customer records one grievance per minute spent inside it, and a 600-minute outage collects 600 times the customer-minutes of a 1-minute one. Statisticians call this the inspection paradox, and it applies to any operator statistic computed by counting events that customers experience by waiting through them.
+
+The size of the gap is Var(X)/E[X]. For recovery time X, the customer-experienced mean is E_a[X] = E[X^2] / (2 E[X]), which rearranges to 0.5 * (E[X] + Var(X)/E[X]). Recovery times are heavy-tailed, so Var(X) runs far above E[X] and the second term dominates. Fit a log-normal to a median TTR of 30 minutes and a p99 of 600 minutes -- one incident in 100 running 10 hours. That distribution gives an MTTR just over 1 hour and a customer-experienced mean of several hours.
+
+Reproduce it before adopting it. Draw failure durations from a log-normal with mu = 1.0 and sigma = 3.0, arrive clients as a Poisson process at rate 100, take 1000 samples, and compare the mean over outages against the mean over affected clients. Raise sigma and watch the two diverge further while the median holds still.
+
+Timeouts and retries hide part of the service-time tail, and nothing hides the recovery-time tail. A client that abandons a request at 200 ms and retries never experiences the 5-second response, so per-request latency numbers are partly a statement about client configuration. During an outage there is no healthy replica to retry against, and the customer waits out the full duration.
+
+We propose three numbers per service, computed from the same incident records we already keep: median TTR, p99 TTR, and E[X^2] / (2 E[X]). The third becomes the headline figure in availability reviews. Keep MTTR for process tracking, where counting events is the right thing to do, and stop quoting it to customers who are measuring something else.

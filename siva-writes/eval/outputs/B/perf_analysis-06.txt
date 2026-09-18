@@ -1,0 +1,19 @@
+Diagnosis: the 100-Gbyte uploads bust the page cache
+
+The memory numbers pointed at the page cache before any tracing started. On the problem instance, free -m reported 64,414 MB total, 15,421 MB used, 349 MB free, 48,643 MB in buff/cache, 48,409 MB available, and no swap. A 64-Gbyte box with 48 Gbytes of page cache and 349 MB genuinely free is not starved for memory, and the kernel is doing what it should: caching file contents in whatever the application is not using.
+
+Set that 48-Gbyte cache beside the file sizes and the split in behavior explains itself. A 40-Gbyte file fits inside 48 Gbytes of cache; a 100-Gbyte file does not, and misses it by better than a factor of two. If the service makes more than one pass over the file, the 40-Gbyte case reads from disk once and serves every later pass from memory, while the 100-Gbyte case evicts the head of the file before it reaches the tail and re-reads from disk on every pass.
+
+cachestat confirmed it directly. cachestat is an experimental tool, written originally for Ftrace and since ported to bcc/eBPF, that reports per-second page cache hits, misses, buffer size, and cache size. During the 100-Gbyte upload it showed hit ratios of 74.1%, 9.7%, 6.5%, 12.0%, 34.5%, 7.0%, and 11.1% across consecutive seconds, with misses climbing from 632 to 23,341 per second, BUFFERS_MB at 17, and CACHE_MB near 48,000. A healthy workload sits in the upper 90s. Five of those seven seconds are under 15%, which means most reads went to disk.
+
+The control run settles the question. Upload a 32-Gbyte file and sample the same counters. cachestat reported a 100.0% hit ratio with zero misses in every second sampled, hits between 33,424 and 65,158, BUFFERS_MB 41, and CACHE_MB about 33,680 -- the whole file resident. free -m on that run showed 18,421 MB used, 11,218 MB free, and 34,773 MB in buff/cache, and iostat showed almost no disk I/O. The 32-Gbyte file is processed entirely from memory however many passes the code takes, because nothing evicts it.
+
+That is the whole gap between minutes and hours. Same code, same instance type, same access pattern; only the working set changed, and it crossed the size of the page cache. The 100-Gbyte case converts what should be memory reads into disk reads at up to 23,341 misses per second, and the wall-clock cost of those reads is the entire regression.
+
+Recommendations
+
+Move the 100-Gbyte workload to a larger-memory instance. This is the quickest fix and it requires no code change: size the instance so the file plus the application's own 15 Gbytes of anonymous memory fit with headroom, which means roughly 128 Gbytes for a 100-Gbyte file. Verify the fix with cachestat rather than with wall-clock time alone, because a hit ratio back in the upper 90s tells you the mechanism was addressed and a faster run by itself does not.
+
+Rework the code to respect the memory constraint. Bigger instances buy time and stop working when file sizes grow again. Process the file in parts that fit in cache instead of making multiple passes over the whole thing, so each chunk is read from disk once and all subsequent work on it hits memory. That bounds the working set independently of the input size.
+
+One caveat on the tooling. cachestat was the tool that cracked this case, and it remains experimental, constrained by low overhead and by what the Ftrace function profiler exposes. At the LSFMMBPF 2019 keynote in Puerto Rico, in front of Linux mm kernel engineers, we argued that statistics this commonly needed belong in /proc. Those engineers raised real difficulties: page cache counters live on hot paths, and maintaining them is not free.

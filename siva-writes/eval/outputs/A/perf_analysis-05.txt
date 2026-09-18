@@ -1,0 +1,40 @@
+The Hundred-Gigabyte Cliff
+
+In December 2018 a service team came to us with a complaint that had a suspicious shape. Their service encrypts large files and ships them to S3. Files up to about 40 Gbytes uploaded in minutes. Files around 100 Gbytes took hours. The environment was a 16-CPU AWS instance running kernel 4.4.0-1072-aws.
+
+The shape is the first piece of evidence, before any tool is run. A 2.5x increase in file size producing a 10x or worse increase in wall-clock time is not a throughput problem. Throughput problems scale linearly: twice the bytes, twice the time. Something in this system behaves differently once the working set crosses a threshold somewhere between 40 and 100 Gbytes, and the job of the investigation is to find what changes state at that boundary.
+
+Atlas, our cloud-wide monitoring tool, showed a spike in pageins that lined up with the slow uploads. Pageins count pages faulted in from disk. This is worth writing down but not worth leaning on: plenty of perfectly healthy workloads generate pageins by the million, and a correlated counter in a cloud-wide dashboard is suggestive, not damning. It tells us where to point the next tool, nothing more.
+
+We started where we always start, with the 60-second performance checklist, and the disk statistics were the first thing that did not look ordinary. Here is iostat -xz 1 for device xvdb during a large upload, with the range across the sampled seconds:
+
+  r/s        734 - 750
+  rkB/s      91,656 - 92,152
+  avgrq-sz   246 - 250
+  avgqu-sz   ~25
+  r_await    33 - 34 ms
+  %util      100
+
+CPU over the same seconds ran about 14.8% user with 24 to 30% iowait.
+
+Three things fall out of that table. First, this is a read workload, and reads are what matters: applications block on reads, whereas writes frequently return as soon as they land in the page cache and are flushed later. If the disk were busy with writes we would have to work harder to connect the device to the stall. It is busy with reads.
+
+Second, 33 ms is a long time to wait for a read, but the shape of the numbers says the device is not the thing that is slow. Average queue depth is around 25. Roughly twenty-five requests are outstanding at any moment, so the wait each one experiences is dominated by the time spent behind the other twenty-four, not by the time the device spends servicing it. %util pegged at 100 says the same thing from the other direction: the device is never idle, which means it is the bottleneck for this workload, but "saturated" and "defective" are different diagnoses with different fixes.
+
+Third, dividing rkB/s by r/s gives about 128 Kbytes per I/O, confirmed independently by avgrq-sz of roughly 248 sectors. These are large reads, not the scattered small ones you would expect from, say, random metadata lookups.
+
+Per-second averages can hide outliers, so before accepting that reading we checked the distribution directly with biolatency -m from bcc, an eBPF histogram of block I/O latency. The result:
+
+  0 - 1 ms         83
+  16 - 31 ms     1,620
+  32 - 63 ms     8,139
+  64 - 127 ms      176
+  128 - 255 ms      95
+  256 - 511 ms      61
+  512 - 1023 ms     93
+
+The bulk of the I/O sits between 16 and 127 ms, with a thin tail out to a second. That is exactly the profile queueing produces, and there is no separate population of pathologically slow operations hiding under the average. The device is behaving.
+
+We then ran bitesize from bcc to check the size distribution for anything anomalous. Process java, 1,682 I/O in the 128-255 Kbyte bucket, only tens in every other bucket. Consistent with iostat, and unremarkable.
+
+So the disk is doing honest work at its limit, in large sequential-sized reads, on behalf of a Java process. The question the rest of this investigation has to answer is why a workload whose job is to encrypt a file and push it to the network is reading 90 Mbytes per second off local disk at all - and why it only starts doing so above 40 Gbytes.

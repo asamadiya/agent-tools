@@ -1,0 +1,9 @@
+Netflix, December 2018, kernel 4.4.0-1072-aws, 16-CPU instance. A service team reported that uploads of roughly 100-Gbyte files ran for hours, while uploads of files up to 40 Gbytes finished in minutes. The affected service encrypts large files and ships them to S3. The slow uploads lined up with a paging spike in Atlas, the cloud-wide monitoring tool - specifically pageins, which count pages faulted in off disk; plenty of healthy workloads generate them, so the signal is suggestive rather than damning.
+
+Investigation started from the 60-second performance checklist. iostat -xz 1 during a large upload, device xvdb: r/s 734 to 750, rkB/s 91,656 to 92,152, avgrq-sz 246 to 250, avgqu-sz about 25, r_await 33 to 34 ms, %util pegged at 100. CPU over the same seconds: about 14.8% user and 24 to 30% iowait. Reads are the operations applications block on; writes often are not, because of write-back caching. A 33 ms read wait is high, and it tracks the queue depth rather than any slowness in the device. Dividing rkB/s by r/s puts the I/O size at about 128 Kbytes - large.
+
+Next tool: biolatency -m from bcc, an eBPF latency histogram, run in case per-second averages were concealing device-level outliers. Buckets: 8,139 I/O at 32-63 ms, 1,620 at 16-31 ms, 176 at 64-127 ms, 95 at 128-255 ms, 61 at 256-511 ms, 93 at 512-1023 ms, 83 at 0-1 ms. The bulk of the I/O falls between 16 and 127 ms with a tail stretching to 0.5-1.0 s, all of it consistent with the queueing already visible in iostat. Reading: workload, not device.
+
+Then bitesize from bcc, to check the size distribution for anything anomalous: process name java, 1,682 I/O in the 128-255 Kbyte bucket, only tens in every other bucket - consistent with iostat, nothing unusual.
+
+Write the opening diagnosis section of a case-study post for systems and performance engineers.

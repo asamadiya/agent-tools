@@ -1,0 +1,39 @@
+Where engineering investment goes over the next decade
+
+Three cost claims
+
+Three claims about cost frame everything below, and only the third one is still a decision.
+
+First, turning written business logic into code now costs approximately zero. A specification precise enough for two engineers to argue about is a specification precise enough to generate from, and the generation is fast and usually right. Second, the plumbing -- integrating services, wiring libraries, translating one schema into another -- also costs approximately zero. Both of these were, for thirty years, most of what we paid engineers to do. Third, building an efficient, reliable, secure, end-to-end system is starting to get cheaper, but slowly. That third rate is the one we have to plan around, because it is the one that will still be setting our schedule in 2036.
+
+Amdahl's Law says where the money goes
+
+The asymmetry between those three rates is the whole strategy, and Amdahl's Law gives it a number. Suppose translation and plumbing were 60 percent of an engineer's week and the sticky work was the other 40 percent. Drive the first portion to zero and the week takes 0.4 of what it did: a 2.5x speedup, and the sticky work has gone from 40 percent of the time to 100 percent of it. Now make the tools better instead of perfect. At 100x on that portion the week takes 0.6/100 + 0.4 = 0.406, a 2.46x speedup. The second improvement, a hundredfold one, bought 1.6 percent. Run the arithmetic yourself with whatever split you believe for your own team; the ceiling moves but the shape does not. Every further dollar spent making code generation better is a dollar spent on a shrinking share of the problem.
+
+Two readings of this moment
+
+The pessimistic reading is that programming is ending as a high-value economic craft, joining weaving, ploughing, and coopering. It is not a silly reading. Those crafts did not decline because the practitioners got worse; they declined because the scarce thing moved somewhere else, and the people who held the old skill held an asset that stopped appreciating.
+
+A story about timing, not direction
+
+A mostly retired analog circuit designer I know founded a hardware company with friends in the late 1960s, on the explicit bet that serious customers would reject digital logic. The 74 series had just launched and they found it graceless, unreliable, and full of problems -- an accurate description of the parts in front of them at the time. Measured by the ratio of transistors in digital versus analog circuits in 2026, the bet was wrong by ten or more orders of magnitude. He still made a small fortune, enough to keep his children comfortable, because the world changes slower than anyone would like. A bet can be wrong by ten orders of magnitude on direction and still pay, if it is right about the rate. We should assume the same courtesy will not be extended twice, and we should also not confuse a correct call on direction with a correct call on timing.
+
+What stays expensive
+
+The optimistic reading is that new tools create new industries, research fields, and careers, and the evidence for it is the list of things that remain stubbornly expensive. Real-world feedback loops are first: the code was never the hard part of knowing whether a change helped, and a shipped experiment that takes three weeks to read out still takes three weeks. Human stubbornness is second -- an organisation that will not change its approval process is a constraint no model dissolves. Adversaries are third, and they get the same tools we do. Integration, translation, simple analysis, and small-scale synthesis are solved. Genuinely new ideas are not, and they grow more valuable as the lever under them lengthens.
+
+Where we invest
+
+Four commitments follow, and we should be willing to be held to them.
+
+Hire and promote for problem formulation, not throughput. The engineer who can state what we are actually optimising is now the bottleneck resource, and we currently reward the one who closes the most tickets.
+
+Fund the feedback apparatus: telemetry, replay corpora, evaluation harnesses, and the ability to run a real experiment in days. This is unglamorous infrastructure and it is where the remaining 40 percent lives.
+
+Stop staffing integration and translation as careers. Absorb them into the tooling budget and redeploy the people; do not run a team whose product is a shrinking share of total time.
+
+Keep reliability and adversarial work in-house and senior. Both compound on institutional memory that no tool holds for us.
+
+How we would know we are wrong
+
+Instrument the third cost claim rather than argue about it. Track the median wall-clock time from a green build to a fully ramped production change across our top twenty services, and publish it quarterly. If that number halves inside two years, the expensive portion is moving faster than this document assumes and we reweight the four commitments against fresh arithmetic.

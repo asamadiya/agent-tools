@@ -1,0 +1,13 @@
+Measuring availability and recovery: proposal for platform-wide metrics
+
+Two disputes keep reaching us, and in both of them neither side is lying. A service reports a mean request time of 100ms; a customer reports that her mean wait is 1s. A service reports MTTR under 1 minute; a customer reports that the average outage she sat through lasted an hour. The operator and the customer are averaging over different sample spaces. The operator counts events: one request, one outage, one entry in the ledger. The customer samples elapsed time, and the number of customers who land inside a given outage is proportional to that outage's length. A 10-hour outage collects 600 times as many arriving customers as a 1-minute blip, and it enters our MTTR with exactly the same weight.
+
+This is the inspection paradox. Customers do not sample f(t); they sample a t-weighted version of it. If the operator's mean is E[X], the customer-experienced mean is E_a[X] = E[X^2] / (2 E[X]), which rearranges to 0.5 * (E[X] + Var(X)/E[X]). The gap is carried entirely by Var(X)/E[X], and recovery-time variance is usually enormous relative to the mean, because most incidents are a page and a rollback while a few are a corrupted replica at 3 a.m.
+
+Fit a log-normal to our own TTR data and the size of the gap falls out. Take median TTR 30 minutes and p99 600 minutes, which is one incident in a hundred running 10 hours. That implies sigma = 1.29 and an MTTR of 69 minutes, just over the hour we currently report. The customer-experienced mean is 180 minutes. For a log-normal the ratio collapses to 0.5 * exp(sigma^2), so the answer is 2.6x -- a multiple of the MTTR, not a correction to it. Note the boundary: below sigma = 0.83 the ratio drops under 1 and the customer mean sits below the MTTR. Variance, not duration, is what we are failing to publish.
+
+We propose three changes. Publish E_a alongside E for both request latency and TTR, computed from the second moment of the measured distribution. Report Var(X)/E[X] as a first-class metric, since it is the whole of the discrepancy and it is what a reliability investment moves. Gate releases on the tail quantiles that drive the second moment, not on the mean.
+
+We are validating this against a simulator: log-normal failures at mu=1.0, sigma=3.0, Poisson client arrivals at rate 100, 1000 samples. At sigma=3.0 the predicted ratio is 4051x, which is a stress case rather than a forecast, and it should bound the estimator's behavior before we trust it on production traces.
+
+One limit is worth stating plainly. Timeouts and retries can hide part of a service-time tail from the customer. Nothing hides a recovery-time tail.

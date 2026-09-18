@@ -1,0 +1,39 @@
+Trim — Monthly Programme Status
+
+Owner: Renee Alvarez. Finance partner: Sanjay Kothari.
+Target: $28M annualised infrastructure savings by end of FY27.
+Booked to date: $16.4M (59% of target).
+
+Where the $16.4M came from
+
+Three workstreams account for everything booked so far.
+
+Right-sizing over-provisioned pods contributed $9.1M. We cut requests on 6,800 pods and moved the median CPU request from 4.0 cores to 1.5. This is the largest single line in the programme and also the one that cost us the most operationally; see the incident section below.
+
+Object storage deletion contributed $4.2M. We removed 41 PB that had not been read in more than three years.
+
+Reserved instance conversion contributed $3.1M. 62% of the steady-state fleet is now on reserved pricing.
+
+The remaining $11.6M
+
+The gap to target is planned, not yet booked, and it sits in two places.
+
+GPU bin-packing is scoped at $7.0M. Cluster utilization is 38% today against a 65% target, so the headroom is real. The work depends on a scheduler change owned by another org, and that change has no committed date. This is the programme's principal risk and I want it read as such rather than as a timeline detail: $7.0M — a quarter of the full target — is currently gated on a dependency we do not control and cannot schedule. We are not carrying a credible plan B at that size. If the scheduler change does not land with enough runway for us to bin-pack and hold the savings through FY27, the programme lands somewhere near $21M rather than $28M. The ask at this review is executive help getting a date committed, not more engineering capacity on our side.
+
+Decommissioning three legacy datacenter halls is scoped at $4.6M with a June 2027 completion date. This one is on our own critical path and is tracking.
+
+Incidents from right-sizing
+
+Right-sizing caused five incidents: four SEV-3 and one SEV-2. Every one was the same failure mode. Services whose p99 CPU sat close to the new request began throttling once the headroom was gone. The savings model was reading average utilization; the services were living at their p99.
+
+We shipped a guardrail on August 20 that blocks any cut where measured p99 CPU exceeds 70% of the proposed request. Since then it has rejected 410 of 1,100 candidate cuts — 37%. Two things follow from that number. First, the guardrail is doing real work; had it not been in place, we would have shipped several hundred more cuts with the same profile as the five that broke. Second, roughly a third of our remaining right-sizing pipeline was never bankable at the aggressiveness we had modelled. We have not restated the right-sizing forecast yet. We should, and I will bring a revised number next month rather than let the current one stand unexamined.
+
+Cadence and what changes next month
+
+Reporting stays monthly. Two items to expect at the next review:
+
+A restated right-sizing forecast reflecting the 37% rejection rate, so the booked-to-target picture stops flattering itself.
+
+A position on GPU bin-packing. If we still have no committed date from the scheduler owners by then, I will bring options for closing the gap without that dependency — most likely a larger reserved-instance conversion and an accelerated hall decommission — with honest estimates of what each can actually cover. Neither will cover $7.0M.
+
+Summary for the business review: 59% booked, the booked portion is solid, and the unbooked portion is concentrated in a single item we do not control. The headline number is still $28M. Whether it stays $28M is, at this point, mostly a question about someone else's scheduler.

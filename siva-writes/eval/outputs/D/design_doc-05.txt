@@ -1,0 +1,15 @@
+Concurrency control and consistency defaults
+
+We are choosing optimistic concurrency control and strong consistency as the defaults for this datastore, because a client that can never block another client removes the main path by which one application's behavior becomes another's tail latency.
+
+Pessimistic locking couples clients through a held resource. A transaction that acquires a write lock owns it until it commits or dies, and every transaction that needs that row waits behind it. The stall does not need to be a slow query. A process that pauses for garbage collection while holding a write lock stops everything queued behind it for the length of the pause, and the waiters are not the client that paused. That is client-to-client performance cross talk, and on a pessimistic relational engine it is a large driver of tail latency.
+
+The worse failure is that lock contention sustains itself. A transaction that fails to acquire a lock retries, the retry competes for the same lock, and the added load raises the failure rate for every other acquirer. Load that was a symptom becomes the cause. Amazon's operational record shows this pattern repeatedly as a source of outages and of metastable failure, where the system stays degraded after the original trigger is gone and recovery takes a long time. Two design objectives follow: keep applications out of metastable failure, and blunt the duller failures caused by badly behaved clients and client code.
+
+Optimistic concurrency control breaks the coupling by never making one client wait on another. A transaction reads, does its work, and finds out at commit whether a conflicting write landed underneath it. A conflict aborts the loser immediately. That discards work instead of queueing it, and discarded work does not accumulate into a queue that outlives its trigger. The cost is real -- conflict-heavy workloads abort more -- and it is a cost paid by the transaction that lost, at a bounded time, not by unrelated clients.
+
+Aurora DSQL runs this design across regions. Figure 6 plots SELECT and UPDATE latency there, and both stay fast with the database spanning regions.
+
+Strong consistency is the second default, and the argument against it has expired. The Amazon Dynamo paper (2007) and Werner Vogels' "Eventually Consistent" (2009) held that cloud-scale systems had to give up strong consistency to hit their availability and latency targets. That was a claim about the machinery of that decade. Four things have changed since: how time is distributed, how data-centre networks are built, how power and cooling are provisioned, and what distributed protocols can do. The price those papers were paying has fallen far enough that almost no application is better served by eventual consistency today.
+
+Application teams get both defaults without opting in. Nobody writes a lock-ordering discipline to avoid deadlock, and nobody writes reconciliation code for conflicting replicas.

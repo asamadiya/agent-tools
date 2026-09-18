@@ -1,0 +1,54 @@
+Trim: monthly programme status
+
+Owner: Renee Alvarez. Finance partner: Sanjay Kothari. Reporting cadence: monthly.
+
+Trim has booked $16.4M of its $28M annualised infrastructure savings target, 59% of the
+commitment, with the FY27 deadline still ahead of us. The three workstreams that produced
+that number are all past their hardest execution phase. The $11.6M that remains is
+concentrated in two workstreams, one of which we do not control.
+
+Right-sizing contributed $9.1M, the largest single line. We cut requests on 6,800
+over-provisioned pods and moved the median CPU request from 4.0 cores to 1.5, a 62%
+reduction in requested capacity per pod. Storage deletion contributed $4.2M by removing
+41 PB of object storage that no client had touched in more than three years. Reserved
+instance conversion contributed $3.1M and now covers 62% of the steady-state fleet.
+
+Right-sizing also caused five incidents: four SEV-3 and one SEV-2. Every one of them was
+CPU throttling on a service whose p99 CPU already sat close to the new request, which
+means we were cutting into live headroom and not into slack. We shipped a guardrail on
+Aug 20 that blocks any cut where measured p99 CPU exceeds 70% of the proposed request.
+Since then the guardrail has rejected 410 of 1,100 candidate cuts, 37%. No right-sizing
+incident has occurred since Aug 20.
+
+Read that 37% rejection rate as a correction to our earlier sizing model, not as friction.
+Before the guardrail we would have shipped those 410 cuts, and the incident record says
+roughly what fraction of them would have paged someone. The tradeoff is that the
+right-sizing pipeline now yields less per candidate than the $9.1M run rate implies, so
+forecasts that extrapolate from the first 6,800 pods will run high.
+
+GPU bin-packing carries $7.0M of the remaining $11.6M and is the programme's single
+largest risk. Cluster utilization is 38% today against a 65% target, a 27-point gap. The
+work depends on a scheduler change owned by another org that has no committed date, which
+means we currently hold no schedule for 60% of the unbooked savings. Pull that date in or
+the $28M target moves. We are treating this as the one item that needs a decision at this
+review: either the scheduler change gets a date and an owner on record, or we rebaseline
+the FY27 number to $21M and say so now.
+
+Decommissioning three legacy datacenter halls carries the other $4.6M and is scheduled to
+complete by June 2027. That date leaves no buffer inside FY27, and the savings do not
+begin to accrue until the halls are actually dark, so a one-quarter slip pushes recognition
+out of the fiscal year entirely. We will bring a hall-by-hall migration schedule to the
+October review with the workload count still resident in each.
+
+Two things we would like from this forum. First, an escalation path to the scheduler
+owning org, ideally at the VP level, since our own requests have not produced a date in two
+months. Second, agreement on how we report against $28M while the GPU line has no
+schedule: we would prefer to show booked savings plus a scheduled-and-unscheduled split
+each month instead of a single percentage that implies uniform confidence across the
+remainder.
+
+Forecast for the next 90 days: right-sizing adds $0.8M to $1.2M at the post-guardrail
+yield, reserved instance conversion adds roughly $0.4M as we move coverage from 62% toward
+75%, and storage deletion is largely exhausted after the 41 PB sweep. That puts us near
+$18M booked by the December review, 64% of target, with the GPU dependency unchanged
+unless the escalation lands.

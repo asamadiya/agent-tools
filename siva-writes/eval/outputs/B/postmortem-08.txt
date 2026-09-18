@@ -1,0 +1,37 @@
+Congestion between Cloudflare and AWS us-east-1, 21 August 2025
+
+All times UTC.
+
+Summary
+
+On 21 August 2025 customers whose origins sit in AWS us-east-1 saw elevated latency, request timeouts and reduced throughput for roughly three hours and fifty minutes, from 16:27 to 20:18. One customer began pulling large volumes of cached objects out of us-east-1 at 16:27, and the response traffic doubled total Cloudflare-to-AWS traffic. That volume saturated every direct peering link between the two networks. This was a capacity and routing event confined to the Cloudflare-AWS interconnection in the Ashburn (IAD) region. It was not an attack and not a BGP hijack, and global Cloudflare services outside this path were unaffected.
+
+What happened
+
+Traffic doubled against links that had no headroom to absorb it. At 16:37 AWS began withdrawing BGP advertisements on the congested private network interconnects in order to shed load. The withdrawals moved traffic onto peering links reached through an offsite interconnection switch, and those links saturated in turn. Router queues grew and our edge routers began dropping packets, including high-priority packets, for the duration of the event.
+
+Two pre-existing conditions removed the margin that would otherwise have absorbed the surge. One direct peering link was running at half its rated capacity following an earlier failure. The Data Center Interconnect carrying traffic to the offsite switch was already scheduled for a capacity upgrade and had not yet received it. Each condition was known and neither was load-bearing on its own; together they meant the remaining paths could not take the traffic the withdrawals displaced.
+
+Timeline
+
+16:27 A single customer begins requesting large volumes of cached objects from AWS us-east-1. Cloudflare-to-AWS traffic doubles and direct peering links saturate.
+16:37 AWS starts withdrawing BGP advertisements on congested private network interconnects, steering traffic onto links behind the offsite interconnection switch.
+16:44 Our network team is alerted to congestion in Ashburn.
+16:45 Responders find that the uncongested paths no longer carry AWS prefixes, because those prefixes were withdrawn.
+17:22 Dropped traffic increases.
+17:45 A customer-impact incident is raised.
+19:05 Rate-limiting the customer reduces congestion.
+19:27 Traffic engineering fully resolves congestion.
+19:45 AWS begins reverting the withdrawals.
+20:07 AWS finishes normalizing announcements over the IAD private network interconnects.
+20:18 Impact ends.
+
+Customer impact
+
+Requests to origins in AWS us-east-1 were slow, timed out, or completed at low throughput. The share of our synthetic origin requests that missed the latency service level objective tracked the packet drop rate through the event, which is the clearest single measure of what customers experienced. Latency stayed elevated after the drops stopped because both networks were still renormalizing prefix advertisements between 19:45 and 20:07. Traffic that did not traverse the Cloudflare-AWS interconnect in Ashburn was not affected.
+
+What we are doing
+
+The load-shedding response made the problem worse, and that is the part we own jointly with AWS. Withdrawing advertisements on a congested interconnect assumes alternate paths have capacity; here it removed the prefixes from the paths that still had room. We are working with AWS on a shedding approach that does not strip reachability from uncongested links.
+
+We are restoring the degraded peering link to full capacity and completing the Data Center Interconnect upgrade to the offsite switch, both of which were in flight before this incident and are now prioritized. We are also shortening the path from congestion alert to customer-impact declaration. Our team was alerted at 16:44 and the customer-impact incident was raised at 17:45, a gap of sixty-one minutes, and rate-limiting the origin request volume at 19:05 was the action that relieved the congestion. Detecting that a single traffic source is saturating a peering edge should take minutes, and we are adding the detection and the rate-limiting response to our automated tooling.

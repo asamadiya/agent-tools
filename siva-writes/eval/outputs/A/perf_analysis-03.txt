@@ -1,0 +1,29 @@
+The ZFS That Wasn't There
+
+A metrics ingestion team at Netflix picked up a new BaseAMI and their CPU headroom fell off a cliff. Their conclusion, filed with the request for help: ZFS is burning more than 30% of our CPU.
+
+The engineer they asked had worked on ZFS internals at Sun. He did not believe it. ZFS is not a cheap filesystem, but short of a pathological misconfiguration there is no path by which it eats a third of a machine. Disbelief is not a diagnosis, though, so he went and looked.
+
+Atlas, the cloud-wide monitoring tool, showed 38% of CPU time in sys. That is a strange number for Netflix cloud workloads, which are overwhelmingly Java and overwhelmingly user-time. Something in the kernel really was eating the box. The claim's magnitude was right even if its attribution was suspect.
+
+The next step is where the old reflex and the new tooling part ways. The old reflex is to find the instance, SSH in, run mpstat(1) to confirm the sys time is spread across CPUs rather than pinned to one, then perf(1) to sample stacks. That works. It also takes minutes per instance and does not scale past the one box you happened to pick. Instead he used Netflix's flame graph fetch tooling — Vector then, FlameCommander later — which pulls a CPU flame graph from a running instance on demand, no login required.
+
+The graph came back with two orange kernel towers, one left, one right. Orange is kernel. Two towers means two threads or two paths doing the same expensive thing. The left tower was arc_reclaim_thread. The right descended into spl_kmem_cache_reap_now(), a different ZFS memory-freeing path — almost certainly the two of them fighting over the same locks.
+
+So the team was right after all. The stack frames said ZFS.
+
+Some background on what arc_reclaim_thread is supposed to be doing. The Adaptive Replacement Cache is ZFS's main in-memory cache, and arc_reclaim_thread is the housekeeper: it calls arc_adjust() to evict buffers and to keep free memory above a threshold, waking periodically or when the system signals memory pressure. There is a well-known way to make this thread hot. Set the record size small — 512 bytes, say — and a modest working set becomes millions of buffers, and the eviction path has millions of things to walk. But the default record size is 128 Kbytes and nobody has a good reason to go below 8 Kbytes.
+
+First theory, then: a new infrastructure project at Netflix was using ZFS to back containers. Container churn means filesystem churn means ARC churn. Plausible, testable, and wrong — the team said they were not running containers.
+
+Then they said something better. They were not using ZFS at all.
+
+df -h, mount, zfs list. No ZFS filesystems mounted. Not on that instance, and not on a second one either. Then /proc/spl/kstat/zfs/arcstats, which is the cache's own accounting: hits 0, misses 0, every counter zero. The ARC had never cached anything, because there was nothing to cache. The module was loaded and idle, and it was consuming 38% of the machine doing it.
+
+The answer was in the source and in the change history, not in any further measurement. A performance feature had converted the ARC's eviction lists into a multilist — one list per CPU — to cut lock contention on a shared list. To pick which list to evict from, the code chose at random. Not with a cheap pseudorandom number, but through the kernel's cryptographically-secure path: the flame graph frames ran down through get_random_bytes() into extract_entropy(). That is the tower.
+
+Assemble it. ZFS detects that system memory is low — which on a busy Netflix instance it perpetually is, because the JVM has taken everything. arc_reclaim_thread wakes. It draws a random number at cryptographic cost to select an eviction list. The list is empty, because every list is empty, because the ARC is empty. It finds nothing to free, and goes around again. A perfectly correct algorithm, run as fast as a thread can run it, over nothing at all.
+
+It became ZFS issue #6531. The first fix taught arc_reclaim_thread to bail out earlier when ZFS was not in use.
+
+Two things worth keeping. The reporter's attribution was right and their reasoning was wrong — the expert's instinct that "ZFS cannot cost this much" was also right, and also not a reason to stop. And the fastest step in the whole investigation was the flame graph, taken before anyone logged into anything.

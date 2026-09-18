@@ -1,0 +1,33 @@
+Cloudflare Dashboard and API outage, 12 September 2025
+
+All times UTC.
+
+Summary
+
+The Cloudflare Dashboard and much of the public API returned 5xx errors for roughly 75 minutes on 12 September 2025, starting at 17:57 and ending at 19:12. The proximate cause was a bug in a Dashboard release that flooded our Tenant Service with repeated calls to /organizations. Tenant Service sits in the API request authorization path, and when authorization cannot be evaluated the request fails with a 5xx. This was our bug, not an attack and not a capacity planning miss, and we are sorry for the time it cost you.
+
+What happened
+
+The Dashboard bug was a React useEffect whose dependency array held an object recreated on every state or prop change. React compares dependencies by identity, so the array looked new on every render and the effect re-fired, issuing a fresh call to /organizations each time. Failed calls retried, and the retries rendered, which fired the effect again. A single user's browser could therefore produce many requests per second against an API that expected one per page load.
+
+That version shipped at 16:32 and ran for 78 minutes without taking anything down. At 17:50 we deployed a new Tenant API Service version. The deploy briefly reduced available capacity, the accumulated Dashboard load exceeded what remained, and at 17:57 Tenant Service was overwhelmed and Dashboard availability began to drop.
+
+Recovery, including the part we made worse
+
+Adding Tenant Service pods and a global rate limit brought the public API back to 98% availability by 18:17, but the Dashboard did not recover with it. Restarting Tenant Service caused every open Dashboard session to re-authenticate at the same moment, and the useEffect loop multiplied that thundering herd instead of damping it. At 18:58 we shipped a change intended to remove erroring codepaths; it made API impact worse rather than better. We published a temporary rate-limiting rule at 19:01, reverted the 18:58 change at 19:12, and Dashboard availability returned to 100%.
+
+Two things made the middle of the incident slower than it should have been. Our telemetry could not distinguish a retry from a new request, so responders were reading a request count that conflated the symptom with the load. And Argo Rollouts, which automatically rolls back a deployment on detected errors, had not yet been adopted for Tenant Service. Had it been, the bad 18:58 update would have been reverted automatically rather than after 14 minutes of manual diagnosis.
+
+Who was affected
+
+Cloudflare separates the control plane from the data plane strictly, and Tenant Service lives entirely in the control plane. Network services -- proxying, DNS resolution, WAF, Workers -- continued serving normally throughout. If you were not making configuration changes or calling the API during that window, you likely saw nothing.
+
+What we are changing
+
+We are fixing the Dashboard call pattern so a re-render cannot become a request. Retries from the Dashboard will use backoff with jitter and a circuit breaker, so a degraded Tenant Service sees decreasing load from clients rather than increasing load.
+
+We are adopting Argo Rollouts for Tenant Service so an update that raises error rates rolls itself back.
+
+We are instrumenting Tenant Service to label retries distinctly from first-attempt requests, so the next responder can read amplification directly off a graph.
+
+We are provisioning Tenant Service for a multiple of peak load rather than a margin over it, and we are moving the global rate limit from an incident-time action to a standing configuration.

@@ -1,0 +1,21 @@
+Concurrency Control and Consistency Defaults
+
+Two defaults need justifying before anything else in this datastore is designed: how transactions are isolated from each other, and how strong the consistency guarantee is. Both are load-bearing, both are hard to reverse, and both go against what a lot of existing practice would suggest.
+
+Optimistic concurrency control
+
+We are choosing optimistic concurrency control. The obvious argument is throughput, but the more important one is an isolation property: under OCC a client is never in a position to block another client. Nothing a client does — holding a transaction open, stalling mid-statement, disappearing entirely — can make another client wait.
+
+That property is what removes client-to-client performance cross talk, which is a large driver of tail latency in applications sitting on pessimistic relational engines. The textbook version is a process that stops for garbage collection while holding a write lock: everything queued behind it stops too, and the tail is now shaped by someone else's heap. The operational version is worse. In Amazon's record, lock contention and the retries that follow a failed lock acquisition turn up repeatedly as causes of outages and of metastable failure, where the system stays degraded long after the triggering event has passed and recovery takes far longer than the incident that started it.
+
+Two objectives follow directly. First, keep applications out of metastable failure — the failure mode that does not clear on its own. Second, blunt the duller failures caused by badly behaved clients and client code, which under lock-based isolation are free to impose their own bugs on everyone else's latency.
+
+The cost of OCC is retries on conflict, paid by the conflicting transaction rather than by every transaction queued behind a lock. Figure 6 shows the result: SELECT and UPDATE latency both stay fast, including with the database running across regions.
+
+Strong consistency as the default
+
+The counterargument comes from the 2000s. The Dynamo paper (2007) and Werner Vogels' Eventually Consistent (2009) held that cloud-scale systems had to give up strong consistency to hit their availability and latency targets. That was an accurate reading of the hardware and protocols of the time.
+
+Four things have changed since. Time is distributed differently. Data-centre networks are built differently. Power and cooling are provisioned differently. And distributed protocols can do things they could not then. Each of these independently moved the price of a strongly consistent commit, and together they moved it enough that the 2007 tradeoff no longer describes the choice in front of us.
+
+So strong consistency is the default here. Eventual consistency pushes reconciliation into application code, where it is written once per application and tested approximately never. Almost no application is better served by that bargain.

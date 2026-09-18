@@ -18,18 +18,21 @@ because that is the direction the error actually runs.
 
 ---
 
-## Rule 1. The first sentence of a paragraph is the paragraph's claim
+## Rule 1. Open a paragraph with its claim
 
-**Measured: 0.893, sd 0.062, n = 29 documents, range 0.758 to 1.000.**
+**Measured: 0.889, sd 0.064, n = 29 documents, range 0.742 to 1.000** (document-weighted).
 
-The tightest result in the corpus and the only one that behaves like a property of the register
-rather than of an author. It holds at 0.94 across Google Cloud incident reports and at 0.92 across
-Python PEPs, two populations with nothing else in common.
+The tightest spread of any metric here, and it holds at 0.94 across Google Cloud incident reports
+and 0.93 across Python PEPs, two populations with nothing else in common.
 
-The classifier is operational, so you can argue with it: a paragraph is claim-first when its first
-sentence is declarative, at least five words, does not open with a discourse connective (*however,
-but, moreover, for example, first, finally, in summary*) and does not take the document as its
-subject (*this section, in this post, we will discuss*).
+**Read the number as what it is.** `is_claim_first` is a LEXICAL PROXY: it returns true when the
+first sentence is at least five words, is not a question, does not open with a discourse connective
+(*however, but, moreover, for example, first, finally, in summary*) and does not take the document
+as its subject (*this section, in this post, we will discuss*). It does not check that a claim is
+present. An independent review demonstrated that **both "before" examples below pass it**, which is
+the honest limit of the measurement: 0.889 describes survival of four exclusions across 8 families,
+not paragraph organisation, and 0.742 is that proxy's observed minimum -- one document, danluu-metrics-analytics, which
+opens sections with questions -- rather than a floor for good prose. The rule is still right. The number is weaker evidence for it than it looks.
 
 What this rule is really preventing is the windup. A paragraph that spends its first sentence
 arriving costs the reader a sentence, and a document does it forty times.
@@ -107,10 +110,16 @@ The third pair is the one worth studying. The "before" is denser with numbers th
 and every number in it is decoration: no unit, no source, no statement of what was measured.
 Numbers as ornament read as rigour and fail the first question asked about them.
 
-## Rule 3. Mechanism outnumbers evaluation, about three to one
+## Rule 3. Mechanism outnumbers evaluation
 
-**Measured: mechanism-to-evaluative 3.14, median 2.60, n = 30, range 0.33 to 9.56. Evaluative
-vocabulary 0.362 words per 100, sd 0.262.**
+**Measured: mechanism-to-evaluative 3.14, median 2.60, n = 27, range 0.33 to 9.56. Evaluative
+vocabulary 0.362 words per 100, sd 0.262, n = 30.**
+
+The ratio excludes three GCP incident reports that contain zero evaluative sentences, where it is
+undefined. The classifiers behind both terms are lexical: a sentence counts as mechanism if it
+carries a causal connective, and as evaluative if it carries an evaluative word and no number. So
+*Since Monday the queue has drained* counts as mechanism, and the spread from 0.33 to 9.56 is wide
+enough that 3.14 is a description of this corpus, not a target to write against.
 
 A mechanism sentence carries a causal connective and says what makes something happen. An
 evaluative sentence asserts quality without measuring it: *important, crucial, powerful, robust,
@@ -122,16 +131,19 @@ transfers nothing and costs the writer credibility on the sentences that could h
 ```
 before  Shuffle sharding is a powerful technique that provides excellent isolation between
         customers with minimal operational overhead.
-after   Shuffle sharding gives each customer a random pair of the 8 available queues. Two
-        customers collide on both queues with probability 1/28, so one noisy tenant degrades
-        1 in 28 of its neighbours rather than all of them.
+after   Shuffle sharding gives each customer a random pair of the 8 available queues. A noisy
+        tenant overlaps on at least one queue with 13 of the 28 possible pairs, and on both
+        queues with 1 of them. A customer that shares one queue still has its other queue and,
+        with retry and spare capacity, stays served. Only the 1-in-28 that drew the identical
+        pair loses both alternatives.
 ```
 
 ```
 before  This is a critical component of the architecture and its performance characteristics
         are extremely important to overall system behaviour.
-after   Every read passes through this component, so its p99 sets the floor for the p99 of
-        every downstream call. At 12 ms it currently contributes 40% of the 30 ms budget.
+after   Every read passes through this component and waits on it, so its 12 ms p99 is spent
+        inside the 30 ms request budget before any downstream call starts. That is 40% of the
+        budget, on the serial path.
 ```
 
 ```
@@ -139,7 +151,8 @@ before  The elegant solution here is to make the operation idempotent, which is 
         that provides significant robustness benefits.
 after   Make the operation idempotent, so a retry after an ambiguous timeout is safe. Without
         it the client cannot distinguish "the write failed" from "the response was lost", and
-        the only safe action is to give up.
+        retrying risks a duplicate write. The alternatives are a status query or a read-back,
+        which cost a round trip and need the server to expose one.
 ```
 
 ## Rule 4. Hedge, qualify, or quantify. Do not ban hedging
@@ -179,8 +192,10 @@ after   The service handles 8,000 rps at p99 under 50 ms. We have not tested abo
 
 ```
 before  Removing all hedges: "Quadratic in sequence length."
-after   Quadratic in sequence length at fixed head dimension and fixed on-chip capacity.
-        Past that capacity the cost is set by memory traffic and the exponent changes.
+after   The attention score matrix costs O(S^2) multiply-accumulates at fixed head dimension.
+        Once S exceeds what on-chip memory holds, the same operation count is spread over more
+        memory traffic, so measured runtime stops tracking the operation count. The exponent on
+        the operation count has not changed; the thing setting runtime has.
 ```
 
 The third pair is the over-correction. A claim stripped of its domain is not more confident, it is
@@ -188,19 +203,20 @@ less true, and it will be over-applied by exactly the readers who trusted it.
 
 ## Rule 5. Vary sentence length. There is no cap
 
-**Measured: sentence mean 23.92 words, sd 6.26 across documents. Within-document sentence-length
-sd averages 13.59, minimum 6.23. 22.77% of all sentences exceed 30 words, range 0.69% to 55.62%.**
+**Measured: sentence mean 23.37 words, sd 6.05 across documents. Within-document sentence-length
+sd averages 13.21, minimum 6.28. 21.67% of sentences exceed 30 words as a document-weighted mean,
+20.92% pooled (1,473 of 7,040), range 0.00% to 54.32%.**
 
 | family | mean | share over 30 words |
 |---|---|---|
-| aws-builders | 18.99 | 9.1% |
-| rust-rfc | 20.81 | 12.3% |
-| sre-book | 21.45 | 16.2% |
-| allthingsdistributed | 23.18 | 24.0% |
-| **danluu** | **33.18** | **47.0%** |
+| aws-builders | 18.94 | 9.1% |
+| rust-rfc | 20.07 | 10.0% |
+| sre-book | 21.30 | 15.7% |
+| allthingsdistributed | 22.47 | 22.1% |
+| **danluu** | **32.36** | **45.6%** |
 
-A 30-word cap rejects 47% of Dan Luu's sentences and 55.62% of one of his posts. It would reject a
-fifth of *The Tail at Scale*. The cap does not describe this corpus; it describes one register
+A 30-word cap rejects 45.6% of Dan Luu's sentences and 54.3% of one of his posts, and 26.8% of
+*The Tail at Scale*. The cap does not describe this corpus; it describes one register
 inside it, and enforcing it flattens the variation that carries the emphasis.
 
 What the corpus supports is variance. A 9-word sentence after three 30-word ones lands hard, and
@@ -224,20 +240,27 @@ before  Because the connection pool is sized at 200 and each of the 40 applicati
         maintains its own pool, and because the database enforces a global connection limit of
         4,000 which the fleet therefore exactly saturates at full deployment, any instance
         added past the fortieth fails to acquire connections at startup and crash-loops.
-after   Each of the 40 instances holds a pool of 200 connections, so the fleet sits at exactly
-        the database's 4,000-connection limit. Instance 41 gets nothing. It crash-loops.
+after   Each instance opens a pool of 200 connections, and the database accepts 4,000 in total,
+        so the twentieth instance takes the last of them. Instance 21 gets nothing at startup.
+        It crash-loops.
 ```
 
 ```
-before  Cutting a good long sentence to fit: "The mask breaks equivariance."
-after   Applying a fixed causal mask breaks general permutation equivariance, because the mask
-        does not commute with an arbitrary permutation of the input rows.
+before  The queue drained. The workers recovered. Throughput returned. Latency followed.
+        The incident closed.
+after   The queue drained and the workers recovered within about 90 seconds of the rollback,
+        and throughput and latency came back together over the next four minutes. The incident
+        closed at 15:02.
 ```
+
+The five short sentences are not wrong; five in a row are. The repair keeps one short sentence
+for the sharp fact -- the closing time -- and lets the rest run long enough to carry the order
+of events, which is what the reader needs and what five equal clauses flatten.
 
 ## Rule 6. Paragraphs run about 85 words, and long ones are a minority rather than an error
 
 **Measured: paragraph mean 84.38 words, sd 21.83, range 46.7 to 131.4. 17.23% of paragraphs exceed
-120 words, range 0% to 45.45%, n = 29.**
+120 words as a document-weighted mean, 15.72% pooled (307 of 1,953), range 0% to 45.45%, n = 29.**
 
 One document is excluded from these: *The Tail at Scale* is a two-column PDF that extracts as six
 818-word blocks with no paragraph breaks. Leaving it in moved the corpus paragraph mean from 84.4
@@ -247,11 +270,16 @@ A 120-word paragraph is not a defect. Roughly one in six is over it. What is a d
 paragraph carrying two claims, because the reader cannot tell which one the paragraph was for.
 
 ```
-before  [one 180-word paragraph covering both the cause of the regression and the rollback
-        procedure]
-after   [two paragraphs: the first opens "The regression came from a 3x increase in
-        serialisation cost" and stays on cause; the second opens "Rolling back takes 11
-        minutes" and stays on procedure]
+before  The regression came from a 3x increase in serialisation cost after the schema change,
+        which we found by diffing CPU profiles across the deploy, and rolling back takes 11
+        minutes because the config has to drain through three regions in sequence, which is
+        also why we could not roll back during the incident window without extending it.
+after   The regression came from a 3x increase in serialisation cost after the schema change.
+        A CPU profile diff across the deploy put 71% of the added time in the encoder.
+
+        Rolling back takes 11 minutes, because the config drains through three regions in
+        sequence. That is longer than the incident window we were working in, which is why we
+        patched forward instead.
 ```
 
 ```
@@ -264,10 +292,25 @@ after   The migration is complete and cost 22% less than the old path, with late
 ```
 
 ```
-before  [a 40-word paragraph for each of nine sequential steps]
-after   [three paragraphs of roughly 90 words: setup, the step where the behaviour changes,
-        and the consequence. The nine steps survive; they are no longer nine paragraphs.]
+before  The client opens a connection.
+        The proxy accepts it.
+        The proxy looks up the route.
+        The route is cached.
+        The cache is cold.
+        The proxy queries the control plane.
+        The control plane is rate limited.
+        The query is queued.
+        The connection times out.
+after   The client opens a connection and the proxy accepts it, then looks up the route in a
+        cache that is cold on a fresh proxy. The lookup falls through to the control plane.
+
+        The control plane rate-limits route lookups at 50 per second per proxy, so on a cold
+        start the queries queue behind each other. The client's 5-second timeout expires while
+        its lookup is still in the queue.
 ```
+
+The nine steps all survive. They are no longer nine paragraphs, and the two that carry the
+mechanism -- the cold cache and the rate limit -- are now the ones the reader lands on.
 
 ---
 

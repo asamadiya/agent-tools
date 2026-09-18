@@ -1,0 +1,32 @@
+BYOIP prefix withdrawal, 20 February 2026
+
+All times UTC.
+
+On 20 February 2026 a Cloudflare cleanup task withdrew roughly 1,100 customer BYOIP prefixes from BGP, about 25% of the 4,306 BYOIP prefixes we advertise to a given peer. Withdrawals ran from 17:56 to 18:46. The last prefixes came back at 23:03, 5 hours and 15 minutes after the outage began at 17:48. If you bring your own IP space to Cloudflare, your traffic was affected; if you use Cloudflare-owned address space, it was not. We are sorry. This should not have happened, and the mechanism that caused it was ours alone.
+
+The failing call was an HTTP GET with an empty query parameter. We deployed a new sub-task designed to automate removal of BYOIP prefixes that customers had queued for deletion. It called GET /v1/prefixes?pending_delete with no value after the equals sign. On the server, Query().Get("pending_delete") returned an empty string, the filter matched nothing to exclude, and the API responded with every BYOIP prefix in the system. The sub-task read that response as its work queue and began deleting prefixes and their dependent service bindings, one after another, until an engineer killed the process at 18:46.
+
+The Addressing API is the authoritative source for customer IP addresses, and it pushes changes to the edge immediately. That property is what customers want when they add or move a prefix, and it is what turned a bad query into a routing event within seconds. There was no staging gap between the API's view of the world and what our routers announced.
+
+Path hunting is why the impact lasted longer than the withdrawal. When a prefix is withdrawn, transit networks do not fail the connection immediately; they search alternate paths for a route that no longer exists. Client connections hang until they time out. Traffic to affected prefixes did not cleanly fail over, and operators watching their own monitoring saw stalls rather than an obvious outage signal.
+
+Visitors to the one.one.one.one website received HTTP 403 with an Edge IP Restricted message. DNS resolution over 1.1.1.1 kept working throughout, including DNS over HTTPS. The resolver and the marketing site sit behind different address handling, and only the latter depended on a withdrawn prefix.
+
+Timeline
+- 2026-02-05 21:53 -- the cleanup sub-task is merged.
+- 17:46 -- the change is deployed to production, 15 days after merge.
+- 17:56 -- prefix withdrawals begin; customer impact starts.
+- 18:13 -- Cloudflare engineers engage on one.one.one.one failures.
+- 18:18 -- an internal incident is declared.
+- 18:21 -- the Addressing API team is paged.
+- 18:46 -- the sub-process is terminated; withdrawals stop after 50 minutes.
+- 19:11 -- mitigation begins; prefixes are re-advertised.
+- 19:19 -- we publish self-remediation guidance for affected customers.
+- 20:20 -- about 800 prefixes are restored.
+- 23:03 -- the remaining roughly 300 prefixes are restored by hand.
+
+Our tests covered the wrong actor. The customer self-service journey through the Addressing API is well tested: a person authenticates, selects a prefix, and asks for a deletion. Nothing in the suite exercised a task runner mutating user data with no explicit input from anyone, and our staging data and mocks were thin enough that a query returning the entire fleet looked like a query returning a plausible list. An empty result set and a full result set were never distinguished in test.
+
+We are making four changes. First, the Addressing API now rejects list requests whose filter parameters are present but empty, instead of treating them as absent. Second, any automated deletion path takes a bounded batch size and a hard ceiling on prefixes affected per run; a task asking to delete thousands of prefixes stops and pages a human. Third, we are adding staging fixtures that represent production-scale BYOIP data so that an over-broad query produces a visibly wrong result in test. Fourth, we are auditing every internal caller of the Addressing API for the same empty-parameter pattern.
+
+Restoration took until 23:03 because roughly 300 prefixes had lost dependent service bindings that automated re-advertisement could not reconstruct. Engineers rebuilt those by hand. We are tracking that reconstruction work separately, because a mitigation that requires manual repair of 300 objects is not a mitigation we can rely on next time.

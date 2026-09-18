@@ -1,0 +1,29 @@
+Prioritising latency work against cost with the latency Lorenz curve
+
+The share of fleet capacity a latency fix can return is the same number as the share of total mean latency held by the requests it touches, and the Lorenz curve of the measured latency distribution reports that number directly. This document proposes that we compute it per service, per quarter, and rank latency projects by it against their cost.
+
+What the curve measures
+
+The empirical Lorenz curve L(P) answers one question: of total mean latency, how much is contributed by requests faster than percentile P. Its complement, 1-L(P), is the share contributed by requests at or above P. Both are shares of a sum of service times, not of request counts, which is why the fast majority of a skewed distribution can contribute almost nothing.
+
+Take the worked example we already have: quantiles of 1, 10, 200, 10000 and 20000 ms measured at percentiles 0, 0.5, 0.9, 0.99 and 0.999. The complement evaluates to 1, 0.9938, 0.9308, 0.5171 and 0.1034. Requests at or above p50 account for 99.4% of mean latency. Requests at or above p99 -- one in a hundred -- account for 51.7%. Halving the service time of that top percent removes about a quarter of the mean. Improving the median removes almost nothing, because the median request contributes almost nothing to begin with. Values of 1-L(0.99) above 0.5, and sometimes above 0.75, are common in our services.
+
+Why this is a capacity number and not only a latency number
+
+Little's law carries the same fraction over to concurrency. Mean concurrency is arrival rate times mean residence time, and residence time decomposes by request class exactly as the Lorenz sum does. In a threaded service, if 1-L(p) = k then 100k% of busy threads at any instant are occupied by requests that will finish above the pth percentile. At 1-L(0.99) = 0.5171, half of every thread pool in the fleet is sitting behind requests that make up one percent of traffic. That is a spend, in instances and in licences, and it is the number to put beside the engineering cost of the fix.
+
+How to compute it
+
+Compute from sorted raw samples when you can. With n samples, L(p) = sum(sorted(x)[:k]) / sum(x) with k = p*n. That is exact, cheap, and it is the only form we should accept in a funding argument.
+
+From a quantile vector you must interpolate between the measured points and extrapolate past the highest one, and the answer inherits the error of both. Fitting a power law to the tail is one workable option. It is a model, not a measurement, and it is exact only if someone goes back to the sorted raw samples. Record which of the two produced any number quoted.
+
+Constraints on the result
+
+The tail index alpha must exceed 1. At alpha <= 1 the mean is not estimable, the denominator of L has no stable value, and every share computed from it is noise dressed as a percentage.
+
+Measured percentiles are themselves estimates, and their uncertainty grows with the percentile. p99.9 from an hour of a low-rate endpoint rests on a handful of samples. Report 1-L with the sample count behind its highest quantile, and prefer a lower percentile band with tight estimates to a high one with wide ones.
+
+What we ask for
+
+Instrument the p50, p90, p99 and p99.9 bands with raw-sample capture behind them, publish 1-L(P) per service alongside the latency dashboard, and state every proposed latency project as an expected change in 1-L over a named band. A project that moves 1-L(0.99) from 0.52 to 0.35 has a concurrency saving we can price. A project that improves the median has one we cannot.

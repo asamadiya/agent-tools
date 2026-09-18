@@ -1,0 +1,58 @@
+KEP: Pod Scheduling Readiness
+
+Motivation
+
+The scheduler treats a pod as ready to place the moment the API server admits it. A pod that is
+waiting on something outside the scheduler's control -- a quota grant, a secret, a PVC nobody has
+created yet -- still enters the active queue, fails a scheduling cycle, and comes back on the
+backoff schedule. It keeps coming back for as long as it sits pending, which can be minutes or
+hours. The scheduler spends those cycles on pods it has already decided it cannot place, and pods
+it could place wait behind them in the queue. Scheduling throughput drops for every workload in the
+cluster, not only for the blocked ones.
+
+The churn does not stop at the scheduler. Every failed attempt updates the pod's PodScheduled
+condition, and the integrators that watch pod conditions do work in response. Cluster Autoscaler
+reads {type: PodScheduled, reason: Unschedulable} as evidence that the cluster is short on capacity
+and evaluates a scale-up. A pod parked on a missing quota grant looks exactly like a pod parked on a
+missing node, so the autoscaler burns evaluation cycles on pods that no amount of new capacity would
+help.
+
+The absence of a pause signal also constrains what vendors can build on top of the scheduler.
+Hierarchical quota, gang admission, and similar policies need a way to hold a pod out of the queue
+until an external controller says the pod is admissible. Today an operator implements the hold by
+keeping the pod out of the API server entirely, which gives up pod identity, status, and the normal
+admission path.
+
+That existing condition is a contract, and this proposal does not change it.
+{type: PodScheduled, reason: Unschedulable} remains the signal that a pod needs cluster resources
+it cannot get, and Cluster Autoscaler and every other integrator that keys on it keep working
+unmodified. A pod that is explicitly paused is not unschedulable in that sense, and marking it so
+would tell integrators to provision capacity for a pod that is not asking for any.
+
+Goals
+
+1. Add an API that marks a pod scheduling-paused or scheduling-ready. A pod created in the paused
+   state is not placed in the active queue until a controller or a user clears the pause.
+
+2. Add an Enqueue extension point so that queueing behavior becomes customizable by a plugin, in the
+   same way filtering and scoring already are.
+
+3. Guarantee that a paused pod is never marked Unschedulable through the PodScheduled condition.
+   The condition continues to mean what integrators already assume it means.
+
+4. Ship a default enqueue plugin that implements the semantics of the new API, so that a cluster
+   gets the behavior without writing a plugin.
+
+Non-Goals
+
+1. Extending pod conditions to carry more context about why a pod is paused. A pod is paused or it
+   is ready; the reason belongs to the controller that set the pause.
+
+2. Designing in-house features on top of the Enqueue extension point. This KEP defines the
+   extension point and one default plugin.
+
+Future Work
+
+Permission control on individual scheduling gates: which principals may add or remove a specific
+gate. That work depends on a fine-grained permissions design that does not exist yet, and we will
+open it as a separate KEP once that design lands.

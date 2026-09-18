@@ -1,0 +1,21 @@
+Trim: $16.4M booked, $7.0M of the remainder blocked on another org
+
+Trim has booked $16.4M of its $28M annualised FY27 target, 59%, and $7.0M of the $11.6M remaining depends on a scheduler change another org owns with no committed date.
+
+The booked $16.4M came from three actions, each a one-time inventory correction. Right-sizing 6,800 over-provisioned pods returned $9.1M and cut the median CPU request from 4.0 cores to 1.5. Deleting 41 PB of object storage untouched for more than three years returned $4.2M. Converting 62% of the steady-state fleet to reserved instances returned $3.1M. None of the three repeats next year: the pods are sized, the storage is deleted, and the conversion already covers the fleet that stays up.
+
+Right-sizing cost five incidents, four SEV-3 and one SEV-2, every one of them CPU throttling on a service whose p99 CPU sat close to its new request. The cuts were sized against average utilization, so a service with a spiky profile kept its average under the new ceiling and hit the ceiling at peak, where the kernel throttled it.
+
+A guardrail shipped Aug 20 blocks any cut where measured p99 CPU exceeds 70% of the proposed request, and it has rejected 410 of 1,100 candidates since. That 37% rejection rate measures how much of the original right-sizing pipeline was aimed at services that could not absorb a cut. No right-sizing incident has occurred since Aug 20.
+
+The guardrail also caps what right-sizing can still return, and finance should treat the $9.1M as close to the ceiling for this lever. The first wave took the median request from 4.0 cores to 1.5 across 6,800 pods, $1,340 per pod per year, and that is where the bulk of the over-provisioning sat. Of the 1,100 candidates screened since Aug 20, the 690 that passed are pods already reviewed once and already closer to their true usage, so each returns well under $1,340.
+
+GPU bin-packing carries $7.0M of the remaining $11.6M and cannot begin until the scheduler change lands. Cluster utilization is 38% against a 65% target, and the 27-point gap is fragmentation: jobs hold whole GPUs they do not fill, and recovering the waste requires the scheduler to place several jobs on one device. That scheduler work sits with another org and has no committed date, which leaves the $7.0M with no date either.
+
+Decommissioning three legacy datacenter halls by June 2027 carries the other $4.6M and is the only remaining item Trim controls end to end. It is on plan for the June 2027 date.
+
+The decision for this review is whether $7.0M stays in the FY27 forecast. If the scheduler owners commit a date before the October review, the $28M target holds and GPU bin-packing has roughly 20 months to move utilization from 38% to 65%. If they do not, the ceiling Trim can deliver on its own is $21.0M, 75% of target, and the $7.0M needs either a replacement source or a restated number in front of the board.
+
+Two asks. Renee will get a written scheduler date, or a written refusal, from the owning org before the October review. Sanjay will hold the $28M forecast unchanged until that answer arrives, then re-forecast to $21.0M in a single revision if the answer is no.
+
+One measurement worth taking before the next review: rerun the guardrail against the 6,800 pods already cut. If it would now reject some of them, the $9.1M booked from right-sizing includes services running closer to their ceiling than the guardrail permits today, and those pods should be raised back before they throttle. The five incidents all came from that population, and the guardrail has only ever been applied to candidates proposed after Aug 20.

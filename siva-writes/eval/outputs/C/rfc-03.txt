@@ -1,0 +1,57 @@
+## Version Skew Strategy
+
+A resize admitted by the API server can land on a kubelet that does not implement
+resize, and the two ways that ends are both wrong. The runtime side of the skew is
+already settled: the CRI changes merged in v1.25 so runtimes could implement
+support, and containerd added it in 1.6.9. The remaining problem is the kubelet.
+
+Older clients are handled by field defaulting. A client that does not know about
+`ResizePolicy` sends those fields as nil, and the API server copies the non-nil
+values from the old pod forward, so a stale client updating some other part of the
+spec cannot silently clear a policy it never knew existed.
+
+The kubelet skew is the serious case, and the failure mode inverted at v1.31.
+Before v1.31, with `InPlacePodVerticalScaling` disabled, the kubelet reads a
+resource mutation as a change to the container definition and restarts the
+container with the new values. The restart is not gated on node capacity, so the
+node can end up over-subscribed. From v1.31 the kubelet no longer treats a
+resource change as a definition change and does not restart the container. The
+new value then takes effect only if the container restarts for some unrelated
+reason -- an OOM kill, a liveness probe failure -- which makes the effective
+resource values nondeterministic and never reflects them in the API. A silent
+over-subscription and a silent no-op are both worse than a rejected request, so
+the API server must refuse a resize whenever the kubelet handling that pod lacks
+the feature.
+
+No field on the node or the pod reports kubelet resize support directly. The
+proxy we use is `.status.containerStatuses[*].resources`, which the kubelet
+populates for running containers if and only if the feature is enabled. Note that
+the kubelet sets it to an empty `{}` when the container declares no requests or
+limits, so the test must be non-nil, not non-empty. An emptiness test would reject
+every resize on a best-effort pod.
+
+Admission applies the following logic:
+
+- If the `InPlacePodVerticalScaling` feature gate is off on the API server,
+  reject the resize.
+- Otherwise find the first running container in the pod. Allow the resize if and
+  only if its status resources are non-nil.
+- If the pod has no running containers, allow the resize.
+
+The last branch admits two cases with different risk. An unscheduled pod carries
+no node assignment at all, and the new values are the ones the scheduler sees and
+the kubelet starts the container with, which is the behavior we want. A pod that
+is already scheduled but has no running container gives the API server no signal
+about the kubelet that owns it. We allow the resize there, and on an old node the
+container may start with values the scheduler never accounted for, leaving the
+node over-provisioned. We accept that gap because the alternative -- rejecting
+every resize against a pod with no running container -- also rejects the
+unscheduled case, which is the common one.
+
+That same gap contains a race. A resize can be admitted against a non-running
+container while the kubelet is starting it, and the outcome depends on which
+kubelet won: before v1.31 the container restarts with the new values, and from
+v1.31 it keeps the old ones. Neither outcome corrupts the node beyond what the
+preceding paragraph already concedes, and the pod's status resources converge once
+the container is running, at which point the next resize is decided on a real
+signal.

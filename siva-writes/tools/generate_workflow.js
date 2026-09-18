@@ -3,24 +3,38 @@ export const meta = {
   description: 'Generate condition A/B/C/D outputs over the 40 frozen briefs',
   whenToUse: 'Phase 4 execution, after the eval is frozen and the skill is installed',
   phases: [
-    { title: 'Generate', detail: '40 briefs x 4 conditions, each agent writing one file' },
+    { title: 'Generate', detail: '40 briefs x 4 conditions, each agent reading its brief and writing one file' },
   ],
 }
 
 const ROOT = '/home/spopuri/my_stuff/agent-tools/siva-writes'
 
-// args: {briefs: [...], conditions: {A: {...}, ...}} supplied by the caller so the workflow does
-// not have to read and inline 40 briefs into its own script text.
-const briefs = args.briefs
-const conditions = args.conditions
+// args is a compact [[id, genre, target_words], ...] list. Brief text, condition system prompts
+// and the exemplar index all live on disk for the agent to read; inlining them made args 95 KB.
+const EXEMPLARS = {
+  design_doc: ['aws-timeouts-retries-backoff-jitter.txt', 'aws-workload-isolation-shuffle-sharding.txt'],
+  rfc: ['pep-0572-assignment-expressions.txt', 'rust-rfc-2229-capture-disjoint-fields.txt'],
+  postmortem: ['gcp-incident-ow5i3PPK96RduMcb1SsW.txt', 'danluu-postmortem-lessons.txt'],
+  perf_analysis: ['danluu-latency-pitfalls.txt', 'danluu-perf-opt.txt'],
+  status_update: [],
+}
+const CONDITIONS = {
+  A: { label: 'no skill', system: false, exemplars: false, stages: false },
+  B: { label: 'rules only', system: true, exemplars: false, stages: false },
+  C: { label: 'rules + exemplars', system: true, exemplars: true, stages: false },
+  D: { label: 'full skill', system: true, exemplars: true, stages: true },
+}
+
+const briefs = args.map(([id, genre, target_words]) => ({
+  id, genre, target_words, exemplars: EXEMPLARS[genre] || [],
+}))
+const conditions = CONDITIONS
 
 phase('Generate')
 
 const jobs = []
 for (const cond of Object.keys(conditions)) {
-  for (const b of briefs) {
-    jobs.push({ cond, brief: b })
-  }
+  for (const b of briefs) jobs.push({ cond, brief: b })
 }
 
 log(`${jobs.length} generations: ${Object.keys(conditions).join(', ')} over ${briefs.length} briefs`)
@@ -29,8 +43,13 @@ const results = await parallel(jobs.map((job) => () => {
   const c = conditions[job.cond]
   const b = job.brief
 
+  const systemBlock = c.system
+    ? `FIRST, read ${ROOT}/eval/conditions/${job.cond}.md and follow it. It is the writing guidance
+you are working under.\n\n`
+    : ''
+
   const exemplarBlock = c.exemplars && b.exemplars.length
-    ? `\n\nBEFORE WRITING, read these two documents in full:
+    ? `\n\nALSO read these two documents in full before writing:
 ${b.exemplars.map((f) => `  ${ROOT}/skill/references/exemplars/${f}`).join('\n')}
 
 They are ${b.genre.replace('_', ' ')} documents by expert engineers, and they outrank any rule you
@@ -42,35 +61,32 @@ they do not. Do not match their subject matter.`
   const stageBlock = c.stages
     ? `\n\nWork in three stages and do not skip to stage 2.
 
-STAGE 1. Write the brief, under 150 words: Claim (the one sentence the reader should be able to say
-afterwards), Evidence (the quantities with units and source), Mechanism (why it is true, not that it
-is true), Decision (what changes because of this).
+STAGE 1. Write a brief for yourself, under 150 words: Claim (the one sentence the reader should be
+able to say afterwards), Evidence (the quantities with units and where each came from), Mechanism
+(why it is true, not that it is true), Decision (what changes because of this).
 
-STAGE 2. Write the document from YOUR STAGE 1 BRIEF, not from the raw material above. Anything that
-did not make your brief does not go in the document.
+STAGE 2. Write the document from YOUR STAGE 1 BRIEF, not from the raw material. Anything that did
+not make your brief does not belong in the document.
 
-STAGE 3. Score your draft against the gate and revise: does sentence one state your claim; does every
-claim resting on a quantity carry that quantity with its unit; does each paragraph open with its own
-claim; does any paragraph carry two claims; are there any patterns from the negative set.
-
-Output ONLY the finished document. Do not include your stage 1 brief or your stage 3 notes.`
-    : '\n\nOutput ONLY the finished document.'
-
-  const system = c.system ? `${c.system}\n\n---\n` : ''
+STAGE 3. Check the draft and revise: does sentence one state your claim; does every claim resting on
+a quantity carry that quantity with its unit; does each paragraph open with its own claim; does any
+paragraph carry two claims; are there patterns from the negative set. You may run
+\`python3 ${ROOT}/skill/scripts/prose-check.py <your file>\` after writing it, and revise.`
+    : ''
 
   return agent(
-    `${system}You are writing a ${b.genre.replace('_', ' ')} of about ${b.target_words} words.
+    `${systemBlock}Read ${ROOT}/eval/jobs/${b.id}.md. It contains raw material and an ask.
 
-=== RAW MATERIAL AND THE ASK ===
-${b.prompt}
-=== END ===
-${exemplarBlock}${stageBlock}
+Write the ${b.genre.replace('_', ' ')} it asks for, about ${b.target_words} words.${exemplarBlock}${stageBlock}
 
-Write the document, then save it with the Write tool to exactly this path:
+Save the finished document with the Write tool to exactly:
   ${ROOT}/eval/outputs/${job.cond}/${b.id}.txt
 
-Write the file in one go; it is short. Your final message should be the single word DONE and nothing
-else - do not repeat the document back, because the file is the artifact.`,
+The file must contain ONLY the document: no stage-1 brief, no self-review notes, no preamble, no
+markdown fence around the whole thing. Write it in one call; it is short.
+
+Your final message is the single word DONE. Do not repeat the document back - the file is the
+artifact, and echoing it wastes the turn.`,
     { label: `${job.cond}:${b.id}`, phase: 'Generate', effort: 'medium' },
   ).then(() => ({ cond: job.cond, id: b.id, ok: true }))
    .catch((e) => ({ cond: job.cond, id: b.id, ok: false, error: String(e).slice(0, 120) }))

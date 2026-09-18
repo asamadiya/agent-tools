@@ -1,0 +1,29 @@
+Unauthenticated gRPC Endpoints: Monthly Burndown
+For the Security Review Board, September 18, 2026
+Owner: Hiroshi Tanabe. Security partner: Dana Ruiz.
+
+Where we stand
+
+Of the 1,432 unauthenticated internal gRPC endpoints the red team found in June across 318 services, 1,189 are remediated. That is 83%. The remaining 243 are the hard part, and on the current trajectory they will not be closed by the October 31 P2 deadline.
+
+The P1 tier is finished. All 96 endpoints reachable from outside the service mesh were closed by the August 15 deadline, with no extensions and no exceptions granted. Those were the endpoints that put us one network hop from an external caller, and they are gone.
+
+The fix has not changed: mTLS plus a per-endpoint ACL. Median time to fix is 11 days. P90 is 74 days, and that spread is the whole story of this report. The median case is a team that owns its service, reads the ticket, and lands the change in under two weeks. The P90 case is a team that has to find someone who remembers why the endpoint exists.
+
+The schedule problem
+
+Our run rate is 26 endpoints per week. At that rate the remaining 243 close on November 23, three weeks past the P2 deadline. Hitting October 31 requires roughly 40 per week starting now, a 54% increase in throughput, and we do not have a credible plan to get there by adding effort. The teams doing the work are not idle; the remaining endpoints are slower per unit than the ones already done.
+
+Two categories explain most of the tail. Sixty-one endpoints sit in services with no registered owner. There is no team to assign the ticket to, so every one of them requires archaeology before any code can be written. Another 12 are in systems already declared end-of-life, where the correct engineering answer is to turn the system off, but the decommission schedule is owned elsewhere and does not align with our deadline. Together that is 73 of the 243, and they are the endpoints least likely to move on their own.
+
+The decision in front of the board
+
+We are proposing that on October 6 we switch mesh ingress to deny-by-default for the 61 orphaned services. This closes the exposure with no code change and no owner, which is exactly why it works on a population that has neither. It converts a 74-day archaeology problem into a configuration change.
+
+It is not free. We know of four cross-team callers that break when the switch flips. One has acknowledged and is planning a migration. Three have not responded to outreach. If we proceed on October 6 without hearing from them, we should expect to break them, and we should expect to find out from their on-call rather than from ours.
+
+We are asking the board to choose between two accepted costs: breaking up to three unresponsive callers on October 6, or carrying 61 unauthenticated endpoints past October 31 into an indefinite window while we keep looking for owners. We recommend proceeding, with a final notice to the three silent callers on September 29 and a documented rollback path.
+
+Next report
+
+The October update will carry the post-October-6 numbers, the actual breakage count against the predicted four, and a revised finish date for the endpoints outside the orphaned set. If the board declines the ingress change, that report will instead carry a request for a formal deadline extension to November 23.

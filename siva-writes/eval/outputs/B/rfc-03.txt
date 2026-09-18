@@ -1,0 +1,21 @@
+Version skew strategy
+
+The CRI changes for in-place resize merged in v1.25, which let runtimes implement support on their own schedule; containerd shipped it in 1.6.9. Skew therefore spans three independent components -- client, API server, and kubelet -- and each one fails differently when it is older than the others.
+
+Older clients do not know the ResizePolicy fields and send them as nil. The API server copies the non-nil values from the old pod forward, so a stale client that round-trips a pod spec cannot silently erase a resize policy the pod already carries.
+
+Kubelet skew is the case that can damage a node. Before v1.31, with InPlacePodVerticalScaling disabled, the kubelet read a resource mutation as a change to the container definition and restarted the container with the new values. A node running several such pods can be over-subscribed by the sum of the increases, because nothing on that path consults the node allocatable budget. From v1.31 the kubelet stops treating a resource change as a definition change and does not restart the container. The new value then takes effect only if the container restarts for an unrelated reason -- an OOM kill, a liveness probe failure, an image pull after eviction -- and the API never reflects the change. One behavior over-subscribes the node and the other is nondeterministic. Neither is acceptable, and the API server must reject a resize whenever the kubelet handling that pod lacks the feature.
+
+No field reports kubelet feature state directly. We use .status.containerStatuses[*].resources as the proxy: the kubelet populates it on running containers if and only if InPlacePodVerticalScaling is enabled. Read the field as a presence test, not as a resource value. A container that declares no requests or limits still gets an empty {} written there, which is non-nil and counts as support.
+
+Admission then runs three checks in order. If the feature gate is off at the API server, reject the resize. Otherwise find the first running container in the pod and allow the resize only when its status resources are non-nil. If the pod has no running containers, allow the resize.
+
+Three cases follow from that last branch, and two of them are gaps we are accepting.
+
+An unscheduled pod may always be resized. The scheduler has not placed it, the new values are what it is scheduled and started with, and no node has committed capacity yet.
+
+A scheduled pod with no running containers gives us no signal at all. We allow the resize, and if that node's kubelet is older than v1.31 the containers start with values the scheduler never accounted for, leaving the node over-provisioned. Detecting this would require a per-node feature advertisement that does not exist today.
+
+A race exists at the boundary between those two states. Admission can accept a resize against a non-running container at the same moment the kubelet is starting it. Before v1.31 the container restarts and picks up the new values; from v1.31 it keeps the old ones. The window is one kubelet sync period wide, roughly 10 seconds by default, and closing it needs a compare-and-swap on container status that the current API does not offer.
+
+Both gaps close once every kubelet in the cluster is at v1.31 or newer with the gate enabled. Until then, operators running mixed-version node pools should expect resizes on not-yet-started pods to land on a best-effort basis.

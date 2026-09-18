@@ -1,0 +1,31 @@
+Impact analysis
+
+All times are UTC. The origin of the incident was a failure in the core proxy; what follows is the blast radius among the services that depend on it, service by service, including what continued to work.
+
+Workers KV
+
+Workers KV returned heavily elevated 5xx for the duration of the incident. KV's front-end gateway calls the core proxy, so every request inherited the proxy's failure. At 13:04 we deployed a patch that let KV bypass the core proxy, and error rates fell immediately for KV and for everything sitting downstream of it, including Access. KV is the shared dependency behind most of the customer-visible symptoms below.
+
+Cloudflare Access
+
+Access returned widespread authentication failures from the start of the incident until the rollback at 13:05. Two characteristics bound the damage. First, sessions that were already established continued to work; users who were logged in before the incident began were not interrupted. Second, every failed authentication terminated at an error page rather than at a target application, so no request reached a protected origin while authentication was broken. Logins that did succeed during the window were logged correctly, so audit logs for the period are accurate and complete.
+
+Access configuration changes attempted during the window are the one area requiring customer attention. Updates either failed outright or propagated very slowly. All affected updates have since been recovered, but customers who made policy or application changes between the start of the incident and 13:05 should confirm that the intended configuration is the one now in effect.
+
+Dashboard
+
+The Dashboard depends on Workers KV internally and on Turnstile in its login flow. Turnstile failed to load, which meant that anyone without an active session could not log in at all. Dashboard availability dropped in two separate windows.
+
+The first window ran from 11:30 to 13:10 and was ended by the Workers KV bypass at 13:10. The second ran from 14:40 to 15:30 and had a different cause: after the feature file was restored, a backlog of queued login attempts plus client retries overwhelmed the control plane. We ended that window by scaling control plane concurrency at approximately 15:30. Customers who saw the Dashboard recover and then fail again were seeing these two distinct windows, not a single continuous outage.
+
+Email Security
+
+Email Security continued to process and deliver mail throughout. No message flow stopped. The service did lose access to an IP reputation source, which reduced spam-detection accuracy and suppressed some detections that rely on new-domain-age signals. The practical effect is that a subset of messages that would normally have been flagged were delivered. Separately, some Auto Move actions failed during the window; those have been remediated. Customers concerned about the window should review quarantine and inbox contents for messages received during the incident.
+
+CDN
+
+CDN response latency rose, though the mechanism was indirect. Our debugging and observability systems consumed large amounts of CPU enriching the volume of uncaught errors the incident generated, and that CPU contention showed up as increased response latency at the edge. This was a degradation in speed, not in correctness or availability.
+
+Summary of customer action
+
+Two items warrant review on the customer side: Access configuration changes attempted before 13:05, and email delivered during the window that ordinarily would have been caught by reputation or domain-age signals. No other impact described above requires customer remediation.

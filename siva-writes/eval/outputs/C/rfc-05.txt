@@ -1,0 +1,68 @@
+## Calculating a container's swap limit
+
+The kubelet computes every swap limit; no user sets one. Only containers in
+Burstable pods are eligible, and for those the limit falls out of two numbers
+the kubelet already has: the container's memory request and the node's swap
+capacity after system reservation. The scheme ties each container's share of
+swap to its memory request, then rescales that share against whatever swap the
+system actually has.
+
+### Step 1: ContainerMemoryProportion
+
+Divide the container's memory request by the total physical memory on the node.
+
+```
+ContainerMemoryProportion = ContainerMemoryRequest / TotalNodePhysicalMemory
+```
+
+A container whose memory request equals its memory limit is a special case: its
+proportion is defined to be zero, not the computed ratio. Such a container is
+individually Guaranteed even though the pod as a whole is Burstable, and the
+zero proportion carries through step 2 to give it a swap limit of zero. Note
+that the proportions of the containers in a pod do not sum to one in general,
+because the denominator is node memory and not pod memory. That is intended:
+each container is sized against the node, so a pod that requests little memory
+on a large node claims little swap.
+
+### Step 2: Scale against available swap
+
+Multiply the proportion by the swap the kubelet is willing to hand to pods.
+
+```
+TotalPodsSwapAvailable = TotalNodeSwap - SystemReservedMemory
+ContainerSwapLimit     = ContainerMemoryProportion * TotalPodsSwapAvailable
+```
+
+The subtraction of SystemReservedMemory is the residue that keeps swap
+available to system-critical daemons. The kernel offers no `memory.swap.min`,
+so there is no way to reserve swap for a cgroup directly; withholding it from
+the sum that pods divide is the only lever the kubelet has. The quantity
+subtracted is the configured system-reserved *memory*, not a separately
+configured swap reservation, which means a node with generous memory
+reservation also holds back proportionally more swap.
+
+### Worked example
+
+Take a node with 40 GB of physical memory and 40 GB of swap, with
+`--system-reserved=memory=2Gi`. A Burstable pod runs container A requesting
+20 GB and container B requesting 10 GB, neither with a memory limit equal to
+its request.
+
+| | request | proportion | swap limit |
+|---|---|---|---|
+| A | 20 GB | 20 / 40 = 0.5 | 0.5 * 38 GB = 19 GB |
+| B | 10 GB | 10 / 40 = 0.25 | 0.25 * 38 GB = 9.5 GB |
+
+TotalPodsSwapAvailable is 40 - 2 = 38 GB. The two containers together may swap
+28.5 GB, leaving 11.5 GB of the node's swap uncommitted -- 2 GB of it reserved
+by construction, the remaining 9.5 GB simply unclaimed by any running pod.
+
+### What implementers and testers should check
+
+Set a container's memory limit equal to its request inside an otherwise
+Burstable pod and confirm the written `memory.swap.max` is 0. Vary
+`--system-reserved` on a fixed node and confirm each container's limit moves
+linearly with it. Schedule pods whose requests sum past node memory and confirm
+the limits still sum past TotalPodsSwapAvailable, since nothing in this
+calculation caps the aggregate; the scheduler's memory-request accounting is
+what keeps the sum bounded in practice.

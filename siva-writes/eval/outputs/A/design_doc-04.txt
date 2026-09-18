@@ -1,0 +1,27 @@
+Architecture principles for a new disaggregated data service
+
+Goal
+
+The service should remove scale, reliability, durability, and multi-region fault tolerance from the list of things an application builder thinks about. That is the bar Aurora DSQL sets for itself, and it is the right bar for us: a database of first resort, trivial to adopt at low scale, that grows with the application without the application growing new operational concerns.
+
+The argument is stronger than it was five years ago. Agents write code well and are weak at long-horizon tasks, and database operations — capacity planning, failover drills, shard splits, version upgrades — are the canonical long-horizon task. Every operational concern we leave exposed is a concern that an agent-built application will get wrong, quietly, months later. Design for the case where nobody is watching.
+
+Decomposition
+
+Split the system into independent services, each owning a small number of well-defined concerns, each independently scalable and independently deployable. Aurora and DynamoDB established this; DSQL's contribution is going further, fully disaggregating replication from transaction isolation and from storage. Those three are separable and we should separate them. Concretely: a component that orders and commits, a component that durably replicates, and a component that stores and serves. None of them should need to know how the others achieve their guarantee.
+
+Three lessons from operating the predecessors
+
+Avoid large caches. A big cache is a big warm-up. It makes failover slow, because the replacement starts cold, and it makes read scaling awkward, because every additional reader pays the warm-up again. Prefer designs where a new replica is useful immediately.
+
+Offer strongly consistent scalable reads. This is not only a correctness nicety. It eliminates whole classes of hot-key and partition problems, because clients stop building read-your-writes workarounds — sticky routing, read-from-primary escape hatches, client-side caches — that concentrate load on exactly the keys that were already hot.
+
+Push expensive operations into storage. Scans and filters should execute next to the local SSD, not stream whole partitions across the network to a compute tier that discards most of it. The network is the scarce resource; move the predicate, not the rows.
+
+Multi-tenancy and cost
+
+Cost scales with peak load; revenue scales with average. Packing many tenants onto a physical machine attacks that gap directly: the peak-to-average ratio of N independent loads falls at roughly sqrt(N). This is the same argument the Firecracker paper makes for microVMs, and it is the economic reason to build multi-tenant rather than pool-per-customer. Two design consequences follow. First, isolation has to be real — packing is only safe if one tenant's burst cannot starve another. Second, tenant placement is a first-class control loop, not an afterthought, because the sqrt(N) benefit assumes the loads on a host are actually independent.
+
+What we owe reviewers
+
+The open questions are where isolation boundaries land, what the storage-side execution surface is, and how placement reacts to correlated tenants. Those are the sections to argue with.

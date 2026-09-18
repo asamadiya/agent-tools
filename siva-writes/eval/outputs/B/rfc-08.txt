@@ -1,0 +1,22 @@
+Notes and Constraints
+
+This section records the restrictions the API server enforces on `.spec.schedulingGates`, the validation matrix reviewers should check against, the asymmetry in how the three parts of the feature respond to the feature gate, and the one kubectl surface the feature adds. It is written for API reviewers auditing the validation rules and for scheduler reviewers auditing the plugin and framework split.
+
+State transitions on the field are deliberately one-way. A client or a mutating admission webhook may initialize `schedulingGates` only at pod creation; no path adds a gate afterward. After creation, a controller may remove gates in any order, and removal is the only update the API server accepts. The one-way restriction is what lets the scheduler treat an empty gate list as terminal: once a pod leaves the gated state it cannot re-enter it, so the PreEnqueue check does not have to handle a pod moving backward out of the scheduling queue.
+
+A scheduled pod always carries empty scheduling gates, which rules out one create call that reviewers commonly expect to work. A client -- administrator or custom controller -- cannot create a pod that populates `schedulingGates` and sets `spec.nodeName` in the same object; the API server rejects it with a validation error. Assigning a node and asking the scheduler to hold the pod are contradictory requests, and the rejection happens at admission rather than being resolved later by the scheduler.
+
+The full matrix has four cells, two of them closed:
+
+| nodeName | operation | non-nil gates | nil gates |
+|---|---|---|---|
+| nil (unscheduled) | create | allowed | allowed |
+| nil (unscheduled) | update | denied | allowed |
+| non-nil (scheduled) | create | denied | allowed |
+| non-nil (scheduled) | update | denied | allowed |
+
+Read the `non-nil gates` column as the whole constraint: exactly one of the four cells permits a non-nil gate list, and it is creation of a pod with no node assigned. The `nil gates` column is unconditionally permitted, so a pod that never uses the feature sees no new validation behavior.
+
+Feature-gating covers two of the three parts, not all three. The feature gate controls (a) the pod spec field and its associated API bits, and (b) the `SchedulingGates` scheduler plugin. It does not control (c) the underlying framework change, the new `PreEnqueue` extension point, which stays registered whether or not the gate is on. A plugin developer can therefore build an equivalent of (a) and (b) on top of (c) alone: implement `PreEnqueue` in an out-of-tree plugin and carry the gating state in an annotation or CRD. Disabling the feature removes the in-tree path and leaves that capability intact, and reviewers evaluating the disablement story should evaluate it on those terms.
+
+kubectl gains one new value in the phase column. `kubectl get pod` prints `SchedulingPaused` for a pod whose gates are non-empty. The literal is a display value computed by kubectl from the gate list; it is not a new value of `.status.phase`, and no controller should key off it.

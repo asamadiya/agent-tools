@@ -1,0 +1,19 @@
+li-httpclient v3 migration: 612 multiproducts left, builds fail Dec 1 2026
+
+612 of the 1,000 multiproducts that consume li-httpclient are still on v3, and their builds start failing on Dec 1 2026, two months before v3 reaches end of life on Jan 31 2027. 388 multiproducts, 38.8% of the fleet, are already on v4. Clearing the remaining 612 in the 74 days before enforcement takes 8.3 multiproducts landing per day, every day, including the ones that need hand edits.
+
+v3 cannot be patched for CVE-2026-31819. The flaw is an HTTP request-smuggling bug in Netty 4.1.79 with a CVSS base score of 7.5, and v3 pins that exact Netty version. Advancing the pin changes types on the public surface and breaks v3's ABI, so every consumer would have to recompile and retest regardless. Given that cost, the fix ships in v4 and only in v4.
+
+An automated codemod does 84% of the call-site work. It rewrites 7,910 of the 9,417 call sites across consuming code and leaves 1,507 for hand edits. Those 1,507 are not spread thin across the fleet; they sit in 63 multiproducts. If yours is one of them, your migration is a code change with review, not a version bump.
+
+Two v4 changes fall outside the codemod entirely. v4 renames every connection-pool configuration key, so any pool size, connect timeout or idle-eviction value you carry in a config file or LiX needs its new name before the client will read it. v4 also drops support for HTTP/1.0 upstreams. 17 upstreams still speak HTTP/1.0 today, and each one needs either a fix from the upstream owner or a proxy shim in front of it, which is a cross-team negotiation rather than an afternoon of edits.
+
+Budget 6 engineer-days. That is the median across teams that have finished, and it covers the codemod run, the hand edits, the config-key rename and a canary. The 63 hand-edit multiproducts and the callers of the 17 HTTP/1.0 upstreams should expect to land above that median, because both categories add work the codemod never touches.
+
+The exemption process buys 30 days at a time. 22 exemptions have been granted so far, and 9 of them went to the same three teams, which means those teams are re-applying every month instead of migrating. An exemption does not move Jan 31 2027, and a team stacking three of them has now spent more calendar time on renewals than the 6-day median migration costs.
+
+Do three things this week. Check whether your multiproduct appears in the list of 63 that need hand edits, because that determines whether you are scheduling a day or a sprint. Run the codemod against your repo now and count the call sites it leaves, which gives you your own number instead of the fleet average. If you call one of the 17 HTTP/1.0 upstreams, open the conversation with that upstream owner today, since their fix has to land before yours can.
+
+Office hours run Tuesdays and 41 teams have attended so far. Bring the codemod output and the residual call-site count; that is enough to get a migration sized in the session. Tomasz Hejna owns li-httpclient and takes escalations on upstream owners who will not commit to a date.
+
+The numbers above are current as of this update. I will report the v4 adoption share, the remaining multiproduct count and the outstanding HTTP/1.0 upstreams every two weeks until Dec 1 2026.

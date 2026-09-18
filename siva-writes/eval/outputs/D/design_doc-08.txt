@@ -1,0 +1,17 @@
+Where to invest in coding-agent tooling
+
+A coding agent stops when something tells it that it is done, and the quality of that something, not the difficulty of the task, sets the ceiling on what agents can build for us. Our tooling budget should buy checkers.
+
+The mechanism is the loop. An agent proposes a change and reads a signal: a compiler error, a failing property, a benchmark number, a model checker's counterexample. A good signal names the defect and locates it, so the next proposal is conditioned on something specific instead of on the agent's own belief about its work. Where no such signal exists, the agent cannot tell whether the last edit helped, and the loop degenerates into sampling.
+
+What we already observe follows from that. Agents stay unstuck on code with good error messages. Rust steers them toward correct programs because it signals whole classes of incorrectness explicitly and at compile time, before any test runs. Agents do well on performance work wherever a benchmark exists, because the benchmark returns a number after every attempt. Property-based testing is worth more to an agent than to a human author, because the agent can afford to run it on every candidate. Agents do badly on architecture, where the feedback is of the know-it-when-I-see-it kind, and on concurrent code, where a wrong program passes every run on the machine and shows up later as silent data corruption.
+
+Two problems make the argument concrete. First: build a delightful, ergonomic photo-editing website. Second: build a correct, high-performance storage engine at the scale of RocksDB or InnoDB -- the storage layer itself, not a distributed database like Aurora DSQL or PostgreSQL. Ask which one an agent will finish.
+
+For a model asked to produce one shot with no loop, the website is easier and lands closer to success. Over the long run that ranking inverts. The website's loop has a human in it: only a person can say whether the crop tool feels right, people answer in hours, and two people, or the same person on two days, score the same mockup differently. The storage engine has a specification with three parts -- the API, the safety properties, and the liveness properties -- and all three are machine-checkable, so the engine's loop runs at machine speed with nobody in it.
+
+This tells us what to fund. Buy compile-time checking: Rust, Hydro for distributed dataflow, Verus for proofs the compiler enforces. Buy modelling tools that produce counterexample traces, TLA+ and P, and treat a trace as the highest-value feedback we can hand an agent for concurrency. Buy Kiro's spec analyzer and anything else that turns a vague requirement into a checkable one. Buy the unglamorous layer -- deterministic simulators, fault injectors, mocks, and benchmark harnesses -- and staff it, because that layer is where the agent's ceiling actually sits.
+
+It also tells us what not to buy. Spending on raw agent capability for architecture and UX work will not move those tasks much, because the missing ingredient there is a checker and not a smarter proposer. The cheaper path is to convert a know-it-when-I-see-it judgment into something a program can evaluate, even partially.
+
+The hypothesis is falsifiable and we should try to falsify it. If agents start closing hard architecture tasks without anyone building new checkers for them, this investment thesis is wrong and we should redirect.

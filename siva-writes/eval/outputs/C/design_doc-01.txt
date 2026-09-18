@@ -1,0 +1,31 @@
+Pricing latency work: rank proposals by the concurrency they return
+
+Introduction
+
+A capacity team is asked to fund latency work and has no currency to price it in. "p99 fell from 400 ms to 250 ms" does not convert into servers, and the team that proposed it cannot say how many. We propose that every latency proposal carry one number: the share of the fleet's busy threads occupied by the requests it targets. That number comes out of the latency samples we already store, and Little's law turns it into hardware.
+
+The Lorenz curve of latency
+
+Let L(P) be the share of total mean latency contributed by requests faster than percentile P. Then 1-L(P) is the share contributed by requests at or above P. From raw samples the computation is one line: sort the durations, set k = P*n, and take sum(sorted(x)[:k]) / sum(x).
+
+Take a service whose quantiles at p0, p50, p90, p99 and p99.9 measure 1, 10, 200, 10000 and 20000 ms. Interpolating log-linearly between the measured points and extrapolating a power-law tail above p99.9 gives 1-L = 1, 0.9938, 0.9308, 0.5171, 0.1034. Requests at or above p50 account for 99.4 percent of mean latency. Requests at or above p99 -- one in a hundred -- account for 51.7 percent. The faster half of the traffic accounts for 0.62 percent of it.
+
+Little's law converts the share into threads
+
+In a threaded service, concurrency equals arrival rate times mean residence time, so a class of requests occupies a share of busy threads equal to its share of mean latency. If 1-L(P) = k, then 100k percent of busy threads at any instant hold a request that will finish above the Pth percentile. In the example above, 1 percent of requests hold 52 percent of the pool.
+
+Now price the work. Halving latency for everything at or above p99 cuts mean residence time by 25.9 percent, and at a fixed arrival rate that returns 25.9 percent of the thread pool. Halving latency for everything below p50 returns 0.31 percent. The second project is 83 times less valuable and is usually the easier engineering, which is part of why it keeps getting funded.
+
+Values of 1-L(0.99) above 0.5, and often above 0.75, are common in our services, but they are not a law. Compute the curve per service before you conclude that the tail is where the capacity is. A service measuring 1-L(0.99) = 0.08 should spend its engineer-weeks on the body of the distribution.
+
+Three ways the number goes wrong
+
+The mean must exist. A Pareto tail with index alpha at or below 1 has no finite mean, and every quantity above is a statement about a mean. Fit alpha on the top decile before quoting a curve; if the estimate sits near 1, report the concurrency share as a lower bound taken over the observed window and say so.
+
+Measured percentiles are estimates, and the uncertainty grows with the percentile. A p99.9 read from a one-minute window at 1000 requests per second rests on about 60 samples. In the worked example, the 10.3 percent attributed to the top 0.1 percent is not measured at all -- it is extrapolated past the last quantile we have, and a different tail fit moves it by a factor of two or more. Where a decision turns on that segment, go back to the sorted raw samples, which are exact and need no fit.
+
+Quantile vectors force interpolation. The 51.7 percent figure depends on the shape assumed between p90 and p99, where this service's latency rises 50-fold.
+
+What we adopt
+
+Emit 1-L at p50, p90 and p99 weekly per service from the raw span store, not from the pre-aggregated quantiles. Require the number on any latency proposal above two engineer-weeks, and rank the queue by returned concurrency per engineer-week.

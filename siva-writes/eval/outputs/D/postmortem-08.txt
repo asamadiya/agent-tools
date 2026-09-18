@@ -1,0 +1,25 @@
+Incident report: congestion between Cloudflare and AWS us-east-1, 21 August 2025
+
+Customers with origins in AWS us-east-1 saw elevated latency, timeouts and reduced throughput from 16:27 to 20:18 UTC on 21 August 2025, because one customer's cache-fill traffic doubled total Cloudflare-to-AWS traffic and the load-shedding that followed concentrated that traffic onto the paths that were left. All times below are UTC. Impact was limited to this interconnection; Cloudflare's global services carried normal traffic throughout. This was not an attack and no BGP hijack occurred.
+
+At about 16:27 a single customer began requesting large volumes of cached objects stored in AWS us-east-1. Those responses travel from AWS into our network, and the added volume doubled total Cloudflare-to-AWS traffic, saturating every direct peering link between the two networks. Two pre-existing conditions removed the headroom that would normally have absorbed part of this. One direct peering link was running at half its capacity after an earlier failure, and the Data Center Interconnect carrying traffic to our offsite interconnection switch was already scheduled for a capacity upgrade.
+
+At 16:37 AWS began withdrawing BGP advertisements on the congested private network interconnects to shed load. A withdrawal does not reduce the number of bytes customers are asking for; it deletes a path, and every packet still destined for those prefixes must take a path that remains advertised. The shed traffic moved onto peering links reached through the offsite interconnection switch, crossing the Data Center Interconnect that was already short of capacity, and that path saturated in turn. Router queues grew and edge routers dropped packets, including the high-priority packets our queueing policy exists to protect.
+
+Our network team was alerted to congestion in Ashburn (IAD) at 16:44, 17 minutes after the first links saturated. Responders confirmed at 16:45 that the uncongested paths they would have shifted traffic onto no longer carried AWS prefixes, which removed traffic engineering as an immediate option. Dropped traffic increased at 17:22, and we raised a customer-impact incident at 17:45.
+
+Rate-limiting the customer at 19:05 was the action that reduced congestion, and traffic engineering fully resolved it at 19:27. AWS began reverting the withdrawn advertisements at 19:45 and finished normalizing announcements over the IAD private network interconnects at 20:07. Impact ended at 20:18, 3 hours and 51 minutes after the first saturation.
+
+The share of synthetic origin requests missing our latency SLO tracked packet drops through the event, which is how we sized customer impact without depending on any single customer's telemetry. Latency stayed elevated for a period after drops stopped, because both networks were still renormalizing prefix advertisements and traffic had not yet settled back onto the direct paths.
+
+The mechanism that turned a saturated link into a 3 hour 51 minute incident is that our fastest mitigation depended on alternate paths that load-shedding had withdrawn. We are making the following changes.
+
+We are adding per-customer origin fetch rate limits at the edge, triggered by measured link utilization on the path toward the origin network, so a single customer's cache-fill cannot consume an entire interconnection's headroom before a human is alerted.
+
+We are completing the Data Center Interconnect capacity upgrade to the offsite interconnection switch and restoring the failed direct peering link to full capacity. Both were known gaps on 21 August, and together they determined how quickly the second path saturated.
+
+Interconnect alerting will fire on utilization crossing a threshold instead of on the packet drops it eventually causes. Drops at 16:44 were a late signal; utilization crossed its saturation point at about 16:27.
+
+Finally, we have opened work with AWS on load-shedding behaviour that preserves reachability on at least one uncongested path, so that shedding traffic and removing our ability to reroute it stop being the same operation.
+
+Cloudflare apologizes for the disruption to your origin traffic. If you observed impact outside the window above, please open a support ticket and include the affected hostnames.

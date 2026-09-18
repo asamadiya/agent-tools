@@ -1,0 +1,21 @@
+Where to invest in agent tooling
+
+Coding agents are limited by feedback, not by intelligence. A task with a fast, accurate signal of correctness gets easier for an agent over time, and a task whose only signal is a human's judgment stays hard. If that holds, our tooling budget should buy feedback loops instead of buying more agent.
+
+The current evidence points the same way, though every piece of it is short-horizon. Agents stay unstuck when error messages say what is wrong and where. Rust is a good agent language for a narrow reason: it makes a class of incorrectness explicit at compile time, before the agent has committed to a design that depends on it. Agents do well on performance work wherever a benchmark already exists, because the benchmark converts "is this faster" into a number. Property-based testing is unusually valuable to an agent for the same reason it is valuable to a person, and more so: it generates the counterexample rather than asking the author to imagine one.
+
+The failures are the mirror image. Agents do poorly on architecture, where the feedback is know-it-when-I-see-it and arrives days later from a reviewer. They do poorly on concurrent code, where a wrong program is silent, and the feedback shows up as data corruption at runtime, possibly in production, possibly months out.
+
+Two workloads make the investment case concrete. Take a delightful, ergonomic photo-editing website, and take a correct, high-performance storage engine at the scale of RocksDB or InnoDB -- the engine itself, not Aurora DSQL or PostgreSQL above it. Under today's open-loop models the website is the easier job, and a single shot gets much closer to something shippable. The hypothesis inverts that ranking over the long run. The website's loop closes only through a human who can say whether the crop tool feels good, and humans are slow, squishy, inconsistent feedback providers. The storage engine has a specification -- the API, the safety properties, the liveness properties -- that fits on a few pages and admits no taste. An agent can iterate against that specification overnight with nobody in the loop.
+
+The ranking to fund follows: anything that converts a human judgment into a machine-checkable one, ordered by how early in the loop it fires.
+
+Compile time. Rust, plus Hydro for distributed dataflow and Verus for proofs about Rust code. These move an error from runtime into the edit loop, which is the largest single move available to us.
+
+Model time. TLA+ and P for the concurrency and protocol layer. A model checker gives the silent-corruption class of bug the immediate signal it otherwise lacks, and it does so before any code exists to debug.
+
+Spec time. A spec analyzer along the lines of Kiro's, which checks that a specification is consistent and complete before an agent starts writing against it. A specification that contradicts itself is a feedback loop aimed at the wrong target.
+
+Run time. Simulators, deterministic harnesses, and mocks. These are the least glamorous items on the list and probably the highest yield per engineer-month, because they make a failing run reproducible on demand.
+
+Two caveats bound this. The hypothesis is a claim about the long run and we have no measurement of the rate, so a two-year plan resting on it may be early. It also says nothing about whether the storage engine is worth building. It says only that an agent will find the storage engine tractable and the photo editor will not.

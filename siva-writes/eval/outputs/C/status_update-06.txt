@@ -1,0 +1,24 @@
+Storage Platform -- H2 2026 roadmap status and recommendation
+Owner: Kwame Boateng. For VP staff planning review.
+
+Two of our three chartered workstreams are now off their committed dates, and the cause is headcount, not engineering. Tiered storage GA moves from Nov 17 2026 to Feb 23 2027, a slip of fourteen weeks. Cross-region async replication is paused with zero engineers assigned and no restart date. The compaction rewrite is still moving with one engineer where the plan assumed three. We are carrying three workstreams on 7 filled positions against an approved 11.
+
+The 4-engineer gap has been open long enough to be structural. Four requisitions have stayed open since February at an average age of 214 days. Two candidates declined offers on compensation, one in July and one in August, which is the only signal we have about why the pipeline is not closing. Two engineers resigned in Q2. One of them was the DRI for the compaction rewrite, so that workstream lost its owner and two of its three engineers inside a single quarter.
+
+No hiring path adds capacity in Q4. The internal transfer pipeline has three candidates in loop with an earliest possible start of Nov 30. Ramp on this codebase has historically taken eight weeks, which puts a Nov 30 starter on independent work in late January 2027. Plan Q4 at 7 engineers and treat any transfer as Q1 capacity.
+
+Option A, borrowing two engineers from the Index team for one quarter, moves the slip onto someone else and returns less than it costs. Index's query-planner goal goes out five weeks. On our side the borrowed engineers pay the same eight-week ramp, so a 13-week loan yields roughly five productive weeks each -- an estimate that assumes transfers and loans ramp alike, which I have not measured separately. That buys back a fraction of fourteen weeks in exchange for a firm five-week hit to a peer team.
+
+Option B, contracting the migration tooling to a vendor at $480K for two quarters, spends real money off the critical path. Migration tooling is not what is holding GA; the remaining tiered-storage work is, and a vendor cannot take it without the codebase context we do not have the people to transfer. I would revisit this only if we fund it as a durable tooling investment on its own merits instead of as schedule recovery.
+
+Option C, cutting scope to single-region tiered storage and holding Nov 17, is the only option that delivers something to customers in 2026. It also matches where the team already is: cross-region replication is paused with nobody on it, so a single-region GA ships the scope we are actually staffed for and stops us from carrying a cross-region dependency we cannot fund.
+
+Recommendation: take Option C. Ship single-region tiered storage on Nov 17 2026, keep the compaction rewrite at one engineer, and leave cross-region async replication formally paused with a named restart trigger rather than an implied date. Re-plan cross-region for H1 2027 once transfer capacity has cleared ramp.
+
+Three asks for the review:
+
+1. Approve the scope cut and the Nov 17 single-region GA, or tell us to take the Feb 23 date with full scope. Both are defensible; carrying both is not.
+2. Approve a compensation band review for the four open requisitions. Two comp declines in two months is the evidence, and the current bands have produced zero closes in 214 days.
+3. Name the restart trigger for cross-region replication -- a headcount number, a date, or a customer commitment. Without one it will read as cancelled by Q1.
+
+I will bring a revised H2 plan with dependency impacts one week after the decision.

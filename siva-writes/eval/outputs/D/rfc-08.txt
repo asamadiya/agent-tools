@@ -1,0 +1,41 @@
+Notes and constraints: `.spec.schedulingGates`
+
+A pod's scheduling gates only shrink, and only from a set fixed at creation: the client or a
+mutating admission webhook writes the gates when it creates the pod, gate owners remove them in
+any order afterwards, and no update may add one.
+
+Validation enforces this over four cells, indexed by whether `.spec.nodeName` is set and whether
+the incoming object carries non-nil `schedulingGates`. For an unscheduled pod with nil `nodeName`,
+create with non-nil gates is allowed and update with non-nil gates is rejected; nil gates allow
+both verbs. For a scheduled pod with non-nil `nodeName`, both create and update with non-nil gates
+are rejected; nil gates again allow both. One of the four combinations admits a non-empty gate set,
+and it is the create of a pod that has no node. A client -- an administrator or a custom
+controller -- that creates a pod carrying both populated `schedulingGates` and `spec.nodeName` gets
+a validation error rather than a pod nobody will schedule.
+
+The ban on gates for a scheduled pod follows from where the gate is read. A gate is a precondition
+the scheduler checks at PreEnqueue, before the pod enters the active queue; once the pod carries a
+`nodeName` it has already left that queue, and adding a gate would ask the API to un-schedule a
+pod that may already be running. No such operation exists. The equivalent invariant, stated as a
+property of the stored object: a scheduled pod always carries empty scheduling gates.
+
+Creation-time initialization is what makes the gate set knowable. Every gate that will ever hold
+the pod is present when the pod first reaches the API server, so a controller that wants to hold a
+pod must register its gate in the admission chain the pod passes through exactly once. Removal
+carries no ordering contract between gate owners; each owner deletes its own string, and whichever
+removal empties the slice releases the pod to the queue.
+
+The feature gate does not cover all three parts of this feature. It covers (a) the pod spec field
+with its validation, defaulting and strategy bits, and (b) the in-tree SchedulingGates scheduler
+plugin. It does not cover (c) the scheduler framework change underneath both, the new PreEnqueue
+extension point. Disabling the feature therefore turns off two of the three parts and leaves
+PreEnqueue live, which is deliberate: a plugin developer can build their own equivalent of (a) and
+(b) on (c) alone, using a CRD and an out-of-tree plugin, with no dependency on the in-tree field
+shipping or staying enabled.
+
+`kubectl get pod` gains one new literal, `SchedulingPaused`, in the PHASE column. It reports that
+the pod has at least one gate remaining and has not been enqueued. It is a kubectl-side display
+value and not a new member of `v1.PodPhase`, so a client reading `.status.phase` over the API sees
+`Pending` for a gated pod and needs no change. Reviewers of the printer code should confirm that
+`SchedulingPaused` is derived from a non-empty `.spec.schedulingGates`, which by the matrix above
+can only be true while `.spec.nodeName` is empty.

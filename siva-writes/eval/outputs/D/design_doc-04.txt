@@ -1,0 +1,15 @@
+Architecture for a new disaggregated data service
+
+Build the service as independent components that each own a small number of well-defined concerns, and run every component multi-tenant from the first day. Disaggregation is not new work. Aurora separated storage from the database engine, DynamoDB separated request routing from partition storage, and both have run at scale long enough to tell us what the seams cost. Aurora DSQL pushes the split further: replication is separate from transaction isolation, and both are separate from storage. The property you are buying is not elegance. It is that a component owning one concern can be scaled, replaced, or rolled back without a coordinated migration of everything around it.
+
+Multi-tenant packing pays for the extra machinery, at approximately the square root of the number of independent loads. Provision for one tenant whose peak is 10x its own average and you buy 10 units of capacity to sell 1. Pack 100 such tenants onto shared machines and the excess above average falls by about sqrt(100), so the fleet peaks near 1.9x its average and you buy under 2 units for every unit sold. Cost scales with peak and revenue scales with average, which makes that square root the whole margin. The Firecracker paper makes the same argument for microVMs. It holds only while the loads are independent: a thousand tenants who all serve the same business hours are one load, not a thousand.
+
+Keep caches small. A large in-memory cache couples failover time to working-set size, because the host taking over serves cold until it has refilled, and it couples read scaling to memory, because each replica added has to carry its own copy of the hot set. Both of those bills come due during the minutes when an operator is least able to pay them.
+
+Offer strongly consistent reads that scale horizontally. When a read from any replica is as correct as a read from the writer, the application stops routing reads by hand, and hot keys, read-your-writes bugs, and stale-replica confusion stop being the application builder's problem. That is a whole class of production incidents removed by an architectural decision instead of by a runbook.
+
+Push expensive operations down into storage. A scan executed in the query layer drags every candidate byte across the network to reach the predicate; the same scan executed in the storage node runs beside local SSD and returns only matching rows. Measure your own selectivity before you size the network: at 1% selectivity, push-down moves 1% of the bytes.
+
+The operational-simplicity argument is stronger now than when Aurora was designed, because of who is building applications. Agents write good code and are weak at long-horizon tasks, and database operations -- capacity planning, failover drills, version upgrades, index maintenance -- are the long-horizon task. Every concern this service absorbs is a concern nobody has to hold attention on for weeks.
+
+Design for the database of first resort. It should be simple enough to adopt at low scale, and it should grow with the application without the builder adding a single new piece of complexity.

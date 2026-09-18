@@ -1,0 +1,48 @@
+## Version skew
+
+A kubelet that does not implement in-place resize mishandles a resize in both of the two ways it can
+fail, so the API server must reject a resize whenever it can determine that the pod is held by such a
+kubelet. The determination has no direct signal and rests on a proxy field, which leaves two cases
+admitted that should not be.
+
+The skew window is wide because the pieces landed at different times. The CRI changes merged in v1.25
+so that runtimes could implement support; containerd added it in 1.6.9. A client older than the
+feature does not know the `ResizePolicy` fields and sends them as nil, and the API server copies the
+non-nil values from the old pod forward, so an old client does not clear a policy a new one set.
+
+Before v1.31, a kubelet with `InPlacePodVerticalScaling` disabled read a resource mutation as a change
+to the container definition and restarted the container with the new values. Nothing consulted the
+node's remaining allocatable before that restart, so a resize upward can over-subscribe the node.
+
+From v1.31 the kubelet no longer treats a resource change as a definition change and does not restart
+the container. The new value then takes effect only if the container restarts for some unrelated
+reason -- an OOM kill, a liveness probe failure, a node reboot -- and never appears in the API. The
+resize is neither applied nor reported, and a later reader cannot tell which values the container is
+actually running under.
+
+The kubelet exposes no version or feature field the API server can read, so admission uses
+`.status.containerStatuses[*].resources` as the proxy. The kubelet sets this field on running
+containers if and only if the feature is enabled. Note that it sets it to an empty `{}` when the
+container declares no requests or limits, so the test is non-nil, not non-empty; reading it as
+non-empty rejects every resize on a container with no declared resources.
+
+Admission therefore runs three checks in order. If the `InPlacePodVerticalScaling` feature gate is off
+on the API server, reject the resize. Otherwise find the first running container and allow the resize
+only if its status resources are non-nil. If the pod has no running containers, allow the resize.
+
+Allowing a pod with no running containers is a deliberate hole, and it covers one good case and one
+bad one. An unscheduled pod has no running containers and should be resizable: the new values are the
+ones the scheduler sees and the ones the container starts with, and no node has committed anything
+yet. A pod already scheduled to a node but with no container running yet gives the same empty status
+and the same allow, and here the node may end up over-provisioned, because the kubelet that starts the
+container may be one that never reports back.
+
+The same hole admits a race between admission and container start. A resize is admitted against a pod
+whose containers are not running while the kubelet is starting one of them. On a kubelet older than
+v1.31 the container restarts and comes up with the new values; on v1.31 or later it keeps the old
+ones. Which of the two happens depends on the interleaving, and neither outcome is reflected in the
+API at the time the resize is accepted.
+
+Reviewers should read the three checks as the contract and the two holes as known, bounded gaps: both
+require a pod with zero running containers, and both resolve once any container reaches running and
+reports its resources.

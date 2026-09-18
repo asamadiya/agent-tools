@@ -1,0 +1,21 @@
+Architecture: a disaggregated data service
+
+Goal
+
+We want an application builder to stop thinking about scale, reliability, durability, and multi-region fault tolerance. That is the bar Aurora DSQL sets for itself: a database of first resort, cheap to adopt at low scale, and growing with the application without the builder adding operational machinery along the way. We adopt the same bar. The argument gets stronger when the caller is an agent, not a person, because agents write good code and do poorly on long-horizon operational work -- capacity planning, failover drills, index maintenance, version upgrades. Every knob we remove is a knob no agent has to keep turning for a year.
+
+Shape of the system
+
+Split the service into independent services, each owning a small number of well-defined concerns. DSQL is not the first OLTP system built this way; Aurora and DynamoDB preceded it, and both proved the boundaries hold under production load. DSQL goes further by separating replication from transaction isolation and from storage, so all three scale and fail independently. We propose the same three-way split, plus a separate metadata service. Concretely: a transaction coordinator that owns isolation, a replication layer that owns durability and multi-region ordering, and a storage layer that owns bytes on local SSD.
+
+Three constraints we inherit
+
+Avoid large caches. A large cache makes a failover slow, because the replacement node serves cold traffic until it warms, and it makes read scaling awkward, because each new reader needs its own warm copy. Offer strongly consistent scalable reads. Once every replica returns the same answer, hot keys and partition-affinity problems stop being the application's problem; the reader picks any replica. Push expensive operations down into storage. A scan that runs next to local SSD moves result rows over the network instead of base rows, and the reduction factor equals the scan's selectivity.
+
+Why multi-tenancy pays
+
+Cost scales with peak load and revenue scales with average load, so the peak-to-average ratio on a machine is the margin. Pack many tenants onto one machine and that ratio falls at roughly sqrt(N), where N is the number of independent loads, because the coefficient of variation of a sum of N independent random variables falls as 1/sqrt(N). Pack 100 tenants and the ratio shrinks about 10x. The independence assumption is the whole argument, so measure it: correlated tenants (same region, same business hours, same upstream event) buy far less than sqrt(N). The Firecracker paper makes the same packing argument for microVMs.
+
+Open questions for review
+
+We have not settled the transaction coordinator's failure domain, and it is the piece with the least prior art in our stack. Two candidates: one coordinator per region with cross-region commit, or a coordinator quorum spanning regions. The second likely costs a wide-area round trip on the commit path; we should measure that round trip on our actual links before choosing. Bring p99 numbers to the review.

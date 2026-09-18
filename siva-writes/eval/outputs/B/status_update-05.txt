@@ -1,0 +1,19 @@
+two-tower-v7 wrap-up: session-aware retrieval head, not ramped
+
+Owner: Aditi Sundaram. Status: LIX torn down Sep 5.
+
+We ran a session-aware retrieval head on notifications ranking for seven weeks and shut it down without ramping. The LIX went to 2% on Jul 14, 4% on Aug 4, and 10% on Aug 19. At 10% treatment, notification CTR moved -0.11% with a 95% confidence interval of -0.41% to +0.19%, which is indistinguishable from zero. Downstream sessions per member fell 0.6% at p = 0.003. The metrics council reviewed these numbers on Sep 5 and we agreed to tear down the LIX.
+
+The cost side decided the call even before the sessions regression. Serving ran at 4,100 GPU-hours per day against 3,130 for control, a 31% increase, or 970 extra GPU-hours every day. p99 scoring latency went from 38 ms to 57 ms, a 19 ms addition to the tail that we would have had to defend to the notifications platform team at full ramp. A flat CTR and a negative sessions metric do not buy that.
+
+The segment cut explains where the aggregate came from. Members in the top decile by weekly session count gained +1.9% CTR. The 62% of members with fewer than three sessions a week lost 0.8%, and that segment dominates. Take those two segments alone at their member shares: 0.10 x (+1.9%) + 0.62 x (-0.8%) = -0.31%, against an observed -0.11%. The arithmetic only closes if the middle 28% gained around +0.7%, and it assumes notification volume tracks member share, which it does not exactly -- heavy users receive more notifications, so the top decile is overweighted in the true aggregate. Treat the reconciliation as directional.
+
+Our working hypothesis is that the session head needs at least four prior sessions before it produces a useful embedding. Below that, we think it collapses toward a near-constant vector, which flattens the ranking signal for light users and leaves them with something close to the base tower plus noise. This is a hypothesis and not a measurement. Nobody has instrumented the embedding itself.
+
+Here is how to settle it, and it is cheap. Bucket the holdout by prior session count, 0 through 10-plus. Compute the mean pairwise cosine similarity of the session embeddings within each bucket. If the collapse is real, cosine similarity in the 0-3 buckets sits near 1.0 and drops sharply at 4, and the per-bucket embedding norm variance should show the same break. If the curve is flat across all buckets, the hypothesis is wrong and the light-user regression has some other cause, at which point the diagnosis reopens.
+
+We are keeping the session embedding table in the feature store. Two other teams now read it, so tearing it down would break them, and the table is cheap relative to the serving head that generated the regression. The teardown removed the retrieval head, the LIX config, and the 970 GPU-hours per day. Nothing about the model architecture is being preserved.
+
+Two open items for this forum. First, whether a version gated on prior session count -- serving the session head only above the threshold and falling back to the production tower below it -- is worth building, given that it concedes the majority of members up front and would leave roughly 38% of the base on the new path. Second, whether the 0.6% sessions regression is causally downstream of the CTR change in the light-user segment or an independent effect of reordering, because a 0.8% CTR loss on 62% of members should not by itself move sessions per member by 0.6% at that significance.
+
+Full metrics dashboard and the per-segment breakdown are linked from the LIX record.

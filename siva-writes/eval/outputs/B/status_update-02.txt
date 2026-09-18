@@ -1,0 +1,30 @@
+search-federator canary 2026.9.3: SLO breach on canary hosts, reverting the interceptor
+Owner: Dan Ortiz. Period: Sep 8 -- Sep 15. Audience: weekly engineering review, search-federator SLO owners.
+
+Status
+
+The 2026.9.3 canary breaches the p99 SLO on the 4 hosts carrying it, and we are reverting the change that causes it. Canary p99 response time is 311 ms against 184 ms on the 236 control hosts, an increase of 127 ms or 69%, and the service SLO is p99 under 250 ms. p50 moved from 41 ms to 42 ms. The shape of that split -- a flat median and a blown tail -- points at something that is cheap on most requests and very expensive on a few.
+
+Cause
+
+A new gRPC interceptor validates every response payload against a JSON schema on the serving path, and it misses its schema cache on 29% of requests. The cache is a 512-entry LRU. The working set on production traffic is roughly 3,400 distinct schemas, so the cache is oversubscribed 6.6 to 1 and evicts entries that are about to be used again. Measured hit rate on canary is 71%. Each miss recompiles a schema: median interceptor cost is 0.9 ms, p99 cost is 94 ms, and recompilation dominates that tail. At 2,900 QPS per host, 29% misses is about 840 recompiles per host per second.
+
+A 71% hit rate puts misses far inside the p99 band. The 99th-percentile request is a cache miss with near certainty, which is why the tail moved and the median did not. Note that the 94 ms interceptor p99 does not fully account for the 127 ms end-to-end increase; the remaining 33 ms is most likely queueing behind recompiles on the serving threads, and we have not measured it directly.
+
+Why the pre-release load test passed
+
+The load test exercised 300 distinct schemas and reported a 99.6% hit rate. 300 entries fit inside a 512-entry cache with room to spare, so that test measured a cache that never evicted under load. It was a test of the interceptor's hit path only. Production traffic carries 11 times the schema variety the test used, and the eviction behaviour that produces the tail never appeared.
+
+Blast radius
+
+Zero error budget consumed. The canary carries 1.7% of traffic across 4 of 240 hosts, the fleet-wide p99 stayed inside the SLO, and no customer-visible SLO violation occurred. The breach is real on the canary hosts and contained to them.
+
+Decision, taken Sep 15
+
+Revert the interceptor from the release branch. Raise the schema cache to 8,192 entries, which is 2.4x the measured working set. Move validation behind a sampling flag set to 1%. Re-canary on Sep 22.
+
+Open risks for the Sep 22 canary
+
+Two things could still put recompilation in the tail. First, 1% sampling and a 99th percentile are the same number: if a sampled request hits a cold schema, the recompile lands exactly at p99. The enlarged cache is what has to carry that, not the sampling rate. Second, an 8,192-entry cache still pays 3,400 compiles while it warms, so the first seconds after a host starts serving will show the old tail. We will report canary p99, cache hit rate and interceptor p99 cost separately this time, and hold the re-canary if hit rate sits below 99% at steady state.
+
+Ask of SLO owners: confirm the 250 ms p99 target is the bar you want the Sep 22 canary held to, or tell us the number you would rather gate on.

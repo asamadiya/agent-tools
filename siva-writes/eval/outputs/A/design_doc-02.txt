@@ -1,0 +1,27 @@
+Measuring availability the way customers experience it
+
+Problem
+
+Two arguments keep recurring, and in both of them everyone is right. A service reports a mean request time of 100ms; a user reports she waits a second. A service reports MTTR under a minute; a user reports that her outages last an hour. Nobody is lying and nobody is measuring wrong. The two sides are measuring different things.
+
+We count events. One request is one sample; one outage is one sample. The customer does not sample events, she samples elapsed time — and the number of customers who land inside a given outage is proportional to how long that outage lasts. A five-second blip catches almost nobody. A six-hour recovery catches everybody, repeatedly. Our histogram gives both of them one row.
+
+This is the inspection paradox. Customers see a length-weighted version of our distribution, not the distribution itself. If our mean is E[X], theirs is
+
+  E_a[X] = E[X^2] / (2 E[X]) = 0.5 * (E[X] + Var(X)/E[X])
+
+The gap is Var(X)/E[X], and for recovery times the variance is enormous relative to the mean. Fit a log-normal to plausible numbers: median TTR 30 minutes, p99 600 minutes — one event in a hundred taking ten hours. MTTR lands just over an hour. The customer-experienced mean lands at several hours. That is a multiple of the reported number, not a correction to it. Our dashboard is not slightly optimistic; it is reporting a different quantity.
+
+Proposal
+
+1. Report a time-weighted recovery metric alongside MTTR, computed directly as sum(d_i^2) / (2 * sum(d_i)) over incident durations in the window. Call it customer-experienced recovery time. Do not replace MTTR — it remains the right metric for asking how our response process is doing. It is the wrong metric for asking what customers lived through.
+
+2. Publish the tail explicitly. p99 duration and the share of total downtime minutes contributed by the top 1% of incidents. When one incident owns half the downtime, the mean of the others is decoration.
+
+3. Set SLOs on downtime-minutes and on the time-weighted mean, not on incident count. Counting incidents rewards closing the short ones fast.
+
+4. Ship the simulator as the shared reference: log-normal service with mu=1.0, sigma=3.0, Poisson arrivals at rate 100, 1000 samples, reporting operator-side and customer-side means side by side. It settles these arguments in thirty seconds.
+
+Non-goals
+
+Timeout-and-retry masks some service-time tail and is already deployed where it helps. It does nothing for recovery time — there is no retry around an outage. Latency and availability need separate treatment here.

@@ -1,0 +1,44 @@
+1.1.1.1 Resolver outage on 14 July 2025
+
+On 14 July 2025, the 1.1.1.1 public DNS Resolver was unavailable worldwide for 62 minutes, from 21:52 to 22:54 UTC. Gateway DNS was intermittently degraded over the same window. All times below are UTC.
+
+This was our error, not an attack and not a BGP hijack. A configuration change we made in June left a latent fault in our service topology, and an unrelated, routine change on 14 July detonated it.
+
+What happened
+
+On 6 June at 17:38, a release prepared the service topology for a future Data Localization Suite service. That change incorrectly attached the 1.1.1.1 Resolver's prefixes to the new, non-production service. Nothing observable happened. The production network kept its configuration, no traffic moved, and no alert fired. The fault sat dormant for five weeks.
+
+On 14 July at 21:48, an engineer attached an offline test location to that same non-production service for internal testing. Because the Resolver prefixes were bound to the service, this triggered a global refresh of the network configuration. The refresh recomputed the 1.1.1.1 topology from the service's location list, which now contained exactly one offline location. Every other location was dropped, and the Resolver prefixes were withdrawn from the global routing table.
+
+Withdrawn prefixes included 1.1.1.0/24, 1.0.0.0/24 and 2606:4700:4700::/48, among others. From a client's perspective the addresses simply stopped being reachable. UDP, TCP and DoT query volume collapsed at 21:52. DoH held up: most DoH clients resolve through cloudflare-dns.com, which is served from different addresses that were unaffected.
+
+Timeline
+
+- 6 June, 17:38: latent configuration error introduced. No impact, no signal.
+- 14 July, 21:48: test location added to the non-production service; global refresh begins.
+- 21:52: Resolver prefixes withdrawn worldwide. Queries start failing.
+- 21:54: Tata Communications India (AS4755) begins advertising 1.1.1.0/24.
+- 22:01: internal health checks alert; incident declared.
+- 22:20: revert initiated; prefixes re-advertised. Traffic recovers to roughly 77% of pre-incident levels.
+- 22:54: traffic back to normal.
+- 22:55: incident resolved.
+
+About the hijack
+
+At 21:54, two minutes after our withdrawal, AS4755 began advertising 1.1.1.0/24. This did not cause the outage and it did not extend it. Our prefix was already gone; the advertisement was made visible by the vacuum we created, and some networks briefly routed 1.1.1.0/24 toward Tata. We mention it because network engineers watching route collectors will have seen it and deserve the correct causal ordering.
+
+Why recovery took 34 minutes after the revert
+
+Re-advertising the prefixes restored about 77% of traffic immediately. The remaining 23% of edge servers had lost their IP bindings as part of the same refresh, and those bindings could not be restored by the revert alone. Re-adding them runs through change management, which normally stages such changes over hours to limit blast radius. We validated the change in test locations first, then accelerated the rollout. That validation-then-accelerate step is the bulk of the 22:20 to 22:54 window.
+
+Root cause and what we are changing
+
+The proximate trigger was a test-location change. The root cause is the legacy service topology system. It hard-codes location lists, so a service's footprint is expressed as an explicit set rather than derived from intent, and a single edit can silently redefine a global service. It also has no progressive or canary deployment path: the 14 July refresh applied everywhere at once. Peer review did not catch the 6 June error, and peer review is not a substitute for a deployment system that fails small.
+
+Three things follow:
+
+1. We are deprecating the legacy topology system and migrating 1.1.1.1 onto the same progressive-deployment path our other services use, so that a topology change lands in a fraction of the network first and is observed before it propagates.
+2. We are adding health-mediated rollback, so a global withdrawal of a production prefix stops and reverses itself rather than waiting on human declaration.
+3. We are auditing existing service-to-prefix bindings for the same class of dormant misattachment, since the defining property of this failure was that it was invisible for five weeks.
+
+We are sorry. 1.1.1.1 is infrastructure people depend on without thinking about it, and for an hour we made them think about it.

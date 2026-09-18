@@ -1,0 +1,15 @@
+Ten percent of a box, spent on page faults
+
+Vadim was reading a CPU flame graph from a TensorFlow workload when an orange tower caught his eye: page-fault handling, 10% of all CPU time on the instance. Page faults are normal. A tenth of the machine doing nothing but re-establishing mappings is not, and the arithmetic is what makes it worth a day of someone's time -- multiply 10% by a fleet of thousands of instances and you are paying for hundreds of machines that compute nothing. Our team will open a flame graph over a single point of CPU. Ten is not a judgement call.
+
+The faulting stacks resolved to __memcpy_avx_unaligned(), which told us the faults were memcpy touching data segment mappings that were not resident. That is unremarkable in a process's first seconds, when the segments and the heap have no mappings behind them yet. RSS climbs, the faults taper, and the process settles. This process had been up for hours. By that point the fault rate should have been flat, and it was not.
+
+One familiar way to keep a process faulting forever is to cycle memory through mmap() and munmap(). We tested it directly: mmapsnoop.py, the eBPF tracer, recorded no such calls over the sampling window. Whatever was destroying the mappings was not unmapping them.
+
+Searching the same flame graph for madvise put it at 0.8% of CPU, with the madvise() path descending into zap_page_range() -- the kernel function that tears down page table entries. That is the source of the faults. Which flag drives that path is answered by reading mm/advise.c: MADV_DONTNEED. Tracing the sys_madvise() flag argument with a kprobe or the syscall tracepoint gets you the same answer if you would rather watch it happen than read it.
+
+The diagnosis is an optimization eating itself. The allocator was calling madvise(MADV_DONTNEED) on pages the workload was still using. Each call threw away the virtual-to-physical mapping; the next access took a fault and the kernel put the mapping back. The 0.8% spent in madvise() was buying 10% spent in the fault handler. The memory was never returned to anyone for long enough to matter, because the workload wanted it back almost immediately.
+
+The allocator was jemalloc, pulled in by a configure option that nobody in the room had chosen deliberately. Vadim rebuilt the binary against glibc's allocator and reran it. The first round of testing came back with page-fault work at 3% of CPU, against the 10% we started with, and the corrected flame graph shows the tower cut down to a stub.
+
+Two things are worth carrying out of this. The first is that 0.8% and 10% are the same bug, seen from two ends -- a cheap syscall can be expensive if it creates work somewhere the profiler attributes elsewhere. The second is that the flame graph answered every question except the last one. It found the tower, ruled in madvise(), and sized the fix; the kernel source named the flag. Read mm/advise.c yourself the next time a madvise() frame shows up above zap_page_range().
