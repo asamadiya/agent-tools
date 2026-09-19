@@ -32,8 +32,6 @@ This section should probably be called process error and not human error since I
 
 Oh, we're about to do a risky thing! Ok, let's have humans be VERY CAREFUL about executing the risky operation. Oops! We now have a global outage.
 
-Oh, we're about to do a risky thing! Ok, let's have humans be VERY CAREFUL about executing the risky operation. Oops! We now have a global outage.
-
 Postmortems that start with “Because this was a high risk operation, foobar high risk protocol was used” are ubiquitous enough that I now think of extra human-operated steps that are done to mitigate human risk as an ops smell. Some common protocols are having multiple people watch or confirm the operation, or having ops people standing by in case of disaster. Those are reasonable things to do, and they mitigate risk to some extent, but in many postmortems I've read, automation could have reduced the risk a lot more or removed it entirely. There are a lot of cases where the outage happened because a human was expected to flawlessly execute a series of instructions and failed to do so. That's exactly the kind of thing that programs are good at! In other cases, a human is expected to perform manual error checking. That's sometimes harder to automate, and a less obvious win (since a human might catch an error case that the program misses), but in most cases I've seen it's still a net win to automate that sort of thing.
 
 In an IDC survey, respondents voted human error as the most troublesome cause of problems in the datacenter.

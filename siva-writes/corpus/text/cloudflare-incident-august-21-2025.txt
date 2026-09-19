@@ -30,89 +30,45 @@ Description
 
 2025-08-21 16:27 UTC
 
-2025-08-21 16:27 UTC
-
 Traffic surge for single customer begins, doubling total traffic from Cloudflare to AWSIMPACT START
-
-Traffic surge for single customer begins, doubling total traffic from Cloudflare to AWSIMPACT START
-
-2025-08-21 16:37 UTC
 
 2025-08-21 16:37 UTC
 
 AWS begins withdrawing prefixes from Cloudflare on congested PNI (Private Network Interconnect) BGP sessions
 
-AWS begins withdrawing prefixes from Cloudflare on congested PNI (Private Network Interconnect) BGP sessions
-
 2025-08-21 16:44 UTC
-
-2025-08-21 16:44 UTC
-
-Network team is alerted to internal congestion in Ashburn (IAD)
 
 Network team is alerted to internal congestion in Ashburn (IAD)
 
 2025-08-21 16:45 UTC
 
-2025-08-21 16:45 UTC
-
 Network team is evaluating options for response, but AWS prefixes are unavailable on paths that are not congested due to their withdrawals
-
-Network team is evaluating options for response, but AWS prefixes are unavailable on paths that are not congested due to their withdrawals
-
-2025-08-21 17:22 UTC
 
 2025-08-21 17:22 UTC
 
 AWS BGP prefixes withdrawals result in a higher amount of dropped trafficIMPACT INCREASE
 
-AWS BGP prefixes withdrawals result in a higher amount of dropped trafficIMPACT INCREASE
-
 2025-08-21 17:45 UTC
-
-2025-08-21 17:45 UTC
-
-Incident is raised for customer impact in Ashburn (IAD)
 
 Incident is raised for customer impact in Ashburn (IAD)
 
 2025-08-21 19:05 UTC
 
-2025-08-21 19:05 UTC
-
 Rate limiting of single customer causing traffic surge decreases congestion
-
-Rate limiting of single customer causing traffic surge decreases congestion
-
-2025-08-21 19:27 UTC
 
 2025-08-21 19:27 UTC
 
 Network team additional traffic engineering actions fully resolve congestionIMPACT DECREASE
 
-Network team additional traffic engineering actions fully resolve congestionIMPACT DECREASE
-
 2025-08-21 19:45 UTC
-
-2025-08-21 19:45 UTC
-
-AWS begins reverting BGP withdrawals as requested by Cloudflare
 
 AWS begins reverting BGP withdrawals as requested by Cloudflare
 
 2025-08-21 20:07 UTC
 
-2025-08-21 20:07 UTC
-
-AWS finishes normalizing BGP prefix announcements to Cloudflare over IAD PNIs
-
 AWS finishes normalizing BGP prefix announcements to Cloudflare over IAD PNIs
 
 2025-08-21 20:18 UTC
-
-2025-08-21 20:18 UTC
-
-IMPACT END
 
 IMPACT END
 

@@ -54,7 +54,23 @@ tier1_hits=0
 ran=0
 for f in "$SRC"/references/exemplars/*.txt; do
   ran=$((ran+1))
-  out="$(python3 "$SRC/scripts/prose-check.py" "$f" 2>&1)" || true
+  set +e
+  out="$(python3 "$SRC/scripts/prose-check.py" "$f" 2>&1)"
+  code=$?
+  set -e
+  # Exit 0 means clean and 1 means a house-style failure, both expected. Anything else is the
+  # checker crashing, and discarding it with || true let ten crashes validate as success.
+  if [ "$code" -ne 0 ] && [ "$code" -ne 1 ]; then
+    echo "  FAIL  checker exited $code on $(basename "$f")"
+    echo "$out" | tail -3
+    tier1_hits=$((tier1_hits+1))
+    continue
+  fi
+  if ! echo "$out" | grep -q "REPORT"; then
+    echo "  FAIL  checker produced no report for $(basename "$f")"
+    tier1_hits=$((tier1_hits+1))
+    continue
+  fi
   if echo "$out" | grep -q "tier-1 pattern"; then
     echo "  FAIL  tier-1 pattern fires on expert prose: $(basename "$f")"
     echo "$out" | grep "tier-1 pattern" | head -2

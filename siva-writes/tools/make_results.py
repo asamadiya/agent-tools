@@ -134,6 +134,12 @@ def main() -> None:
         L.extend(paired_table(m2, [("C", "D"), ("C", "B"), ("C", "A"), ("D", "A"), ("B", "A"),
                                    ("D", "H"), ("C", "H"), ("A", "H")]))
         A("")
+        A("**Regraded.** The first grading pass matched numbers as an unordered set, so a reply that")
+        A("reversed two container allocations, or answered GiB against a GB key, scored correct. The")
+        A("grader now requires the key's numbers in the key's order plus agreement on any unit it")
+        A("names, and word overlap can no longer override a numeric disagreement. 32 item verdicts in")
+        A("round 1 and 20 in round 2 changed. Every conclusion below is post-regrade, and all of them")
+        A("survived it.\n")
         A("**H is deflated and its comparisons should not be used.** 13.1% of graded facts have answers")
         A("largely absent from the H span: the briefs' facts were extracted from full source documents")
         A("while H is only the anchored excerpt. H is reported for completeness and excluded from any")

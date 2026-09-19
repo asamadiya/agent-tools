@@ -32,49 +32,25 @@ Impact description
 
 Core CDN and security services
 
-Core CDN and security services
-
 HTTP 5xx status codes. The screenshot at the top of this post shows a typical error page delivered to end users.
-
-HTTP 5xx status codes. The screenshot at the top of this post shows a typical error page delivered to end users.
-
-Turnstile
 
 Turnstile
 
 Turnstile failed to load.
 
-Turnstile failed to load.
-
 Workers KV
-
-Workers KV
-
-Workers KV returned a significantly elevated level of HTTP 5xx errors as requests to KV’s “front end” gateway failed due to the core proxy failing.
 
 Workers KV returned a significantly elevated level of HTTP 5xx errors as requests to KV’s “front end” gateway failed due to the core proxy failing.
 
 Dashboard
 
-Dashboard
-
 While the dashboard was mostly operational, most users were unable to log in due to Turnstile being unavailable on the login page.
-
-While the dashboard was mostly operational, most users were unable to log in due to Turnstile being unavailable on the login page.
-
-Email Security
 
 Email Security
 
 While email processing and delivery were unaffected, we observed a temporary loss of access to an IP reputation source which reduced spam-detection accuracy and prevented some new-domain-age detections from triggering, with no critical customer impact observed. We also saw failures in some Auto Move actions; all affected messages have been reviewed and remediated.
 
-While email processing and delivery were unaffected, we observed a temporary loss of access to an IP reputation source which reduced spam-detection accuracy and prevented some new-domain-age detections from triggering, with no critical customer impact observed. We also saw failures in some Auto Move actions; all affected messages have been reviewed and remediated.
-
 Access
-
-Access
-
-Authentication failures were widespread for most users, beginning at the start of the incident and continuing until the rollback was initiated at 13:05. Any existing Access sessions were unaffected. All failed authentication attempts resulted in an error page, meaning none of these users ever reached the target application while authentication was failing. Successful logins during this period were correctly logged during this incident. Any Access configuration updates attempted at that time would have either failed outright or propagated very slowly. All configuration updates are now recovered.
 
 Authentication failures were widespread for most users, beginning at the start of the incident and continuing until the rollback was initiated at 13:05. Any existing Access sessions were unaffected. All failed authentication attempts resulted in an error page, meaning none of these users ever reached the target application while authentication was failing. Successful logins during this period were correctly logged during this incident. Any Access configuration updates attempted at that time would have either failed outright or propagated very slowly. All configuration updates are now recovered.
 
@@ -178,109 +154,55 @@ Description
 
 11:05
 
-11:05
-
 Normal.
-
-Normal.
-
-Database access control change deployed.
 
 Database access control change deployed.
 
 11:28
 
-11:28
-
 Impact starts.
-
-Impact starts.
-
-Deployment reaches customer environments, first errors observed on customer HTTP traffic.
 
 Deployment reaches customer environments, first errors observed on customer HTTP traffic.
 
 11:32-13:05
 
-11:32-13:05
-
 The team investigated elevated traffic levels and errors to Workers KV service.
-
-The team investigated elevated traffic levels and errors to Workers KV service.
-
-The initial symptom appeared to be degraded Workers KV response rate causing downstream impact on other Cloudflare services. Mitigations such as traffic manipulation and account limiting were attempted to bring the Workers KV service back to normal operating levels. The first automated test detected the issue at 11:31 and manual investigation started at 11:32. The incident call was created at 11:35.
 
 The initial symptom appeared to be degraded Workers KV response rate causing downstream impact on other Cloudflare services. Mitigations such as traffic manipulation and account limiting were attempted to bring the Workers KV service back to normal operating levels. The first automated test detected the issue at 11:31 and manual investigation started at 11:32. The incident call was created at 11:35.
 
 13:05
 
-13:05
-
 Workers KV and Cloudflare Access bypass implemented — impact reduced.
-
-Workers KV and Cloudflare Access bypass implemented — impact reduced.
-
-During investigation, we used internal system bypasses for Workers KV and Cloudflare Access so they fell back to a prior version of our core proxy. Although the issue was also present in prior versions of our proxy, the impact was smaller as described below.
 
 During investigation, we used internal system bypasses for Workers KV and Cloudflare Access so they fell back to a prior version of our core proxy. Although the issue was also present in prior versions of our proxy, the impact was smaller as described below.
 
 13:37
 
-13:37
-
-Work focused on rollback of the Bot Management configuration file to a last-known-good version.
-
 Work focused on rollback of the Bot Management configuration file to a last-known-good version.
 
 We were confident that the Bot Management configuration file was the trigger for the incident. Teams worked on ways to repair the service in multiple workstreams, with the fastest workstream a restore of a previous version of the file.
-
-We were confident that the Bot Management configuration file was the trigger for the incident. Teams worked on ways to repair the service in multiple workstreams, with the fastest workstream a restore of a previous version of the file.
-
-14:24
 
 14:24
 
 Stopped creation and propagation of new Bot Management configuration files.
 
-Stopped creation and propagation of new Bot Management configuration files.
-
 We identified that the Bot Management module was the source of the 500 errors and that this was caused by a bad configuration file. We stopped automatic deployment of new Bot Management configuration files.
-
-We identified that the Bot Management module was the source of the 500 errors and that this was caused by a bad configuration file. We stopped automatic deployment of new Bot Management configuration files.
-
-14:24
 
 14:24
 
 Test of new file complete.
 
-Test of new file complete.
-
 We observed successful recovery using the old version of the configuration file and then focused on accelerating the fix globally.
-
-We observed successful recovery using the old version of the configuration file and then focused on accelerating the fix globally.
-
-14:30
 
 14:30
 
 Main impact resolved. Downstream impacted services started observing reduced errors.
 
-Main impact resolved. Downstream impacted services started observing reduced errors.
-
-A correct Bot Management configuration file was deployed globally and most services started operating correctly.
-
 A correct Bot Management configuration file was deployed globally and most services started operating correctly.
 
 17:06
 
-17:06
-
 All services resolved. Impact ends.
-
-All services resolved. Impact ends.
-
-All downstream services restarted and all operations fully restored.
 
 All downstream services restarted and all operations fully restored.
 

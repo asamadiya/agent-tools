@@ -6,25 +6,13 @@ Besides the original documentation of a software design, design docs fulfill the
 
 Early identification of design issues when making changes is still cheap.
 
-Early identification of design issues when making changes is still cheap.
-
 Achieving consensus around a design in the organization.
-
-Achieving consensus around a design in the organization.
-
-Ensuring consideration of cross-cutting concerns.
 
 Ensuring consideration of cross-cutting concerns.
 
 Scaling knowledge of senior engineers into the organization.
 
-Scaling knowledge of senior engineers into the organization.
-
 Form the basis of an organizational memory around design decisions.
-
-Form the basis of an organizational memory around design decisions.
-
-Acts as a summary artifact in the technical portfolio of the software designer(s).
 
 Acts as a summary artifact in the technical portfolio of the software designer(s).
 
@@ -152,21 +140,11 @@ When considering writing a design doc, think about these points:
 
 Are you unsure about the right software design, and would it make sense to spend upfront time to gain certainty?
 
-Are you unsure about the right software design, and would it make sense to spend upfront time to gain certainty?
-
-Relatedly, would it help to involve senior engineers, who might not be able to review every code-change, in the design?
-
 Relatedly, would it help to involve senior engineers, who might not be able to review every code-change, in the design?
 
 Is the software design ambiguous or even contentious such that achieving organizational consensus around it would be valuable?
 
-Is the software design ambiguous or even contentious such that achieving organizational consensus around it would be valuable?
-
 Does my team sometimes forget to consider privacy, security, logging or other cross-cutting concerns in the design?
-
-Does my team sometimes forget to consider privacy, security, logging or other cross-cutting concerns in the design?
-
-Is there a strong need for documents that provide high-level insights into the design of legacy systems in the organization?
 
 Is there a strong need for documents that provide high-level insights into the design of legacy systems in the organization?
 

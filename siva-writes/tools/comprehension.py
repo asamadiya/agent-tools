@@ -39,8 +39,22 @@ def normalise(s: str) -> str:
     return re.sub(r"\s+", " ", s).strip()
 
 
-def numbers_in(s: str) -> set[str]:
-    return {n.rstrip(".").replace(",", "") for n in re.findall(r"\d[\d,]*(?:\.\d+)?", s)}
+UNIT = re.compile(r"\b(?:[kmgtp]i?b|bytes?|ms|us|ns|s|sec|secs|seconds?|minutes?|hours?|days?|"
+                  r"%|percent|rps|qps|tps|flops?|hz|[kmg]hz|cores?|nodes?|pods?|replicas?)\b", re.I)
+
+
+def numbers_in(s: str) -> list[str]:
+    """Ordered, because a set match scores a reply that reverses two allocations."""
+    return [n.rstrip(".").replace(",", "") for n in re.findall(r"\d[\d,]*(?:\.\d+)?", s)]
+
+
+def numbers_ordered_in(key: list[str], reply: list[str]) -> bool:
+    """Every key number present, in the key's order."""
+    i = 0
+    for r in reply:
+        if i < len(key) and r == key[i]:
+            i += 1
+    return i == len(key)
 
 
 def graded_correct(reply: str, answer: str, accept: list[str]) -> tuple[bool | None, str]:
@@ -65,7 +79,12 @@ def graded_correct(reply: str, answer: str, accept: list[str]) -> tuple[bool | N
         if c in r:
             return True, f"substring:{candidate[:40]}"
         cn = numbers_in(c)
-        numbers_present = bool(cn) and cn <= numbers_in(r)
+        numbers_present = bool(cn) and numbers_ordered_in(cn, numbers_in(r))
+        # A unit named in the key has to appear in the reply: 19 GB and 19 GiB are different
+        # answers, and a set-of-digits match cannot tell them apart.
+        key_units = {u.lower() for u in UNIT.findall(c)}
+        if key_units and not (key_units & {u.lower() for u in UNIT.findall(r)}):
+            numbers_present = False
         distinctive = any(len(n) > 1 or "." in n for n in cn)
         words = [w for w in c.split() if len(w) > 3]
         lexical = sum(1 for w in words if w in r) / len(words) if words else 0.0
@@ -74,7 +93,10 @@ def graded_correct(reply: str, answer: str, accept: list[str]) -> tuple[bool | N
             return True, f"numeric:{sorted(cn)}"
         if numbers_present and lexical >= 0.5:
             return True, f"numeric+lexical:{sorted(cn)} {lexical:.2f}"
-        if lexical >= 0.8:
+        # Word overlap must not override a numeric disagreement. "A gets 9.5 GB and B gets 19 GB"
+        # shares 90% of its content words with the key that says the opposite, and the lexical path
+        # scored it correct until this guard existed. If the key carries numbers, they decide.
+        if lexical >= 0.8 and (not cn or numbers_present):
             return True, f"lexical:{candidate[:40]}"
     if 0.4 <= best < 0.8:
         return None, f"adjudicate:lexical {best:.2f}"

@@ -14,17 +14,11 @@ McKenney starts by describing Fairness Queuing (or queue per client ):
 
 This fairness-queuing algorithm operates by maintaining a separate first-come-first-served (FCFS) queue for each conversation. … Since the queues are serviced in a bit-by-bit round-robin fashion ill-behaved conversations that attempt to use more than their fair share of network resources will face longer delays and larger packet-loss rates than well-behaved conversations that remain within their fair share.
 
-This fairness-queuing algorithm operates by maintaining a separate first-come-first-served (FCFS) queue for each conversation. … Since the queues are serviced in a bit-by-bit round-robin fashion ill-behaved conversations that attempt to use more than their fair share of network resources will face longer delays and larger packet-loss rates than well-behaved conversations that remain within their fair share.
-
 That’s a network packet focused view, but the same thing can apply to RPC requests, for example, just by using a different key (e.g. the authorized customer id). The big downside of this in distributed systems is that it requires O(customers) queues, and the related O(customers) work of doing round-robin across those queues.
 
 Stochastic fairness queuing can be most easily understood by comparing it to strict fairness queuing. The major differences are that the queues are serviced in strict round-robin order and that a simple hash function is used to map from source-destination address pair into a fixed set of queues.
 
-Stochastic fairness queuing can be most easily understood by comparing it to strict fairness queuing. The major differences are that the queues are serviced in strict round-robin order and that a simple hash function is used to map from source-destination address pair into a fixed set of queues.
-
 In SFQ, on the other hand, a fixed set of queues is used (so O(1) queues, not O(customers) queues), and customers are assigned to the queues based on a hash. That’s great, but still causes the problem of long-term bad luck. If I end up on a queue with a noisy neighbor, I end up there forever.
-
-If two conversations collide, they will continue to collide, resulting in each conversation of the pair persistently receiving less than its share of bandwidth. This situation is deviated by periodically perturbing the hash function … so that conversations that collide during one time period are very unlikely to collide during the next.
 
 If two conversations collide, they will continue to collide, resulting in each conversation of the pair persistently receiving less than its share of bandwidth. This situation is deviated by periodically perturbing the hash function … so that conversations that collide during one time period are very unlikely to collide during the next.
 

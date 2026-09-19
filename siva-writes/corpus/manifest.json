@@ -68,9 +68,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 15354,
-      "chars": 99092,
-      "sha256": "60ab833edacce7cbc5e52e62ae0308600697365b86d6223f843be854de735c0d",
+      "words": 14890,
+      "chars": 95829,
+      "sha256": "ac883c1fcdd1dd45d370125e5b5d506b9eb8c6e8c2b5d8b102e67162500846a2",
       "attempts": []
     },
     {
@@ -269,9 +269,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 986,
-      "chars": 6685,
-      "sha256": "c9340e3a8b03a3206ddcf073a1be05b8a1ff863d931e6c10e2c3dde8d79f0f97",
+      "words": 739,
+      "chars": 4937,
+      "sha256": "f78f96ab76c922906308b761821ecb78ccf0071c7ad03cf67cbc78460dc17f5d",
       "attempts": []
     },
     {
@@ -295,9 +295,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 692,
-      "chars": 4507,
-      "sha256": "af3e44e92fc603fd69db9ef0a5b72264aeb8082e9106bf8b320b57d32b031979",
+      "words": 538,
+      "chars": 3457,
+      "sha256": "07e8bf3e2207880b3b7700e17af257ce66d0b3427a8c6ce9687b5e815eb7651e",
       "attempts": []
     },
     {
@@ -349,9 +349,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 2237,
-      "chars": 15413,
-      "sha256": "4ed8671e075c8038d17fc3605c3573aeda13b8d7e8f5fb2a53a1ffd5ec45a9d6",
+      "words": 1971,
+      "chars": 13428,
+      "sha256": "2047d4fdafa8f2fb0e6278e036620f24772e05e7a909e24d94d9881342dfe01f",
       "attempts": []
     },
     {
@@ -363,9 +363,9 @@
       "status": "ok",
       "method": "direct",
       "resolved_url": "https://blog.cloudflare.com/18-november-2025-outage/",
-      "words": 3413,
-      "chars": 21756,
-      "sha256": "aeed50dff929df0e8a97326c18d1e557b710ae63d24e98fa71c63beb48eba22d",
+      "words": 2889,
+      "chars": 18144,
+      "sha256": "be9c42cb139427477870ab66b78eb77921dfc07e802c8ec7a1a56d15d1b5fd2f",
       "attempts": []
     },
     {
@@ -376,9 +376,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 1444,
-      "chars": 9288,
-      "sha256": "a90fb464edcacb72bf33f9675a34868b14e7c71f9cdd152076f36a87bc286e53",
+      "words": 1409,
+      "chars": 8970,
+      "sha256": "9fef4c43d1d13a56f796572399686ec9aab4cbe2304e2e94eba478e97c761bf0",
       "attempts": []
     },
     {
@@ -402,9 +402,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 1470,
-      "chars": 10073,
-      "sha256": "9142de43aaf697f44b658d0767961afe718c63693614c84b65ebe4794dfd5043",
+      "words": 1335,
+      "chars": 8942,
+      "sha256": "1a7af0327fa2bde2cc43f2a007b2150c1d8ffcb94ef66e8ecbdd8c5fa16c896d",
       "attempts": []
     },
     {
@@ -415,9 +415,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 1257,
-      "chars": 8114,
-      "sha256": "c781db7cc52dd587f3d493f52b656514e7b5fc5181950419b111af75aac9fbb3",
+      "words": 1107,
+      "chars": 7018,
+      "sha256": "dbaa18422a45f15397b92b93601dfc8fbfeb6747ac25cd21a015a3d316e2e1dc",
       "attempts": []
     },
     {
@@ -432,9 +432,9 @@
       "status": "ok",
       "method": "direct",
       "resolved_url": "https://danluu.com/bug-blind/",
-      "words": 8261,
-      "chars": 46080,
-      "sha256": "c6a56da1862342d2da800d4481d3f0d3198ce94363c2a867fd55504076f15e80",
+      "words": 6602,
+      "chars": 36861,
+      "sha256": "fb972a9a4b7baa3b53ccff7f3e0339ea29d62beb81fa507b5ce385c7c1725e83",
       "attempts": []
     },
     {
@@ -458,9 +458,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 5447,
-      "chars": 31911,
-      "sha256": "bd8bac771489acdd143835d67aaec48a1906ab409ba4e5690aa1078f04e361c4",
+      "words": 3820,
+      "chars": 22655,
+      "sha256": "95acde2ef9a5404cbd6f55b056b23bd541bd5faf09e52c479f4b66094d9d5ce6",
       "attempts": []
     },
     {
@@ -471,9 +471,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 10189,
-      "chars": 58260,
-      "sha256": "98eee8214f1136ebdd19d9801e79af15ad2bf7695ad7fb4ffa408859ceb8d5ca",
+      "words": 7162,
+      "chars": 41261,
+      "sha256": "799d2aa07e20adc897beaecbfee1c0751bfa5a9150f1e8dd225006cbe2bdc994",
       "attempts": []
     },
     {
@@ -484,9 +484,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 5054,
-      "chars": 29807,
-      "sha256": "fb49c73ff595b3f0de9fa5a2307266bfbde58cd7cf7a7629e9aacd95a3bd30a1",
+      "words": 4762,
+      "chars": 28087,
+      "sha256": "d078526ee96ee78aaf8ed3fbf0245a26104666225b13f93db80c2077b0065f3d",
       "attempts": []
     },
     {
@@ -497,9 +497,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 13891,
-      "chars": 80972,
-      "sha256": "4fe64b0944468700739388e6fbc77f8814af1c27b479e9c4d9f77b8cf74beda7",
+      "words": 10671,
+      "chars": 62323,
+      "sha256": "42597091fabbf88c7afa553a427b9eb1628c47ca15e1faf80624601a7c7d9449",
       "attempts": []
     },
     {
@@ -510,9 +510,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 2390,
-      "chars": 14325,
-      "sha256": "a837747afebabe0696142e18f6e1c4bdf1b4517cc6bfc94cf5b208de9c3a8ce2",
+      "words": 2363,
+      "chars": 14177,
+      "sha256": "3f77cfcc36fc3b379eb6dae5847b067ec7d61b9790e82aee8336bfedf82cf1b2",
       "attempts": []
     },
     {
@@ -523,9 +523,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 10922,
-      "chars": 74366,
-      "sha256": "9ee85e5c9296085e815027b8c3ed704ceb28f3c1a3344edb97bb830f4aeff6ef",
+      "words": 5530,
+      "chars": 37842,
+      "sha256": "7080a4088c1753069483deef77a6d10a3482a0a17f25074aa2d1aa37c1fa87a5",
       "attempts": []
     },
     {
@@ -536,9 +536,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 5613,
-      "chars": 39474,
-      "sha256": "0a9592265a625f1a3b8295b253323e2efdd4ab2c1bcce1c9af68f7c8444fa154",
+      "words": 2853,
+      "chars": 20250,
+      "sha256": "3a187082738fe0b8511b73b7ebf8464670120bf5e3d15ee921a1d716b4286b3b",
       "attempts": []
     },
     {
@@ -549,9 +549,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 5380,
-      "chars": 36889,
-      "sha256": "a3a851f01de52baa1e917cb03b25a84f4d70de0a19de73ec2bd1edaa2a61f99c",
+      "words": 2881,
+      "chars": 20218,
+      "sha256": "4c4b71e12e347f68e58e30baeb1c85c8b214b0b4fba7c722d52fc67b16ecffe0",
       "attempts": []
     },
     {
@@ -562,9 +562,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 5798,
-      "chars": 39543,
-      "sha256": "5eda5785a48afb20d7f519d9e318f39cea3f06146f6830e3389aae09fe5df679",
+      "words": 2958,
+      "chars": 20275,
+      "sha256": "73a64f36499bb0aba6c5f9d20a0186585d772e4b3db033727d8a0cd7ff5b0fd0",
       "attempts": []
     },
     {
@@ -576,9 +576,9 @@
       "status": "ok",
       "method": "direct",
       "resolved_url": "https://industrialempathy.com/posts/design-docs-at-google/",
-      "words": 2649,
-      "chars": 16204,
-      "sha256": "2fb3518ff78babe1d6879557e368cb980961c0fb27048fa03824d85a60290ba0",
+      "words": 2498,
+      "chars": 15199,
+      "sha256": "e139813d15b1f309f79bb9902e280138ae6bd1b9471d0e60cfca005c478323bf",
       "attempts": []
     },
     {
@@ -693,9 +693,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 37468,
-      "chars": 266896,
-      "sha256": "34b15692c6323aef6c0c57dcdeaf4fce674c1c29e521a2c0ecbcc2889d028bb4",
+      "words": 23244,
+      "chars": 163870,
+      "sha256": "e9ce98fa7ed78aadf93aaafd6d5794ab4cab4819b05dbedf0d2b0a77e85a4e66",
       "attempts": []
     },
     {
@@ -755,9 +755,9 @@
       "status": "ok",
       "method": "direct",
       "resolved_url": "https://developers.google.com/style/highlights",
-      "words": 351,
-      "chars": 2537,
-      "sha256": "242d5ba0882df236894ebd75666d2255be110aaa8694068635f14f2fdf8784b3",
+      "words": 266,
+      "chars": 1898,
+      "sha256": "2e1aeebf2c7801ac79ff1788e1e639489e97401b421c266b5bfc5c38e020aa93",
       "attempts": []
     },
     {
@@ -768,9 +768,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 1016,
-      "chars": 5572,
-      "sha256": "b4971bacf11b1665f5d9a0e20c681e8c6e585fde6b8ded8bf6c82a7f6a6885a8",
+      "words": 508,
+      "chars": 2785,
+      "sha256": "a02a86b877b538803e0393512aec55ec03c8b1b06c73d0984334e0ab1fb0f591",
       "attempts": []
     },
     {
@@ -856,9 +856,9 @@
       "kind": "html",
       "status": "ok",
       "method": "direct",
-      "words": 2011,
-      "chars": 13766,
-      "sha256": "eaa5f1d256d8f642b8cbd317fc0d13355a1ad7b57c356561190e882411a06d4c",
+      "words": 2003,
+      "chars": 13716,
+      "sha256": "d685c2e7e5c44c849ee2600fd25d80818fd65162b888278571ca714ec3975aac",
       "attempts": []
     },
     {

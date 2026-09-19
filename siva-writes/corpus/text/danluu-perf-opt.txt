@@ -4,11 +4,7 @@ In response to a comment in my last post that the cost of formerly specialized p
 
 Completely agree with your closing point. Dynamic custom software, fitted to a particular workload rather than a class of workloads, seems like a very likely outcome. (Which comes with all kinds of fun risks and opportunities of its own). Kind of reminds me of FFTW . And a ton of weird old demoscene techniques which were all about being super fast and small on a very particular problem (and often very particular hardware). For example, I remember a demo that re-used its code as textures to get great cache locality.
 
-Completely agree with your closing point. Dynamic custom software, fitted to a particular workload rather than a class of workloads, seems like a very likely outcome. (Which comes with all kinds of fun risks and opportunities of its own). Kind of reminds me of FFTW . And a ton of weird old demoscene techniques which were all about being super fast and small on a very particular problem (and often very particular hardware). For example, I remember a demo that re-used its code as textures to get great cache locality.
-
 And Michael Malis has noted
-
-There’s been a meme circulating about how AI doesn’t help because “code was never the hard part.” I think that’s true in some domains, but in others, writing the code absolutely was the hard part. JIT compilers are a great example of that. For many pieces of software, a JIT compiler would help a lot with speeding up the code. The rarity of JIT compilers makes me believe that implementing a JIT compiler historically was too difficult for it to be worthwhile. LLMs have lowered the barrier to entry and made it much easier to write a JIT compiler. This is the thesis behind pgrust. Databases historically were the hardest piece of software to build and were limited because of that. Now, with AI, we can be more ambitious about the type of software we build.
 
 There’s been a meme circulating about how AI doesn’t help because “code was never the hard part.” I think that’s true in some domains, but in others, writing the code absolutely was the hard part. JIT compilers are a great example of that. For many pieces of software, a JIT compiler would help a lot with speeding up the code. The rarity of JIT compilers makes me believe that implementing a JIT compiler historically was too difficult for it to be worthwhile. LLMs have lowered the barrier to entry and made it much easier to write a JIT compiler. This is the thesis behind pgrust. Databases historically were the hardest piece of software to build and were limited because of that. Now, with AI, we can be more ambitious about the type of software we build.
 
@@ -44,11 +40,7 @@ Coming back to this part of Marc Brooker's comment:
 
 Dynamic custom software, fitted to a particular workload rather than a class of workloads, seems like a very likely outcome.
 
-Dynamic custom software, fitted to a particular workload rather than a class of workloads, seems like a very likely outcome.
-
 This seems pretty inevitable. In another response to my post, Michael Malis of pgrust said something similar:
-
-[discussion of pgrust optimizations] ... I think it's easy enough to create these optimizations that we could look at a customers workload and add them as needed
 
 [discussion of pgrust optimizations] ... I think it's easy enough to create these optimizations that we could look at a customers workload and add them as needed
 
@@ -132,8 +124,6 @@ I won't add plots or tables for these, but another thing to note is that there's
 Also, 99% of queries were regex queries (1% were non-regex string searches) and 99.9% of search queries were ASCII only, but in terms of files searched, approximately 45% were ASCII only and 55% contained Unicode, a higher percentage than I would've guessed for Unicode.
 
 On a draft of the last post, Peter Geoghegan noted
-
-It's also possible for a regex implementation to be faster by supporting fewer features. Some implementations don't support back references, etc.
 
 It's also possible for a regex implementation to be faster by supporting fewer features. Some implementations don't support back references, etc.
 

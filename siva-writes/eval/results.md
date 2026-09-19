@@ -61,11 +61,11 @@ the candidate write-up and the questions, never the brief.
 
 | condition | documents | items | correct | accuracy | Wilson 95% | adjudicated |
 |---|---|---|---|---|---|---|
-| C | 40 | 200 | 152 | **76.0%** | [69.6, 81.4] | 70 |
-| A | 40 | 200 | 140 | **70.0%** | [63.3, 75.9] | 73 |
-| D | 40 | 200 | 136 | **68.0%** | [61.2, 74.1] | 68 |
-| B | 40 | 200 | 126 | **63.0%** | [56.1, 69.4] | 65 |
-| H | 32 | 160 | 80 | **50.0%** | [42.3, 57.7] | 54 |
+| C | 40 | 200 | 146 | **73.0%** | [66.5, 78.7] | 70 |
+| A | 40 | 200 | 128 | **64.0%** | [57.1, 70.3] | 73 |
+| D | 40 | 200 | 128 | **64.0%** | [57.1, 70.3] | 68 |
+| B | 40 | 200 | 123 | **61.5%** | [54.6, 68.0] | 65 |
+| H | 32 | 160 | 77 | **48.1%** | [40.5, 55.8] | 54 |
 
 ### Paired, per brief
 
@@ -74,14 +74,21 @@ and is far more powerful than treating the conditions as independent samples.
 
 | comparison | n | mean diff /5 | 95% CI | W-L-T | verdict |
 |---|---|---|---|---|---|
-| C vs D | 40 | +0.400 | [+0.180, +0.620] | 17-3-20 | **C higher** |
-| C vs B | 40 | +0.650 | [+0.187, +1.113] | 16-5-19 | **C higher** |
-| C vs A | 40 | +0.300 | [-0.177, +0.777] | 14-11-15 | not distinguishable |
-| D vs A | 40 | -0.100 | [-0.575, +0.375] | 8-14-18 | not distinguishable |
-| B vs A | 40 | -0.350 | [-0.918, +0.218] | 10-18-12 | not distinguishable |
-| D vs H | 32 | +0.719 | [+0.175, +1.263] | 16-9-7 | **D higher** |
-| C vs H | 32 | +1.125 | [+0.550, +1.700] | 19-5-8 | **C higher** |
-| A vs H | 32 | +0.969 | [+0.262, +1.675] | 19-9-4 | **A higher** |
+| C vs D | 40 | +0.450 | [+0.197, +0.703] | 19-3-18 | **C higher** |
+| C vs B | 40 | +0.575 | [+0.105, +1.045] | 14-6-20 | **C higher** |
+| C vs A | 40 | +0.450 | [-0.026, +0.926] | 17-9-14 | not distinguishable |
+| D vs A | 40 | +0.000 | [-0.496, +0.496] | 10-14-16 | not distinguishable |
+| B vs A | 40 | -0.125 | [-0.709, +0.459] | 13-15-12 | not distinguishable |
+| D vs H | 32 | +0.750 | [+0.229, +1.271] | 16-7-9 | **D higher** |
+| C vs H | 32 | +1.156 | [+0.613, +1.700] | 21-5-6 | **C higher** |
+| A vs H | 32 | +0.906 | [+0.246, +1.567] | 19-8-5 | **A higher** |
+
+**Regraded.** The first grading pass matched numbers as an unordered set, so a reply that
+reversed two container allocations, or answered GiB against a GB key, scored correct. The
+grader now requires the key's numbers in the key's order plus agreement on any unit it
+names, and word overlap can no longer override a numeric disagreement. 32 item verdicts in
+round 1 and 20 in round 2 changed. Every conclusion below is post-regrade, and all of them
+survived it.
 
 **H is deflated and its comparisons should not be used.** 13.1% of graded facts have answers
 largely absent from the H span: the briefs' facts were extracted from full source documents
@@ -119,11 +126,11 @@ Surface n-grams rank the real human documents as MOST over-represented because t
 
 | condition | documents | surface % | **stylometric %** |
 |---|---|---|---|
-| H | 32 | 4.8445 | **0.3566** |
-| B | 40 | 2.6727 | **1.8580** |
-| C | 40 | 3.4200 | **1.8796** |
-| A | 40 | 2.9688 | **1.9458** |
-| D | 40 | 3.8833 | **2.7178** |
+| H | 32 | 4.7978 | **0.3936** |
+| B | 40 | 2.6132 | **1.8640** |
+| C | 40 | 3.6556 | **1.8836** |
+| A | 40 | 3.1662 | **1.9419** |
+| D | 40 | 3.7124 | **2.7157** |
 
 Lower is closer to the train corpus of expert human writing. The stylometric column maps every
 content word to one placeholder and keeps function words, so what is compared is syntactic
@@ -140,12 +147,12 @@ stylometric trigrams pointed at them.
 
 | construction | TRAIN | r1 A | r1 B | r1 C | r1 D | r1 H | r2 B | r2 C | r2 D |
 |---|---|---|---|---|---|---|---|---|---|
-| causal so (R2) | 0.80 | 2.66 | 2.91 | 3.14 | 3.46 | 1.14 | 2.95 | 3.68 | 1.04 |
-| all so | 1.81 | 4.62 | 3.73 | 4.27 | 4.42 | 2.81 | 3.67 | 4.93 | 1.54 |
+| causal so (R2) | 0.87 | 3.11 | 3.00 | 3.18 | 3.50 | 1.38 | 3.03 | 3.76 | 1.17 |
+| all so | 1.85 | 4.62 | 3.73 | 4.27 | 4.42 | 2.81 | 3.67 | 4.93 | 1.54 |
 | instead of (R3) | 0.36 | 0.41 | 0.99 | 0.79 | 1.29 | 0.24 | 0.94 | 0.79 | 0.96 |
-| rather than (R3) | 0.19 | 2.17 | 0.69 | 1.09 | 0.54 | 0.06 | 0.85 | 1.63 | 0.63 |
-| em dash (R11) | 0.28 | 4.95 | 0.00 | 0.00 | 0.00 | 0.24 | 0.00 | 0.00 | 0.00 |
-| hedges | 1.66 | 1.51 | 1.41 | 1.30 | 0.92 | 0.66 | 1.20 | 1.51 | 1.17 |
+| rather than (R3) | 0.20 | 2.17 | 0.69 | 1.09 | 0.54 | 0.06 | 0.85 | 1.63 | 0.63 |
+| em dash (R11) | 0.31 | 4.95 | 0.00 | 0.00 | 0.00 | 0.24 | 0.00 | 0.00 | 0.00 |
+| hedges | 1.65 | 1.51 | 1.41 | 1.30 | 0.92 | 0.66 | 1.20 | 1.51 | 1.17 |
 
 ---
 
@@ -158,15 +165,15 @@ regenerated.
 
 | condition | r1 accuracy | r2 accuracy | paired diff /5 | 95% CI | verdict |
 |---|---|---|---|---|---|
-| B | 63.0% | 75.5% | +0.625 | [+0.116, +1.134] | **moved beyond CI** |
-| C | 76.0% | 71.0% | -0.250 | [-0.570, +0.070] | not beyond CI |
-| D | 68.0% | 61.0% | -0.350 | [-0.768, +0.068] | not beyond CI |
+| B | 61.5% | 72.5% | +0.550 | [+0.007, +1.093] | **moved beyond CI** |
+| C | 73.0% | 67.5% | -0.275 | [-0.581, +0.031] | not beyond CI |
+| D | 64.0% | 57.5% | -0.325 | [-0.718, +0.068] | not beyond CI |
 
 | condition | r1 stylometric % | r2 stylometric % |
 |---|---|---|
-| B | 1.8580 | 2.2948 |
-| C | 1.8796 | 1.9996 |
-| D | 2.7178 | 2.3957 |
+| B | 1.8640 | 2.1157 |
+| C | 1.8836 | 2.0536 |
+| D | 2.7157 | 2.2784 |
 
 **C beats D in both rounds.** Paired, per brief: r1 +0.400 [0.180, 0.620] and r2 +0.500
 [0.073, 0.927]. The result replicates on a second independent generation, which is the

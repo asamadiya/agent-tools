@@ -20,7 +20,7 @@ because that is the direction the error actually runs.
 
 ## Rule 1. Open a paragraph with its claim
 
-**Measured: 0.889, sd 0.064, n = 29 documents, range 0.742 to 1.000** (document-weighted).
+**Measured: 0.898, sd 0.057, n = 29 documents, range 0.757 to 1.000** (document-weighted).
 
 The tightest spread of any metric here, and it holds at 0.94 across Google Cloud incident reports
 and 0.93 across Python PEPs, two populations with nothing else in common.
@@ -30,8 +30,8 @@ first sentence is at least five words, is not a question, does not open with a d
 (*however, but, moreover, for example, first, finally, in summary*) and does not take the document
 as its subject (*this section, in this post, we will discuss*). It does not check that a claim is
 present. An independent review demonstrated that **both "before" examples below pass it**, which is
-the honest limit of the measurement: 0.889 describes survival of four exclusions across 8 families,
-not paragraph organisation, and 0.742 is that proxy's observed minimum -- one document, danluu-metrics-analytics, which
+the honest limit of the measurement: 0.898 describes survival of four exclusions across 8 families,
+not paragraph organisation, and 0.757 is that proxy's observed minimum -- one document, danluu-metrics-analytics, which
 opens sections with questions -- rather than a floor for good prose. The rule is still right. The number is weaker evidence for it than it looks.
 
 What this rule is really preventing is the windup. A paragraph that spends its first sentence
@@ -64,19 +64,19 @@ after   p99 latency rose from 240 ms to 310 ms after the migration, and stayed t
 
 ## Rule 2. Attach the number to the claim that rests on it. Do not hit a density target
 
-**Measured: 1.334 numbers per 100 words, sd 1.267.** A coefficient of variation near 1.0, which is
+**Measured: 1.152 numbers per 100 words, sd 1.049.** A coefficient of variation near 1.0, which is
 the finding: there is no corpus-level rate to aim at.
 
 | family | numbers / 100 words |
 |---|---|
-| gcp-incident | 3.90 |
+| gcp-incident | 2.45 |
 | pep | 1.28 |
-| danluu | 1.07 |
+| danluu | 1.11 |
 | sre-book | 0.67 |
 | aws-builders | **0.32** |
 
 The AWS Builders' Library is among the best systems writing in public and carries one number per
-312 words. *Timeouts, retries and backoff with jitter* is an argument about a mechanism; the
+313 words. *Timeouts, retries and backoff with jitter* is an argument about a mechanism; the
 mechanism is what transfers, and a measurement would be a measurement of one workload.
 
 So the rule is about attachment. A claim that rests on a quantity states the quantity, its unit,
@@ -112,14 +112,14 @@ Numbers as ornament read as rigour and fail the first question asked about them.
 
 ## Rule 3. Mechanism outnumbers evaluation
 
-**Measured: mechanism-to-evaluative 3.14, median 2.60, n = 27, range 0.33 to 9.56. Evaluative
+**Measured: mechanism-to-evaluative 3.30, median 2.57, n = 27, range 0.32 to 11.00. Evaluative
 vocabulary 0.362 words per 100, sd 0.262, n = 30.**
 
 The ratio excludes three GCP incident reports that contain zero evaluative sentences, where it is
 undefined. The classifiers behind both terms are lexical: a sentence counts as mechanism if it
 carries a causal connective, and as evaluative if it carries an evaluative word and no number. So
-*Since Monday the queue has drained* counts as mechanism, and the spread from 0.33 to 9.56 is wide
-enough that 3.14 is a description of this corpus, not a target to write against.
+*Since Monday the queue has drained* counts as mechanism, and the spread from 0.32 to 11.00 is wide
+enough that 3.30 is a description of this corpus, not a target to write against.
 
 A mechanism sentence carries a causal connective and says what makes something happen. An
 evaluative sentence asserts quality without measuring it: *important, crucial, powerful, robust,
@@ -157,7 +157,7 @@ after   Make the operation idempotent, so a retry after an ambiguous timeout is 
 
 ## Rule 4. Hedge, qualify, or quantify. Do not ban hedging
 
-**Measured: 1.383 hedges per 100 words, sd 0.692, range 0.415 to 2.881.** Expert engineering prose
+**Measured: 1.379 hedges per 100 words, sd 0.678, range 0.439 to 2.881.** Expert engineering prose
 hedges roughly fourteen times per thousand words.
 
 | family | hedges / 100 words |
@@ -203,19 +203,19 @@ less true, and it will be over-applied by exactly the readers who trusted it.
 
 ## Rule 5. Vary sentence length. There is no cap
 
-**Measured: sentence mean 23.37 words, sd 6.05 across documents. Within-document sentence-length
-sd averages 13.21, minimum 6.28. 21.67% of sentences exceed 30 words as a document-weighted mean,
-20.92% pooled (1,473 of 7,040), range 0.00% to 54.32%.**
+**Measured: sentence mean 23.46 words, sd 6.01 across documents. Within-document sentence-length
+sd averages 12.72, minimum 6.28. 21.88% of sentences exceed 30 words as a document-weighted mean,
+21.18% pooled (1,280 of 6,043), range 0.00% to 53.82%.**
 
 | family | mean | share over 30 words |
 |---|---|---|
 | aws-builders | 18.94 | 9.1% |
 | rust-rfc | 20.07 | 10.0% |
 | sre-book | 21.30 | 15.7% |
-| allthingsdistributed | 22.47 | 22.1% |
-| **danluu** | **32.36** | **45.6%** |
+| allthingsdistributed | 22.48 | 22.1% |
+| **danluu** | **32.44** | **46.7%** |
 
-A 30-word cap rejects 45.6% of Dan Luu's sentences and 54.3% of one of his posts, and 26.8% of
+A 30-word cap rejects 46.7% of Dan Luu's sentences and 53.8% of one of his posts, and 26.8% of
 *The Tail at Scale*. The cap does not describe this corpus; it describes one register
 inside it, and enforcing it flattens the variation that carries the emphasis.
 
@@ -257,10 +257,10 @@ The five short sentences are not wrong; five in a row are. The repair keeps one 
 for the sharp fact -- the closing time -- and lets the rest run long enough to carry the order
 of events, which is what the reader needs and what five equal clauses flatten.
 
-## Rule 6. Paragraphs run about 85 words, and long ones are a minority rather than an error
+## Rule 6. Paragraphs run about 76 words, and long ones are a minority rather than an error
 
-**Measured: paragraph mean 84.38 words, sd 21.83, range 46.7 to 131.4. 17.23% of paragraphs exceed
-120 words as a document-weighted mean, 15.72% pooled (307 of 1,953), range 0% to 45.45%, n = 29.**
+**Measured: paragraph mean 76.47 words, sd 21.27, range 39.2 to 120.6. 15.80% of paragraphs exceed
+120 words as a document-weighted mean, 13.99% pooled (258 of 1,845), range 0% to 45.45%, n = 29.**
 
 One document is excluded from these: *The Tail at Scale* is a two-column PDF that extracts as six
 818-word blocks with no paragraph breaks. Leaving it in moved the corpus paragraph mean from 84.4

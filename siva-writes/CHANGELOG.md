@@ -10,7 +10,105 @@ discoverable as a skill.
 
 ---
 
+## r3 -- 2026-09-19 -- round 2, a second review, and three of my own instruments found wrong
+
+`gpt-6-astra` reviewed again and returned **BLOCKERS: 8**, more than round 1, and classified several
+r2 repairs as discharged-but-broken. Every checkable claim was re-derived before acting. It was
+right again, including about three defects in measurement code I had written to check other things.
+
+### What Phase 5 established
+
+One change was made and B, C and D were regenerated over the same frozen briefs: R2 and R3 now carry
+their measured effect, and the gate reports the three construction rates.
+
+| | r1 | r2 | paired diff /5 | verdict |
+|---|---|---|---|---|
+| B rules only | 61.5% | **72.5%** | +0.550 [+0.007, +1.093] | **moved beyond CI** |
+| C +exemplars | 73.0% | 67.5% | -0.275 [-0.581, +0.031] | not beyond CI |
+| D full skill | 64.0% | 57.5% | -0.325 [-0.718, +0.068] | not beyond CI |
+
+**C beats D in both rounds**: +0.450 [0.197, 0.703] and +0.500 [0.097, 0.903]. The result replicates
+on an independent generation and survives a regrade. That answers the question the original brief
+posed: D does not separate from C, so the brief-then-prose split is not doing what it was designed
+to do. D also ties A exactly (+0.000).
+
+Causal *so* per 1000 words in D went **3.50 to 1.17**, below held-out human at 1.38 and near the
+corpus at 0.87. It did not move in B or C. The rule text was identical in all three; only D runs the
+gate. **A rule read before writing lost to a number shown after writing.**
+
+### r2's headline claim was an artifact, and is withdrawn
+
+r2 said the skill drives causal *so* up monotonically. The detector applied `^` to the whole joined
+document rather than per sentence, so every sentence-initial *So* after the first was missed, and it
+counted degree uses such as *so deep that it broke the profiler*. Corrected and counted per sentence:
+
+| | corpus | human | A no skill | B | C | D |
+|---|---|---|---|---|---|---|
+| causal *so* | 0.87 | 1.38 | 3.11 | 3.00 | 3.18 | 3.50 |
+
+**Flat, not monotonic.** Models over-use causal *so* at roughly 2.5x the human rate with or without
+this skill. R2 does not cause it. The gate removes it.
+
+### The corpus was 14.1% duplicated
+
+`fetch_corpus.py` selected both an enclosing `<blockquote>`/`<li>`/`<td>` and the paragraphs nested
+inside it, so the same words entered twice. Corpus 286,696 to **246,402 words** after the fix. The
+GCP incident reports were about 49% duplicated, Paul Graham's essay 50%, the Wikipedia page 38%.
+
+Every statistic in this repository was recomputed and republished: claim-first proxy 0.889 to
+**0.898**, numbers per 100 words 1.334 to **1.152**, paragraph mean 84.4 to **76.5**, sentences over
+30 words 21.7% to **21.9%**, mechanism:evaluative 3.14 to **3.30**. `verify_all.py` now checks every
+republished number in SKILL.md against `corpus/measurements-train.json` on every run.
+
+### The comprehension grader scored wrong answers correct
+
+It matched numbers as an unordered set, so *"A gets 9.5 GB and B gets 19 GB"* scored correct against
+a key saying the opposite, and *19 GiB* scored against *19 GB*. Word overlap could also override a
+numeric disagreement. Now: numbers must appear in the key's order, any unit the key names must be
+present, and the lexical path cannot fire when the key carries numbers. **52 item verdicts changed.
+Every conclusion was recomputed post-regrade and all of them survived.**
+
+### The installer's own safety check was defeated
+
+`|| true` discarded the checker's exit status, so astra injected exit 2 into all ten exemplar runs
+and still saw `gate ran on all 10 exemplars, 0 tier-1 hits  ok`. The status is now checked: 0 and 1
+are expected, anything else is a crash, and a run producing no report fails too.
+
+### Condition H is invalid, and the judge is what proved it
+
+The blind pairwise judge ranked published prose by Brooker, Cloudflare and Gregg last in **24 of 24
+pairs**. Its reasoning: *"Candidate A omits all timestamps"*, *"includes the brief's required future
+work, which Candidate A omits entirely"*. H is an anchored span being asked to answer a brief whose
+facts were drawn from the whole source document. Metric 2 shows the same at 13.1% of graded facts.
+H is reported everywhere and excluded from every conclusion.
+
+### Not fixed, and named
+
+- Multiline heading patterns: the same heading passes or fails depending on position. Adding `re.M`
+  alone over-fires on a genuine Rust heading, so it needs per-pattern work.
+- Documented exceptions in `negative-set.md` are not implemented: upfront summaries, Markdown links
+  and attributed inline quotations still take hard failures.
+- Four regexes displayed in `negative-set.md` are truncated to 300 characters and do not compile as
+  shown. All 68 runtime regexes in the JSON compile; the Markdown is documentation, not the spec.
+- The 25-word paragraph floor still conditions every paragraph statistic, and is labelled rather than
+  removed.
+- voice.md's on-chip-capacity pair still asserts a regime change it does not derive, and the new
+  route-lookup pair omits the offered load needed to reach its 5-second timeout.
+
+### Still open
+
+- **Metric 1** needs your 60 labels before its judge can gate anything; kappa is uncomputed.
+- **Metric 3** has never been run. 50 documents are blind-staged at `eval/edits/edited/`.
+- The mechanism and evaluative classifiers remain lexical and unvalidated against annotated text.
+- The held-out independence claim stays withdrawn until a new, unexposed validation set exists.
+
+---
+
 ## r2 -- 2026-09-18 -- six blockers from an independent review, all verified before acting
+
+> **Superseded in part by r3.** The causal-*so* table below was produced by a detector with two
+> defects, and its headline claim -- that the skill drives the rate up monotonically -- does not
+> survive correction. Every number in this entry predates the corpus deduplication. Read r3 first.
 
 `gpt-6-astra` at max effort reviewed the skill and returned **BLOCKERS: 6**. I re-derived every
 checkable claim myself before changing anything, and **it was right on all of them**. Full review at
@@ -83,11 +181,12 @@ KEP-2400, KEP-3521, Cloudflare and Gregg. The negative-set extraction agents had
 whole corpus and used test-family text to decide what a pattern must *not* fire on. My firewall was
 written into the eval-building workflow and not into that one.
 
-What this does and does not affect: the exclusions make patterns more conservative, so they do not
-inflate any condition's score, and the frozen eval questions and answers were never exposed. But the
-claim "rules were developed without touching held-out data" is false as stated and is withdrawn. The
-tiering control is train-only, and the affected patterns are tier-2 and tier-3, which flag rather
-than fail.
+What this does and does not affect: no evidence was found of score inflation or of exposure to the
+frozen questions and answers, and the nine patterns resolve as five tier-2 and four tier-3, none of
+them enforced. The stronger assurance that conservative exclusions *cannot* change scores is not
+supportable and is withdrawn too -- they can change generation and revision behaviour. The claim
+"rules were developed without touching held-out data" is false as stated and is withdrawn. Restoring
+it requires a new, unexposed validation set.
 
 ### Other fixes
 

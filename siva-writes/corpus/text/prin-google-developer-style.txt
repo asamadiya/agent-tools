@@ -10,17 +10,9 @@ Page Summary
 
 This style guide outlines important standards for tone, content, language, grammar, formatting, punctuation, organization, and image use in documentation.
 
-This style guide outlines important standards for tone, content, language, grammar, formatting, punctuation, organization, and image use in documentation.
-
-Key recommendations include using conversational language, writing for accessibility and a global audience, employing active voice and second person, and following specific formatting rules for lists, code, and UI elements.
-
 Key recommendations include using conversational language, writing for accessibility and a global audience, employing active voice and second person, and following specific formatting rules for lists, code, and UI elements.
 
 For clarity, the guide promotes descriptive link text, unambiguous date formats, the use of alt text for images, and the preference for high-resolution images whenever possible.
-
-For clarity, the guide promotes descriptive link text, unambiguous date formats, the use of alt text for images, and the preference for high-resolution images whenever possible.
-
-This guide aims to ensure consistent, clear, and user-friendly documentation.
 
 This guide aims to ensure consistent, clear, and user-friendly documentation.
 

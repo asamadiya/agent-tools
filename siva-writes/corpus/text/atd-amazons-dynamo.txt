@@ -16,8 +16,6 @@ The official reference for the paper is:
 
 Giuseppe DeCandia, Deniz Hastorun, Madan Jampani, Gunavardhan Kakulapati, Avinash Lakshman, Alex Pilchin, Swami Sivasubramanian, Peter Vosshall and Werner Vogels, “Dynamo: Amazon's Highly Available Key-Value Store”, in the Proceedings of the 21st ACM Symposium on Operating Systems Principles , Stevenson, WA, October 2007.
 
-Giuseppe DeCandia, Deniz Hastorun, Madan Jampani, Gunavardhan Kakulapati, Avinash Lakshman, Alex Pilchin, Swami Sivasubramanian, Peter Vosshall and Werner Vogels, “Dynamo: Amazon's Highly Available Key-Value Store”, in the Proceedings of the 21st ACM Symposium on Operating Systems Principles , Stevenson, WA, October 2007.
-
 A pdf version is available here . You can also read the full online version .
 
 The text of the paper is copyright of the ACM and as such the following statement applies:
@@ -482,76 +480,39 @@ Table 1: Summary of techniques used in Dynamo and their advantages.
 
 Problem
 
-Problem
-
 Technique
 
 Advantage
 
-Advantage
-
 Partitioning
-
-Partitioning
-
-Consistent Hashing
 
 Consistent Hashing
 
 Incremental Scalability
 
-Incremental Scalability
-
 High Availability for writes
-
-High Availability for writes
-
-Vector clocks with reconciliation during reads
 
 Vector clocks with reconciliation during reads
 
 Version size is decoupled from update rates.
 
-Version size is decoupled from update rates.
-
 Handling temporary failures
-
-Handling temporary failures
-
-Sloppy Quorum and hinted handoff
 
 Sloppy Quorum and hinted handoff
 
 Provides high availability and durability guarantee
 when some of the replicas are not available.
 
-Provides high availability and durability guarantee
-when some of the replicas are not available.
-
 Recovering from permanent failures
-
-Recovering from permanent failures
-
-Anti-entropy using Merkle trees
 
 Anti-entropy using Merkle trees
 
 Synchronizes divergent replicas in the background.
 
-Synchronizes divergent replicas in the background.
-
-Membership and failure detection
-
 Membership and failure detection
 
 Gossip-based membership protocol and failure
 detection.
-
-Gossip-based membership protocol and failure
-detection.
-
-Preserves symmetry and avoids having a centralized
-registry for storing membership and node liveness information.
 
 Preserves symmetry and avoids having a centralized
 registry for storing membership and node liveness information.
@@ -613,21 +574,9 @@ If a node becomes unavailable (due to failures or
 routine maintenance), the load handled by this node is evenly dispersed across
 the remaining available nodes.
 
-If a node becomes unavailable (due to failures or
-routine maintenance), the load handled by this node is evenly dispersed across
-the remaining available nodes.
-
 When a node becomes available again, or a new node
 is added to the system, the newly available node accepts a roughly equivalent
 amount of load from each of the other available nodes.
-
-When a node becomes available again, or a new node
-is added to the system, the newly available node accepts a roughly equivalent
-amount of load from each of the other available nodes.
-
-The number of virtual nodes that a node is responsible
-can decided based on its capacity, accounting for heterogeneity in the physical
-infrastructure.
 
 The number of virtual nodes that a node is responsible
 can decided based on its capacity, accounting for heterogeneity in the physical
@@ -1079,37 +1028,12 @@ reconciliation logic. The shopping cart service discussed earlier is a prime
 example of this category. Its business logic reconciles objects by merging
 different versions of a customer’s shopping cart.
 
-Business logic specific reconciliation: This is a
-popular use case for Dynamo. Each data object is replicated across multiple
-nodes. In case of divergent versions, the client application performs its own
-reconciliation logic. The shopping cart service discussed earlier is a prime
-example of this category. Its business logic reconciles objects by merging
-different versions of a customer’s shopping cart.
-
 Timestamp based reconciliation: This case differs from
 the previous one only in the reconciliation mechanism. In case of divergent
 versions, Dynamo performs simple timestamp based reconciliation logic of “last
 write wins”; i.e., the object with the largest physical timestamp value is
 chosen as the correct version. The service that maintains customer’s session
 information is a good example of a service that uses this mode.
-
-Timestamp based reconciliation: This case differs from
-the previous one only in the reconciliation mechanism. In case of divergent
-versions, Dynamo performs simple timestamp based reconciliation logic of “last
-write wins”; i.e., the object with the largest physical timestamp value is
-chosen as the correct version. The service that maintains customer’s session
-information is a good example of a service that uses this mode.
-
-High performance read engine: While Dynamo is built to
-be an “always writeable” data store, a few services are tuning its quorum
-characteristics and using it as a high performance read engine. Typically,
-these services have a high read request rate and only a small number of
-updates. In this configuration, typically R is set to be 1 and W to be N. For
-these services, Dynamo provides the ability to partition and replicate their
-data across multiple nodes thereby offering incremental scalability. Some of
-these instances function as the authoritative persistence cache for data stored
-in more heavy weight backing stores. Services that maintain product catalog and
-promotional items fit in this category.
 
 High performance read engine: While Dynamo is built to
 be an “always writeable” data store, a few services are tuning its quorum
@@ -1464,41 +1388,21 @@ coordination approaches.
 
 99.9th percentile read latency (ms)
 
-99.9th percentile read latency (ms)
-
 99.9th percentile write latency (ms)
-
-99.9th percentile write latency (ms)
-
-Average read latency (ms)
 
 Average read latency (ms)
 
 Average write latency (ms)
 
-Average write latency (ms)
-
 Server-driven
-
-Server-driven
-
-68.9
 
 68.9
 
 68.5
 
-68.5
-
-3.9
-
 3.9
 
 4.02
-
-4.02
-
-Client-driven
 
 Client-driven
 
@@ -1506,15 +1410,7 @@ Client-driven
 
 30.4
 
-30.4
-
-30.4
-
 1.55
-
-1.55
-
-1.9
 
 1.9
 

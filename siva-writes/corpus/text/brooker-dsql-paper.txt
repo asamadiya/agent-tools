@@ -18,11 +18,7 @@ Some highlights
 
 Our overall goal was to build a relational database system that simplifies the work of application building and operations, freeing builders from worrying about scale, reliability, durability, and even multi-region fault tolerance. A database of first resort, which is simple and easy to adopt at low scale, and grows with the application, without adding complexity.
 
-Our overall goal was to build a relational database system that simplifies the work of application building and operations, freeing builders from worrying about scale, reliability, durability, and even multi-region fault tolerance. A database of first resort, which is simple and easy to adopt at low scale, and grows with the application, without adding complexity.
-
 I’ve written about this argument before (in DSQL: Simplifying Architectures ), and it remains the thing that excites me most about the Aurora DSQL product. I believe we’ve made it much easier (and, in many cases, cheaper) to build and operate resilient, highly available, cloud applications at all scales. That applies to systems built by humans and agents, with the benefits magnified for agentic builders. Agents are great at building, but not (yet?) so great at long-horizon tasks like database operations. A database designed to simplify operations really helps.
-
-DSQL’s architecture is disaggregated. Multiple independent services, each focused on a small number of well-defined concerns.
 
 DSQL’s architecture is disaggregated. Multiple independent services, each focused on a small number of well-defined concerns.
 
@@ -32,19 +28,13 @@ We’ve also taken the approach further than others, especially in completely di
 
 Packing multiple workloads reduces the peak-to-average ratio of load on each physical machine (approximately at the rate of √loads). Given that resource cost typically scales with peak, and revenue scales with average, the economic benefit is obvious.
 
-Packing multiple workloads reduces the peak-to-average ratio of load on each physical machine (approximately at the rate of √loads). Given that resource cost typically scales with peak, and revenue scales with average, the economic benefit is obvious.
-
 Here we’re cheekily replicating a point we also made in the Firecracker paper .
-
-Another practical advantage of OCC is preventing clients from ever being able to block other clients. At scale, we have found that performance cross talk between clients is a significant contributor to tail latency in apps backed by pessimistic relational databases (for example clients which pause for garbage collection while holding a write lock). Operational experience at Amazon has shown that contention on locks, and retries on failure to acquire locks, are frequent contributors to system outages, and metastable failures which drive long recovery times …
 
 Another practical advantage of OCC is preventing clients from ever being able to block other clients. At scale, we have found that performance cross talk between clients is a significant contributor to tail latency in apps backed by pessimistic relational databases (for example clients which pause for garbage collection while holding a write lock). Operational experience at Amazon has shown that contention on locks, and retries on failure to acquire locks, are frequent contributors to system outages, and metastable failures which drive long recovery times …
 
 I’ve written about metastable failures (have you tried Stability Sim ?) many times, and this is a key part of how we designed DSQL to help applications avoid them. It also helps avoid a large class of other, more mundane, failures cause by misbehaving clients and client code.
 
 And figure 6, another big advantage of the architecture, showing fast SELECT s and UPDATE s, even in the multi-region setting (faster than the speed of light!):
-
-The 2007 Amazon Dynamo paper’s embrace of eventual consistency [12], and Werner Vogels 2009 article Eventually Consistent [36], reflected the thinking at the time that cloud-scale systems needed to embrace eventual consistency to achieve their availability and latency goals. Since then, advancements in time distribution, data-center networks, power and cooling infrastructure, and distributed protocols have changed the trade-offs.
 
 The 2007 Amazon Dynamo paper’s embrace of eventual consistency [12], and Werner Vogels 2009 article Eventually Consistent [36], reflected the thinking at the time that cloud-scale systems needed to embrace eventual consistency to achieve their availability and latency goals. Since then, advancements in time distribution, data-center networks, power and cooling infrastructure, and distributed protocols have changed the trade-offs.
 

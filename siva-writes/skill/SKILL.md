@@ -75,8 +75,8 @@ The owner decides whether the writing works.
 | Rule | Write this way | Check |
 |---|---|---|
 | **R1. Actor** | Put the relevant concrete actor or technical object in the subject: a tensor, byte, GPU, kernel, tokenizer, matrix, model, request, or **we**. | Replace abstract nouns acting as people and document-agents such as *the step argues / prices / recovers*. A technical term can be a legitimate subject. |
-| **R2. Connection** | Use **so** for a causal consequence and **and** for a list or conjunction. At most **one so per sentence**, and watch the document rate. | Name the actual cause. **Measured: this rule produces the construction it licenses.** With the full skill, causal *so* ran at 3.46 per 1000 words against 0.80 in the corpus and 1.14 in held-out human writing. A per-sentence cap cannot see that. Over about 2.0, cut them. |
-| **R3. Comparison** | Use **instead of** for a real comparison. State the positive fact without performing a contrast. At most **one rather than per rendered page**. | Count titles, summaries, cards, body and captions together. **Measured: the rule displaces rather than removes.** *rather than* fell from 2.17 to 0.54 per 1000 words while *instead of* rose from 0.41 to 1.29, against 0.36 in the corpus. Check the replacement is a real comparison, not the same contrast rewritten. |
+| **R2. Connection** | Use **so** for a causal consequence and **and** for a list or conjunction. At most **one so per sentence**, and watch the document rate. | Name the actual cause. **Measured: every model condition over-uses causal *so* at about 3.0 to 3.5 per 1000 words, with or without this skill, against 0.88 in the corpus and 1.38 in held-out human writing.** The rule does not cause it; a per-sentence cap cannot see it. Reporting the rate after writing is what removes it -- that took the full-skill condition from 3.50 to 1.17. Over about 2.0, cut them. |
+| **R3. Comparison** | Use **instead of** for a real comparison. State the positive fact without performing a contrast. At most **one rather than per rendered page**. | Count titles, summaries, cards, body and captions together. **Measured: the rule partly displaces rather than removes.** *rather than* fell from 2.17 to 0.54 per 1000 words while *instead of* rose from 0.41 to 1.29, against 0.36 in the corpus; the combined rate fell 28.8%. Check the replacement is a real comparison, not the same contrast rewritten. |
 | **R4. Ending** | End a paragraph on a computed number or a full active sentence. | Remove aphoristic fragments such as *Two regimes, one machine.* Headings and UI labels have their own form. |
 | **R5. Once** | Say the fact once. | Delete the sentence that explains the sentence just read. A second representation earns space by adding a calculation, boundary, or experiment. |
 | **R6. Delivery** | Deliver the fact now, or link using the destination's content. | Replace *the physics track*, *the step gives it*, and promises of an argument with the result or a link such as *KV storage and the bandwidth roofline*. |
@@ -94,20 +94,20 @@ are in `references/owner-examples.md`. Read it before applying the rules to unfa
 
 ## The measured bar
 
-Six rules from 30 documents across 9 public sources, 161,966 retained words. Full derivation, per-family
+Six rules from 30 documents across 9 public sources, 138,551 retained words. Full derivation, per-family
 tables and three before/after pairs per rule: `references/voice.md`.
 
 | # | rule | measured |
 |---|---|---|
-| 1 | **Open a paragraph with its claim** | proxy scores 0.889, sd 0.064, n=29, range 0.742-1.000. The proxy is lexical, not semantic - see below |
-| 2 | **Attach the number to the claim resting on it. No density target** | 1.334 per 100w, **sd 1.267** |
-| 3 | **Mechanism outnumbers evaluation, with wide spread** | 3.14, median 2.60, **n=27** (3 GCP documents have zero evaluative sentences, so the ratio is undefined and they are excluded); range 0.33 to 9.56 |
-| 4 | **Hedge, qualify, or quantify. Hedging is not banned** | 1.383 hedges per 100w, range 0.415-2.881 |
-| 5 | **Vary sentence length. There is no cap** | mean 23.4, within-doc sd 13.21, **21.7% of sentences over 30 words** (document-weighted; pooled 20.9%) |
-| 6 | **Paragraphs about 85 words; long ones are a minority** | mean 84.4, 17.2% over 120 words (document-weighted; pooled 15.7%) |
+| 1 | **Open a paragraph with its claim** | proxy scores 0.898, sd 0.057, n=29, range 0.757-1.000. The proxy is lexical, not semantic - see below |
+| 2 | **Attach the number to the claim resting on it. No density target** | 1.152 per 100w, **sd 1.049** |
+| 3 | **Mechanism outnumbers evaluation, with wide spread** | 3.30, median 2.57, **n=27** (3 GCP documents have zero evaluative sentences, so the ratio is undefined and they are excluded); range 0.33 to 9.56 |
+| 4 | **Hedge, qualify, or quantify. Hedging is not banned** | 1.379 hedges per 100w, range 0.439-2.881 |
+| 5 | **Vary sentence length. There is no cap** | mean 23.5, within-doc sd 12.72, **21.9% of sentences over 30 words** (document-weighted; pooled 21.2%) |
+| 6 | **Paragraphs about 76 words; long ones are a minority** | mean 76.5, 15.8% over 120 words (document-weighted; pooled 14.0%) |
 
 Rule 1 is the strongest result in the corpus: the tightest spread of any metric, and it holds at
-0.94 across Google Cloud incident reports and 0.93 across Python PEPs, two populations with nothing
+0.96 across Google Cloud incident reports and 0.93 across Python PEPs, two populations with nothing
 else in common.
 
 Rules 2, 4 and 5 are stated as prohibitions on over-correction, because that is the direction the
@@ -121,7 +121,7 @@ corpus refutes all three:
   single document is the SRE book's Service Level Objectives at 2.881. Hedging
   tracks how much the writer knows: an incident report states what happened, a design document
   argues about conditions nobody has observed.
-- **danluu runs 45.6% of sentences over 30 words**, mean 32.4, and is easy to read, because each long
+- **danluu runs 46.7% of sentences over 30 words**, mean 32.4, and is easy to read, because each long
   sentence resolves clause by clause. A 30-word cap rejects him wholesale.
 
 ### Two things that were asked for and are not measured reliably here
@@ -148,8 +148,8 @@ specify, and the reason is in the right-hand column.
 | axis | threshold | why this and not the obvious one |
 |---|---|---|
 | **Takeaway in sentence one** | the document's first sentence states the claim from the brief | -- |
-| **Claim-first paragraphs** | report the share. No threshold | 0.742 is the observed minimum of a LEXICAL PROXY over 8 families, not a floor for good prose. The proxy returns true after four exclusions and does not check that a claim is present: both of Rule 1's own bad openings pass it. Read the openings; do not chase the number |
-| **Quantified claims** | every claim resting on a quantity carries it with unit and source | **not** "every claim numbered". Numbers/100w has sd 1.267 against a mean of 1.334; there is no rate to hit. Unattributed numbers are the failure, not absent ones |
+| **Claim-first paragraphs** | report the share. No threshold | 0.757 is the observed minimum of a LEXICAL PROXY over 8 families, not a floor for good prose. The proxy returns true after four exclusions and does not check that a claim is present: both of Rule 1's own bad openings pass it. Read the openings; do not chase the number |
+| **Quantified claims** | every claim resting on a quantity carries it with unit and source | **not** "every claim numbered". Numbers/100w has sd 1.049 against a mean of 1.152; there is no rate to hit. Unattributed numbers are the failure, not absent ones |
 | **Long sentences** | report sentences over 45 words for clause-resolution review. **No cap, no failure number** | a 30-word cap fails 22.8% of the corpus and 47% of danluu. Length is not the defect; an unresolvable clause is |
 | **Long paragraphs** | flag paragraphs carrying two distinct claims. 120 words is a look-here line, not a limit | 17.2% of measured paragraphs exceed 120 words. The defect is two claims in one paragraph, which the reader cannot attribute |
 | **Negative-set patterns** | zero tier-1 patterns | 25 patterns, each firing **zero times across 184,722 words of expert human prose**. That control demoted 5 that passed hand-written negatives, one of which fired 215 times across 15 documents. Tier 2 (43) is flagged for a human read. See `references/negative-set.md` |

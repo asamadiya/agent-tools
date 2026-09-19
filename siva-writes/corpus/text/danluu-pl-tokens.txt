@@ -2,17 +2,11 @@ This somewhat widely cited post (I keep seeing it cited, anyway) suggests that d
 
 Dynamically typed languages generally have a lower LLM token cost than traditional statically typed languages because omitting explicit type declarations makes the code more compact.
 
-Dynamically typed languages generally have a lower LLM token cost than traditional statically typed languages because omitting explicit type declarations makes the code more compact.
-
 Google's AI cited the same post, which suggests that some concise dynamic languages have maybe 1/2 to 1/3 the token cost of static languages like Rust, Go, C++, etc. The author says
 
 There was a very meaningful gap of 2.6x between C (the least token efficient language I compared) and Clojure (the most efficient).
 
-There was a very meaningful gap of 2.6x between C (the least token efficient language I compared) and Clojure (the most efficient).
-
 And then they later tried J, saying
-
-It dominates at just 70 tokens average, nearly half of Clojure (109 tokens). Array languages can be extremely token-efficient when they avoid exotic symbol sets. If token efficiency turns out to be a key driver, this is perhaps a very interesting way for languages to evolve.
 
 It dominates at just 70 tokens average, nearly half of Clojure (109 tokens). Array languages can be extremely token-efficient when they avoid exotic symbol sets. If token efficiency turns out to be a key driver, this is perhaps a very interesting way for languages to evolve.
 
@@ -26,15 +20,9 @@ Instead of relying on these evals, we can try running some of our own evals. As 
 
 As a way to build my intuition about things, I like to pre-register guesses before looking at results 1 . Some things I pre-registered with friends were:
 
-High confidence (95%): the overall dynamic vs. static language claim won't hold For reasons stated above: this feels analogous to the caveman eval, where the result will, at best, get diluted as the problem gets larger
-
 For reasons stated above: this feels analogous to the caveman eval, where the result will, at best, get diluted as the problem gets larger
 
-Low confidence (60%): static languages will be somewhat better than dynamic at ultra effort Very weak confidence that, at ultra effort, the harness will get feedback to the model more quickly and this will result in some kind of benefit for either correctness or efficiency, but it would also seem reasonable for this to not be the case for all kinds of reasons, e.g., I've noticed that codex, when invoking the Rust compiler, very often makes the exact same error and then has to fix it; perhaps this kind of thing dwarfs things like a hypothetical faster feedback cycle
-
 Very weak confidence that, at ultra effort, the harness will get feedback to the model more quickly and this will result in some kind of benefit for either correctness or efficiency, but it would also seem reasonable for this to not be the case for all kinds of reasons, e.g., I've noticed that codex, when invoking the Rust compiler, very often makes the exact same error and then has to fix it; perhaps this kind of thing dwarfs things like a hypothetical faster feedback cycle
-
-High confidence (98%): the "weird" language supremacy of something like J won't hold Same reasoning as the overall static vs. dynamic claim, with the additional thought that AI labs are going to have much less (and possibly zero) synthetic data RL env effort on obscure languages
 
 Same reasoning as the overall static vs. dynamic claim, with the additional thought that AI labs are going to have much less (and possibly zero) synthetic data RL env effort on obscure languages
 
@@ -53,8 +41,6 @@ Note that this is the opposite of what the 1st eval found when it suggested that
 And it turns out that if we plot language popularity vs. performance on this eval (not shown), we observe a weak to moderate positive correlation where more popular languages end up with more correct as well as cheaper solutions.
 
 As we previously noted, very closely related evals can give substantially different results. For example, we saw significantly different results in the Optimization 1 vs. Optimization 2 evals here when Optimization 1 and Optimization 2 were optimizing bzip2 compression and decompression in wasm, which are fairly closely related tasks as evals go. To make a strong, universal, claim, like "dynamic languages are more efficient than static languages", we'd have to run evals across many tasks. However, showing that a claim like
-
-Dynamically typed languages generally have a lower LLM token cost than traditional statically typed languages because omitting explicit type declarations makes the code more compact.
 
 Dynamically typed languages generally have a lower LLM token cost than traditional statically typed languages because omitting explicit type declarations makes the code more compact.
 
@@ -82,10 +68,6 @@ Subjects were given classes in which they had to either fix errors in existing c
 The study used a within-subject design, with randomized task order over 33 subjects.
 A notable limitation is that the study avoided using “complicated control structures”, such as loops and recursion, because those increase variance in time-to-solve. As a result, all of the bugs are trivial bugs. This can be seen in the median time to solve the tasks, which are in the hundreds of seconds. Tasks can include multiple bugs, so the time per bug is quite low.
 
-Subjects were given classes in which they had to either fix errors in existing code or fill out stub methods. Static classes for Java, dynamic classes for Groovy. In cases of type errors (and their respective no method errors), developers solved the problem faster in Java. For semantic errors, there was no difference.
-The study used a within-subject design, with randomized task order over 33 subjects.
-A notable limitation is that the study avoided using “complicated control structures”, such as loops and recursion, because those increase variance in time-to-solve. As a result, all of the bugs are trivial bugs. This can be seen in the median time to solve the tasks, which are in the hundreds of seconds. Tasks can include multiple bugs, so the time per bug is quite low.
-
 Picking tasks that avoid "complicated control structures" such as loops and recursion, where tasks take hundreds of seconds makes the result meaningless with respect to tasks that really eat up a professional programmer's time, just like the first eval we saw where tasks took high tens to low hundreds of tokens. However, with LLMs, we can actually feed them non-trivial tasks and compare how they do. There's the issue of how well results generalize to different tasks, but we'd have that exact same issue with human studies, but worse (LLM variance is huge, but human variance is even huger since you can't get the same human to do a bunch of tasks with different seeds).
 And while $20 to get an LLM to implement a Zstd decoder isn't exactly cheap once you multiply by the number of languages and the number of iterations per condition per language, if you think about how much it would cost to hire a professional programmer who can read the zstd RFC and implement it, there's no way the equivalent study would've been done because the cost would've made it completely infeasible. That goes double for the Pandoc task.
 
@@ -93,33 +75,19 @@ With LLMs, a lot of the questions have gone from being effectively unanswerable 
 
 There are a lot of claims I've seen floating around that these evals can't prove or disprove (for the reason noted above that, due to the variance across different problems, many more tasks would have to be tried), but that these shed some light on, such as:
 
-Languages with a lot of bad code out there (e.g., PHP) will perform worse Appears to be false on these tasks
-
 Appears to be false on these tasks
 
-Because it's so easy to re-write now, you should use a powerful language (like Haskell) Appears to be false on these tasks
-
 Appears to be false on these tasks
-
-You should use a popular language There's weak support for this statement
 
 There's weak support for this statement
 
 For my pre-registered guesses, we had
 
-High confidence (95%): the overall dynamic vs. static language claim won't hold This seems correct
-
 This seems correct
-
-Low confidence (60%): static languages will be somewhat better than dynamic at ultra effort There's not enough information to determine this conclusively, but if we had to make a binary correct/incorrect call, I would call this incorrect
 
 There's not enough information to determine this conclusively, but if we had to make a binary correct/incorrect call, I would call this incorrect
 
-High confidence (98%): the "weird" language supremacy of something like J won't hold This seems correct
-
 This seems correct
-
-[from a draft reader]: "dynamic is better on small-scale, but gets overtaken by static as the size of the project grows" Not supported by these tasks (static languages didn't seem to do substantially better than dynamic on the much larger Pandoc task vs. the smaller Zstd task), but the tasks and the presentation of the tasks are so different that it's unclear if this is because task-size scaling or because of other differences
 
 Not supported by these tasks (static languages didn't seem to do substantially better than dynamic on the much larger Pandoc task vs. the smaller Zstd task), but the tasks and the presentation of the tasks are so different that it's unclear if this is because task-size scaling or because of other differences
 
@@ -181,13 +149,9 @@ Appendix: medium in a loop vs. ultra
 As an example of something we can compare, I was curious how cost effective using medium + asking the agent to keep working would be and then, in the back of my mind, I also had this question about something "Ralph loop" advocates say, that you're better off clearing the context window on every iteration of the loop and giving the agent the full prompt again.
 As with the above, my pre-registered guesses here are:
 
-Zero confidence (50%): Ultra is more effective than medium in a loop I'm not sure how to think about this. I guess the case for this would be that ultra was designed in some way and should be smarter than repeatedly doing medium in a loop. But it's possible that there's some tradeoff where ultra was made for more speed and, as we've noted, the variance is very high so even if ultra wins on most problems it might lose here; ultra might also be more optimized for trading off to improve wall clock time or another parameter; ultra also has the disadvantage that it doesn't "know" to stop after reaching correctness on the hidden tests, whereas medium conditions that hit full correctness aren't run again under this setup, which hugely advantages medium in a loop (which is arguably realistic w.r.t. how someone might use these) You could maybe say this is 50% + epsilon since my mind went to framing it this way and not the other way around, but I would say extremely low confidence here at best
-
 I'm not sure how to think about this. I guess the case for this would be that ultra was designed in some way and should be smarter than repeatedly doing medium in a loop. But it's possible that there's some tradeoff where ultra was made for more speed and, as we've noted, the variance is very high so even if ultra wins on most problems it might lose here; ultra might also be more optimized for trading off to improve wall clock time or another parameter; ultra also has the disadvantage that it doesn't "know" to stop after reaching correctness on the hidden tests, whereas medium conditions that hit full correctness aren't run again under this setup, which hugely advantages medium in a loop (which is arguably realistic w.r.t. how someone might use these)
 
 You could maybe say this is 50% + epsilon since my mind went to framing it this way and not the other way around, but I would say extremely low confidence here at best
-
-Medium confidence (80%): continuing with context outperforms Ralph loop /goal mode, etc., don't do this by default and, presumably, folks at Anthropic and OpenAI have tried things like the Ralph loop and found them less effective Watching your context window very closely seems to have gotten less important as harnesses (and models?) have improved; in late 2025 / early 2026 I often had to throw out my context window when working on a long-running task to avoid issues and that's gotten rarer over time but, even then, because I wasn't paying attention to what people were saying, I was running agentic loops with a default of keeping context and only clearing when there were obvious problems, which seemed to work ok, e.g., I built the world's strongest Azul AI doing that, so it's not clear to me that having a default of clearing context on every loop iteration was the right choice back then
 
 /goal mode, etc., don't do this by default and, presumably, folks at Anthropic and OpenAI have tried things like the Ralph loop and found them less effective
 
@@ -237,33 +201,17 @@ This is arguably a bit of a funny problem in that, given a clear spec, e.g., a c
 
 Appendix: reasons for various decisions
 
-Testing ultra I've seen people say that you shouldn't really measure this because this is a harness thing and not a model thing. I can see why you'd want to measure these separately if you're working on improving models or harnesses, but when looking at how users use things, many people are just going to use codex or claude with the various built-in features and options; whether or not something is a harness thing or a user thing isn't really relevant to them
-
 I've seen people say that you shouldn't really measure this because this is a harness thing and not a model thing. I can see why you'd want to measure these separately if you're working on improving models or harnesses, but when looking at how users use things, many people are just going to use codex or claude with the various built-in features and options; whether or not something is a harness thing or a user thing isn't really relevant to them
-
-Using codex I've seen evals use a very thin harness for the same reason as above and my reason for using codex and not a very thin harness is the same as above Similarly, in this caveman model eval , I used claude with Opus and Fable and codex with GPT
 
 I've seen evals use a very thin harness for the same reason as above and my reason for using codex and not a very thin harness is the same as above
 
 Similarly, in this caveman model eval , I used claude with Opus and Fable and codex with GPT
 
-No internet access Models will often cheat if given internet access and there are plenty of problems where searching on the internet doesn't turn up source code that solves the problem, so this makes these evals approximate those more closely
-
 Models will often cheat if given internet access and there are plenty of problems where searching on the internet doesn't turn up source code that solves the problem, so this makes these evals approximate those more closely
-
-Relatively large tasks compared to a lot of benchmarks people pass around Although I have LLMs do plenty of trivial tasks, the things that take my time or take tokens tend to be larger than the kinds of tasks that were in the Alderson eval or the Endoh eval; LLMs are good enough at trivial tasks that it doesn't make too much difference to me if some condition makes them slightly better or slightly worse at one of those trivial tasks, but for a task like implementing Guards of Atlantis, where I have to spend some number of hours setting up scaffolding for the task to even sort of work, I care a lot about what makes models perform better or worse
 
 Although I have LLMs do plenty of trivial tasks, the things that take my time or take tokens tend to be larger than the kinds of tasks that were in the Alderson eval or the Endoh eval; LLMs are good enough at trivial tasks that it doesn't make too much difference to me if some condition makes them slightly better or slightly worse at one of those trivial tasks, but for a task like implementing Guards of Atlantis, where I have to spend some number of hours setting up scaffolding for the task to even sort of work, I care a lot about what makes models perform better or worse
 
-Agent-specified prompts Public evals seem to have moved to relatively thin/lightweight prompts that don't specify the task in great detail; this is said to be better because an agent setting up a task will give too much information that helps agents succeed at the task I can see why you would want to test that, but it's also the case that I care a lot about how well agents do at tasks set up by agents because a lot of the tasks that I have agents execute are tasks that are defined by agents; I care about how agents perform under both styles, not just one style, and the public evals have moved towards one style
-
-Public evals seem to have moved to relatively thin/lightweight prompts that don't specify the task in great detail; this is said to be better because an agent setting up a task will give too much information that helps agents succeed at the task I can see why you would want to test that, but it's also the case that I care a lot about how well agents do at tasks set up by agents because a lot of the tasks that I have agents execute are tasks that are defined by agents; I care about how agents perform under both styles, not just one style, and the public evals have moved towards one style
-
 I can see why you would want to test that, but it's also the case that I care a lot about how well agents do at tasks set up by agents because a lot of the tasks that I have agents execute are tasks that are defined by agents; I care about how agents perform under both styles, not just one style, and the public evals have moved towards one style
-
-Zstd eval: asking agents to fix bugs without telling them the issue or the failing tests In general, if you tell an agent to fix a specific thing, it will fix it, but it won't necessarily fix the class of issue; I've found that if you tell it there's an issue but don't tell it what the issue is, it sometimes does a more general thing instead of just putting in a narrow, brittle fix, so I do care about how agents behave when given instructions like this (of course you can tell agents to not just make a narrow, brittle, fix, but that often doesn't work) This feels a bit related to the issue we noted in the Pandoc holdout footnote, where telling agents we had a holdout set appeared to force agents to produce more generalized and less brittle solutions
-
-In general, if you tell an agent to fix a specific thing, it will fix it, but it won't necessarily fix the class of issue; I've found that if you tell it there's an issue but don't tell it what the issue is, it sometimes does a more general thing instead of just putting in a narrow, brittle fix, so I do care about how agents behave when given instructions like this (of course you can tell agents to not just make a narrow, brittle, fix, but that often doesn't work) This feels a bit related to the issue we noted in the Pandoc holdout footnote, where telling agents we had a holdout set appeared to force agents to produce more generalized and less brittle solutions
 
 This feels a bit related to the issue we noted in the Pandoc holdout footnote, where telling agents we had a holdout set appeared to force agents to produce more generalized and less brittle solutions
 
@@ -295,11 +243,7 @@ Agents were instructed to ignore performance, but the timeout wasn't infinite an
 
 Here are some of the issues that I ran into when trying to get agents to set this up (and, as noted above, the short amount of time it took to find each issue implies there are more issues)
 
-Originally, the build setup wasn't clearly specified to agents, causing some languages to randomly fail when agents did something that seemed reasonable based on how this was specified to agents but didn't work when scoring occurred BTW, I was very exicted by the initial result here because it was super interesting looking and it confirmed my biases. Dynamic languages were substantially worse than static languages. What a blockbuster result! But it turned out that the real result from the initial setup was that static languages were less likely than dynamic languages to have problems caused by this issue because static languages were less likely to have issues with the idiosyncratic way project builds were ambiguously specified
-
 BTW, I was very exicted by the initial result here because it was super interesting looking and it confirmed my biases. Dynamic languages were substantially worse than static languages. What a blockbuster result! But it turned out that the real result from the initial setup was that static languages were less likely than dynamic languages to have problems caused by this issue because static languages were less likely to have issues with the idiosyncratic way project builds were ambiguously specified
-
-In the original assembly conditions, agents implemented code in C and then compiled it to assembly and submitted the assembly With this issue, asssembly did as well as other languages, which is super interesting! And also false once this issue was fixed. It turns out to be very easy to get incorrect but compelling looking results that would easy go viral if you aren't careful. After fixing those two issues, the results looked fairly mundane and fall into what you might call a "negative result" in the framing of a paper, in that there's no interesting or surprising or contentious thing the results show; perhaps slightly favoring boring languages would've been contarian result for very online people 10-20 years ago, but very online trendy discourse seems to have moved away from that, so this isn't really an interesting contarian result anymore
 
 With this issue, asssembly did as well as other languages, which is super interesting! And also false once this issue was fixed. It turns out to be very easy to get incorrect but compelling looking results that would easy go viral if you aren't careful. After fixing those two issues, the results looked fairly mundane and fall into what you might call a "negative result" in the framing of a paper, in that there's no interesting or surprising or contentious thing the results show; perhaps slightly favoring boring languages would've been contarian result for very online people 10-20 years ago, but very online trendy discourse seems to have moved away from that, so this isn't really an interesting contarian result anymore
 
@@ -321,8 +265,6 @@ There's one thing which arguably wasn't a bug that I removed anyway. One of the 
 
 Anyway, in the above list (which is not exhaustive), many of the issues impacted a large fraction of languages and some issues had to be fixed multiple times. All told, if you count each condition as a separate bug, I probably fixed (had agents fix) over 100 of these bugs and I expect there are more. When I talked to Max Bittker (who runs an RL environment startup), he noted
 
-all the evals I've worked on, I ended up putting a huge amount of time and effort into, mostly in the form of reading trajectories (or summaries of many trajectories) and then triaging issues , e.g "oh this class of bug shouldn't be possible, lets update X "(X being the prompt, the harness/ environment, or the verifier)" agents tend to slop this up, so I put a lot of care there to make sure things get fixed at the right layer, for instance it's very sensitive what's in-context for the agent under test (bad to add random junk it has to worry about, or at worst leaking answers) vs whats fixed behind the scenes in other parts of the system. agents, when writing evals, are not sensitive enough to the experience of the agent under test, and will just give it the answer or fix problems by making it the inner agent's problem ("remember to not reward hack plz") I also have had a lot of success re-using existing things (repos, games, tools, levels) and building harnesses and verifiers around them, versus trying to make something from scratch for an eval by prompting
-
 all the evals I've worked on, I ended up putting a huge amount of time and effort into, mostly in the form of reading trajectories (or summaries of many trajectories) and then triaging issues , e.g "oh this class of bug shouldn't be possible, lets update X "(X being the prompt, the harness/ environment, or the verifier)"
 
 agents tend to slop this up, so I put a lot of care there to make sure things get fixed at the right layer, for instance it's very sensitive what's in-context for the agent under test (bad to add random junk it has to worry about, or at worst leaking answers) vs whats fixed behind the scenes in other parts of the system.
@@ -343,15 +285,11 @@ I don't love that the ultra results are somewhat saturated here, but one "proble
 
 a draft reader pre-registered the guess, "dynamic is better on small-scale, but gets overtaken by static as the size of the project grows". [return]
 
-The holdout tests seem necessary because, without them, agents cheat and will detect a test input and hard-code the passing test output (they sometimes do this even when instructed not to cheat). If all cheating was that blatant, that wouldn't be a problem (and could be an interesting thing to measure, as agents differentially following directions or not across languages is something that matters to real users), but a lot of the cheating is more subtle and difficult to adjudicate. For example, some agents wrote code that branched off of the structure of the tests, but then filled in the contents of the branches with code that wasn't special-cased to a single test result and could pass many variants of the same test. For any point on the spectrum from "definitely not cheating" to "obviously cheating", some agent tried it. As we saw when we looked at Senior SWE-Bench , LLM scoring of evals is tricky and a great way to introduce both bias and variance; using a holdout set of tests has some problems, but it lets us avoid this much larger set of problems. For one thing, the holdout tests are suspsicious because they were created by agents. The intention was to create holdout tests that a reasonable person (or agent) would be able to make pass if they're not cheating. Agents audited this set of holdout tests for cases where this wasn't reasonable and eliminated some, but I didn't check these by hand, so I find it likely that there's at least one holdout test that's unfair in some way. However, the overall score against holdout tests is low enough that I'm not too worried about a small number of tests being bad (if I worked at an AI lab and was trying to train next-generation models, I would be more worried about this, but I don't think it's material for our use case here). Instructing agents not to cheat while having a holdout set of tests didn't prevent blatant cheating that scored extremely poorly on holdout tests, but telling agents that there was a holdout set of tests they were graded against seemed to reduce the score they achieved on the agent-visible tests while increasing the score they achieved against holdout tests (without telling them this, a number of agents achieved 100% on the Pandoc tests with uselessly brittle code; on telling them there's a holdout, no agent scored 100% after 1 turn on ultra, but the holdout scores were substantially better, indicating better generalization). [return]
-
 The holdout tests seem necessary because, without them, agents cheat and will detect a test input and hard-code the passing test output (they sometimes do this even when instructed not to cheat). If all cheating was that blatant, that wouldn't be a problem (and could be an interesting thing to measure, as agents differentially following directions or not across languages is something that matters to real users), but a lot of the cheating is more subtle and difficult to adjudicate. For example, some agents wrote code that branched off of the structure of the tests, but then filled in the contents of the branches with code that wasn't special-cased to a single test result and could pass many variants of the same test. For any point on the spectrum from "definitely not cheating" to "obviously cheating", some agent tried it. As we saw when we looked at Senior SWE-Bench , LLM scoring of evals is tricky and a great way to introduce both bias and variance; using a holdout set of tests has some problems, but it lets us avoid this much larger set of problems.
 
 For one thing, the holdout tests are suspsicious because they were created by agents. The intention was to create holdout tests that a reasonable person (or agent) would be able to make pass if they're not cheating. Agents audited this set of holdout tests for cases where this wasn't reasonable and eliminated some, but I didn't check these by hand, so I find it likely that there's at least one holdout test that's unfair in some way. However, the overall score against holdout tests is low enough that I'm not too worried about a small number of tests being bad (if I worked at an AI lab and was trying to train next-generation models, I would be more worried about this, but I don't think it's material for our use case here).
 
 Instructing agents not to cheat while having a holdout set of tests didn't prevent blatant cheating that scored extremely poorly on holdout tests, but telling agents that there was a holdout set of tests they were graded against seemed to reduce the score they achieved on the agent-visible tests while increasing the score they achieved against holdout tests (without telling them this, a number of agents achieved 100% on the Pandoc tests with uselessly brittle code; on telling them there's a holdout, no agent scored 100% after 1 turn on ultra, but the holdout scores were substantially better, indicating better generalization).
-
-There are various Substacks, YouTube channels, and other things that promise to tell you the secrets of LLM coding success, but the ROI on spending time running actual experiments isn't really there. When we looked at caveman mode , we saw that one of the biggest programming YouTubers had a video where they spent a few minutes looking into it and decided that it worked. Spending even 15 minutes looking into whether or not it really works is probably negative ROI compared to spending that time producing more content instead . There are various papers that discuss different techniques, and these sometimes go into more detail than most blog posts or videos but, on average, they don't necessarily have more useful information. For example, when I asked ChatGPT (5.6 Sol, Pro) to find discussions of language effectiveness with respect to LLMs, it turned up this paper on token efficiency , which has an interesting idea, but has the same issue as the caveman mode evals we discussed earlier, where it's not looking at a task that's interesting enough for the result to be relevant to me as a programmer. Just seeing what cited that paper, we find this paper by three academics on token efficiency of languages titled "The Best Programming Language for Tokenmaxxing" , but compared to this post, that paper only compares four languages, uses worse models, and uses small toy problems (from something called LiveCodeBench; the cost to solve problems with GPT-5.5 is often on the order of 1000 tokens). Regardless of how well done the eval is, as we've noted in this post and in our caveman mode eval , we often see wildly different relative results when going from a small toy problem to a problem that I might care about for hobby projects or work. Also, in that paper, they note that they gave the prompt "To test your program, run exactly ./test.sh...  These are the only tests I care about" and they say this is realistic because "We believe that this setup is a realistic way to study agent behavior: in everyday use, programmers don’t hide their tests from agents. Instead, programmers direct their agents to keep working until all tests pass." but, as we noted above, doing this results in brittle code that fails in the real world (or if you have holdout tests that aren't given to the agent, it fails the holdout tests at a very high rate; this problem cannot be solved by just adding a few more tests; it can perhaps be addressed via something like fuzzing or property-based testing, but how well that works is a topic for another post). I'm not saying these papers are bad or that there isn't something interesting to learn from these papers, but as a programmer who wants to know what techniques or tools I should use, I can't get that information from papers like the ones linked above. [UPDATE: Tom Adamczewski sent me a link to his paper, https://arxiv.org/pdf/2606.30182 , which does handle a lot of the issues mentioned above. Relative to this post, it tries a lot more different tasks (which is great) and tries fewer languages and fewer ways of presenting tasks. One conclusion they draw in the paper that I think falls out of trying fewer languages is that language doesn't matter; even if you exclude the very obscure languges from the evals we tried here, we can observe a correlation between language popularity/usage and result quality; because Adamczewski's paper tries a lot more tasks, you can get a more complete picture by looking at this post and that paper combined than you can by looking at either in isolation.] [return]
 
 There are various Substacks, YouTube channels, and other things that promise to tell you the secrets of LLM coding success, but the ROI on spending time running actual experiments isn't really there. When we looked at caveman mode , we saw that one of the biggest programming YouTubers had a video where they spent a few minutes looking into it and decided that it worked. Spending even 15 minutes looking into whether or not it really works is probably negative ROI compared to spending that time producing more content instead .
 

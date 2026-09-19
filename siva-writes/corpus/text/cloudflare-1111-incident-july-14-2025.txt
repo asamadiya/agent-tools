@@ -28,73 +28,37 @@ Event
 
 2025-06-06 17:38
 
-2025-06-06 17:38
-
 ISSUE INTRODUCED - NO IMPACT A configuration change was made for a DLS service that was not yet in production. This configuration change accidentally included a reference to the 1.1.1.1 Resolver service and, by extension, the prefixes associated with the 1.1.1.1 Resolver service. This change did not result in a change of network configuration, and so routing for the 1.1.1.1 Resolver was not affected. Since there was no change in traffic, no alerts fired, but the misconfiguration lay dormant for a future release.
-
-ISSUE INTRODUCED - NO IMPACT A configuration change was made for a DLS service that was not yet in production. This configuration change accidentally included a reference to the 1.1.1.1 Resolver service and, by extension, the prefixes associated with the 1.1.1.1 Resolver service. This change did not result in a change of network configuration, and so routing for the 1.1.1.1 Resolver was not affected. Since there was no change in traffic, no alerts fired, but the misconfiguration lay dormant for a future release.
-
-2025-07-14 21:48
 
 2025-07-14 21:48
 
 IMPACT START A configuration change was made for the same DLS service. The change attached a test location to the non-production service; this location itself was not live, but the change triggered a refresh of network configuration globally. Due to the earlier configuration error linking the 1.1.1.1 Resolver's IP addresses to our non-production service, those 1.1.1.1 IPs were inadvertently included when we changed how the non-production service was set up. The 1.1.1.1 Resolver prefixes started to be withdrawn from production Cloudflare data centers globally.
 
-IMPACT START A configuration change was made for the same DLS service. The change attached a test location to the non-production service; this location itself was not live, but the change triggered a refresh of network configuration globally. Due to the earlier configuration error linking the 1.1.1.1 Resolver's IP addresses to our non-production service, those 1.1.1.1 IPs were inadvertently included when we changed how the non-production service was set up. The 1.1.1.1 Resolver prefixes started to be withdrawn from production Cloudflare data centers globally.
-
 2025-07-14 21:52
-
-2025-07-14 21:52
-
-DNS traffic to 1.1.1.1 Resolver service begins to drop globally
 
 DNS traffic to 1.1.1.1 Resolver service begins to drop globally
 
 2025-07-14 21:54
 
-2025-07-14 21:54
-
 Related, non-causal event: BGP origin hijack of 1.1.1.0/24 exposed by withdrawal of routes from Cloudflare. This was not a cause of the service failure, but an unrelated issue that was suddenly visible as that prefix was withdrawn by Cloudflare.
-
-Related, non-causal event: BGP origin hijack of 1.1.1.0/24 exposed by withdrawal of routes from Cloudflare. This was not a cause of the service failure, but an unrelated issue that was suddenly visible as that prefix was withdrawn by Cloudflare.
-
-2025-07-14 22:01
 
 2025-07-14 22:01
 
 IMPACT DETECTED Internal service health alerts begin to fire for the 1.1.1.1 Resolver
 
-IMPACT DETECTED Internal service health alerts begin to fire for the 1.1.1.1 Resolver
-
 2025-07-14 22:01
-
-2025-07-14 22:01
-
-INCIDENT DECLARED
 
 INCIDENT DECLARED
 
 2025-07-14 22:20
 
-2025-07-14 22:20
-
 FIX DEPLOYED Revert was initiated to restore the previous configuration. To accelerate full restoration of service, a manually triggered action is validated in testing locations before being executed.
-
-FIX DEPLOYED Revert was initiated to restore the previous configuration. To accelerate full restoration of service, a manually triggered action is validated in testing locations before being executed.
-
-2025-07-14 22:54
 
 2025-07-14 22:54
 
 IMPACT ENDS Resolver alerts cleared and DNS traffic on Resolver prefixes return to normal levels
 
-IMPACT ENDS Resolver alerts cleared and DNS traffic on Resolver prefixes return to normal levels
-
 2025-07-14 22:55
-
-2025-07-14 22:55
-
-INCIDENT RESOLVED
 
 INCIDENT RESOLVED
 

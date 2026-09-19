@@ -14,8 +14,28 @@ import re
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
 
+
+# Causal "so" has to be counted PER SENTENCE. Applied to a joined document, "^" matches once at the
+# very start and never again, so every sentence-initial "So ..." after the first is missed - the
+# defect that produced a monotonic trend which does not survive correction.
+#
+# "so" is also excluded when it is a degree modifier ("so deep that it broke the profiler") or
+# purposive ("so that"). The degree use is the one that slipped through: the old negative lookahead
+# only fired when "that" came immediately after "so".
+SENT = re.compile(r"(?<=[.!?])\s+")
+CAUSAL_SO_SENT = re.compile(
+    r"(?:^|[,;]\s+)so\b"
+    r"(?!\s+(?:that|far|long|much|many|called))"          # purposive and fixed phrases
+    r"(?!\s+\w+(?:ly)?\s+that\b)"                         # degree: so deep that, so quickly that
+    r"(?!\s+(?:deep|fast|slow|big|small|large|many|few|hot|cold|late|early|high|low)\b)",
+    re.I)
+
+
+def causal_so_count(text: str) -> int:
+    return sum(len(CAUSAL_SO_SENT.findall(s.strip())) for s in SENT.split(text) if s.strip())
+
 PATTERNS = {
-    "causal so (R2)": r"(?:^|[,;]\s+)so\b(?!\s+(?:that|far|long|much|many|called))",
+    "causal so (R2)": "CAUSAL_SO",
     "all so": r"\bso\b",
     "instead of (R3)": r"\binstead of\b",
     "rather than (R3)": r"\brather than\b",
@@ -25,8 +45,10 @@ PATTERNS = {
 
 
 def rate(texts: list[str], pattern: str) -> float:
-    blob = " ".join(texts).lower()
-    words = len(re.findall(r"[a-z][a-z'’\-]*", blob))
+    blob = " ".join(texts)
+    words = len(re.findall(r"[a-z][a-z'’\-]*", blob.lower()))
+    if pattern == "CAUSAL_SO":
+        return 1000 * causal_so_count(blob) / max(1, words)
     return 1000 * len(re.findall(pattern, blob, re.I)) / max(1, words)
 
 

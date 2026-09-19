@@ -78,61 +78,31 @@ Description
 
 08:47
 
-08:47
-
 INCIDENT start
-
-INCIDENT start
-
-Configuration change deployed and propagated to the network
 
 Configuration change deployed and propagated to the network
 
 08:48
 
-08:48
-
 Full impact
-
-Full impact
-
-Change fully propagated
 
 Change fully propagated
 
 08:50
 
-08:50
-
 INCIDENT declared
-
-INCIDENT declared
-
-Automated alerts
 
 Automated alerts
 
 09:11
 
-09:11
-
 Change reverted
-
-Change reverted
-
-Configuration change reverted and propagation start
 
 Configuration change reverted and propagation start
 
 09:12
 
-09:12
-
 INCIDENT end
-
-INCIDENT end
-
-Revert fully propagated, all traffic restored
 
 Revert fully propagated, all traffic restored
 

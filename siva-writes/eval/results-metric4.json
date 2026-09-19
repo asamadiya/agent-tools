@@ -19,155 +19,155 @@
       "n_documents": 40,
       "2gram": {
         "candidate_ngram_tokens": 15440,
-        "distinct_over_represented": 196,
-        "over_represented_mass_pct": 4.6503,
+        "distinct_over_represented": 200,
+        "over_represented_mass_pct": 5.0777,
         "top": [
           {
-            "ratio": 208.2,
+            "ratio": 185.4,
             "candidate_n": 7,
             "train_n": 0,
             "ngram": "is real"
           },
           {
-            "ratio": 208.2,
+            "ratio": 185.4,
             "candidate_n": 7,
             "train_n": 0,
             "ngram": "are changing"
           },
           {
-            "ratio": 148.7,
+            "ratio": 132.5,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "the working"
           },
           {
-            "ratio": 148.7,
+            "ratio": 132.5,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "the fault"
           },
           {
-            "ratio": 148.7,
+            "ratio": 132.5,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "the board"
           },
           {
-            "ratio": 148.7,
+            "ratio": 132.5,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "nobody has"
           },
           {
-            "ratio": 148.7,
+            "ratio": 132.5,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "gone the"
           },
           {
-            "ratio": 148.7,
+            "ratio": 132.5,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "are sorry"
           },
           {
-            "ratio": 148.7,
+            "ratio": 132.5,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "a kubelet"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we cannot"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we accept"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "was our"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "tells us"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "says the"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "roughly a"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "prefixes that"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "nobody had"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "is wrong"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "every one"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "december 12"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "almost nothing"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "a date"
           },
           {
-            "ratio": 119.0,
+            "ratio": 106.0,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "2025 on"
           },
           {
-            "ratio": 89.2,
+            "ratio": 79.5,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "would rather"
           },
           {
-            "ratio": 89.2,
+            "ratio": 79.5,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "without anyone"
@@ -176,633 +176,633 @@
       },
       "3gram": {
         "candidate_ngram_tokens": 21519,
-        "distinct_over_represented": 63,
-        "over_represented_mass_pct": 1.2872,
+        "distinct_over_represented": 61,
+        "over_represented_mass_pct": 1.2547,
         "top": [
           {
-            "ratio": 166.5,
+            "ratio": 150.1,
             "candidate_n": 7,
             "train_n": 0,
             "ngram": "what we are"
           },
           {
-            "ratio": 166.5,
+            "ratio": 150.1,
             "candidate_n": 7,
             "train_n": 0,
             "ngram": "we are changing"
           },
           {
-            "ratio": 119.0,
+            "ratio": 107.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "we are sorry"
           },
           {
-            "ratio": 119.0,
+            "ratio": 107.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "the working set"
           },
           {
-            "ratio": 111.0,
+            "ratio": 100.1,
             "candidate_n": 14,
             "train_n": 1,
             "ngram": "it is the"
           },
           {
-            "ratio": 95.2,
+            "ratio": 85.8,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the resize is"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "we would have"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "we shipped a"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "we are tightening"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "we accept that"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "was not an"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "third of our"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the tier- 0"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the sys time"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the number that"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the failure mode"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the device is"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "that has not"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "prefixes that were"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "on the ubuntu"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "on 20 february"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "of our cpu"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "nothing in the"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "no amount of"
           },
           {
-            "ratio": 71.4,
+            "ratio": 64.3,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "is the wrong"
           }
         ]
       },
-      "headline_over_represented_mass_pct": 2.9688,
+      "headline_over_represented_mass_pct": 3.1662,
       "stylometric": {
         "2gram": {
           "candidate_ngram_tokens": 25389,
-          "distinct_over_represented": 45,
-          "over_represented_mass_pct": 1.158,
+          "distinct_over_represented": 43,
+          "over_represented_mass_pct": 1.1107,
           "top": [
             {
-              "ratio": 89.8,
+              "ratio": 78.0,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "one one"
             },
             {
-              "ratio": 74.8,
+              "ratio": 65.0,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "it so"
             },
             {
-              "ratio": 59.8,
+              "ratio": 52.0,
               "candidate_n": 12,
               "train_n": 1,
               "ngram": "so a"
             },
             {
-              "ratio": 59.8,
+              "ratio": 52.0,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "why it"
             },
             {
-              "ratio": 59.8,
+              "ratio": 52.0,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "was our"
             },
             {
-              "ratio": 59.8,
+              "ratio": 52.0,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "every one"
             },
             {
-              "ratio": 44.9,
+              "ratio": 39.0,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "toward the"
             },
             {
-              "ratio": 44.9,
+              "ratio": 39.0,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "so every"
             },
             {
-              "ratio": 44.9,
+              "ratio": 39.0,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "it our"
             },
             {
-              "ratio": 44.9,
+              "ratio": 39.0,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "from it"
             },
             {
-              "ratio": 44.9,
+              "ratio": 39.0,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "are what"
             },
             {
-              "ratio": 44.9,
+              "ratio": 39.0,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "and does"
             },
             {
-              "ratio": 44.9,
+              "ratio": 39.0,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "am not"
             },
             {
-              "ratio": 34.9,
+              "ratio": 30.3,
               "candidate_n": 7,
               "train_n": 1,
               "ngram": "not on"
             },
             {
-              "ratio": 34.9,
+              "ratio": 30.3,
               "candidate_n": 7,
               "train_n": 1,
               "ngram": "against the"
             },
             {
-              "ratio": 29.9,
+              "ratio": 26.0,
               "candidate_n": 6,
               "train_n": 1,
               "ngram": "and on"
             },
             {
-              "ratio": 27.8,
+              "ratio": 24.1,
               "candidate_n": 13,
               "train_n": 3,
               "ngram": "and no"
             },
             {
-              "ratio": 19.9,
+              "ratio": 21.7,
+              "candidate_n": 5,
+              "train_n": 1,
+              "ngram": "had not"
+            },
+            {
+              "ratio": 17.3,
+              "candidate_n": 12,
+              "train_n": 4,
+              "ngram": "was not"
+            },
+            {
+              "ratio": 17.3,
               "candidate_n": 4,
               "train_n": 1,
               "ngram": "of every"
             },
             {
-              "ratio": 19.9,
+              "ratio": 17.3,
               "candidate_n": 4,
               "train_n": 1,
               "ngram": "it had"
             },
             {
-              "ratio": 19.9,
+              "ratio": 17.3,
               "candidate_n": 4,
               "train_n": 1,
               "ngram": "in at"
             },
             {
-              "ratio": 19.9,
+              "ratio": 17.3,
+              "candidate_n": 4,
+              "train_n": 1,
+              "ngram": "i will"
+            },
+            {
+              "ratio": 17.3,
               "candidate_n": 4,
               "train_n": 1,
               "ngram": "both are"
             },
             {
-              "ratio": 18.5,
-              "candidate_n": 21,
-              "train_n": 8,
-              "ngram": "what we"
-            },
-            {
-              "ratio": 18.0,
-              "candidate_n": 6,
-              "train_n": 2,
-              "ngram": "i am"
-            },
-            {
-              "ratio": 18.0,
-              "candidate_n": 6,
-              "train_n": 2,
-              "ngram": "had no"
-            },
-            {
-              "ratio": 15.0,
-              "candidate_n": 5,
-              "train_n": 2,
-              "ngram": "had not"
+              "ratio": 17.3,
+              "candidate_n": 4,
+              "train_n": 1,
+              "ngram": "at or"
             }
           ]
         },
         "3gram": {
           "candidate_ngram_tokens": 25388,
-          "distinct_over_represented": 123,
-          "over_represented_mass_pct": 2.7336,
+          "distinct_over_represented": 125,
+          "over_represented_mass_pct": 2.773,
           "top": [
             {
-              "ratio": 107.7,
+              "ratio": 94.0,
               "candidate_n": 7,
               "train_n": 0,
               "ngram": "what we are"
             },
             {
-              "ratio": 92.4,
+              "ratio": 80.6,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "so it <w>"
             },
             {
-              "ratio": 71.8,
+              "ratio": 62.7,
               "candidate_n": 14,
               "train_n": 1,
               "ngram": "it is the"
             },
             {
-              "ratio": 61.6,
+              "ratio": 53.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "three <w> and"
             },
             {
-              "ratio": 61.6,
+              "ratio": 53.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "should have <w>"
             },
             {
-              "ratio": 61.6,
+              "ratio": 53.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "one one one"
             },
             {
-              "ratio": 61.6,
+              "ratio": 53.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "<w> it so"
             },
             {
-              "ratio": 61.6,
+              "ratio": 53.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "<w> <w> neither"
             },
             {
-              "ratio": 56.4,
+              "ratio": 49.2,
               "candidate_n": 11,
               "train_n": 1,
               "ngram": "so a <w>"
             },
             {
-              "ratio": 56.4,
+              "ratio": 49.2,
               "candidate_n": 11,
               "train_n": 1,
               "ngram": "<w> so a"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "we would have"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "was our <w>"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "was not an"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "the <w> own"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "that has not"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "over the same"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "or above <w>"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "not in <w>"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "it our <w>"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "i am not"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "every one of"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "at or above"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "are <w> what"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "are <w> we"
             },
             {
-              "ratio": 46.2,
+              "ratio": 40.3,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "and why it"
             }
           ]
         },
-        "headline_over_represented_mass_pct": 1.9458
+        "headline_over_represented_mass_pct": 1.9419
       }
     },
     "B": {
       "n_documents": 40,
       "2gram": {
         "candidate_ngram_tokens": 14834,
-        "distinct_over_represented": 192,
-        "over_represented_mass_pct": 4.5369,
+        "distinct_over_represented": 186,
+        "over_represented_mass_pct": 4.3886,
         "top": [
           {
-            "ratio": 216.7,
+            "ratio": 193.0,
             "candidate_n": 7,
             "train_n": 0,
             "ngram": "the curve"
           },
           {
-            "ratio": 154.8,
+            "ratio": 137.9,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "under cgroups"
           },
           {
-            "ratio": 154.8,
+            "ratio": 137.9,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "the board"
           },
           {
-            "ratio": 154.8,
+            "ratio": 137.9,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "that window"
           },
           {
-            "ratio": 154.8,
+            "ratio": 137.9,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "it directly"
           },
           {
-            "ratio": 154.8,
+            "ratio": 137.9,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "is wrong"
           },
           {
-            "ratio": 154.8,
+            "ratio": 137.9,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "by oct"
           },
           {
-            "ratio": 154.8,
+            "ratio": 137.9,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "at 22"
           },
           {
-            "ratio": 154.8,
+            "ratio": 137.9,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "and confirm"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we deployed"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "us the"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the split"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the pod's"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "request so"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "one a"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "number to"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "nobody has"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "kernel and"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "is real"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "is cheap"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "deployed a"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "becomes a"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "are sorry"
           },
           {
-            "ratio": 123.8,
+            "ratio": 110.3,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "are changing"
           },
           {
-            "ratio": 92.9,
+            "ratio": 82.7,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "your traffic"
@@ -812,632 +812,632 @@
       "3gram": {
         "candidate_ngram_tokens": 20531,
         "distinct_over_represented": 47,
-        "over_represented_mass_pct": 0.8085,
+        "over_represented_mass_pct": 0.8378,
         "top": [
           {
-            "ratio": 124.7,
+            "ratio": 112.4,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "under cgroups v"
           },
           {
-            "ratio": 99.7,
+            "ratio": 89.9,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "what we are"
           },
           {
-            "ratio": 99.7,
+            "ratio": 89.9,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we have not"
           },
           {
-            "ratio": 99.7,
+            "ratio": 89.9,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we deployed a"
           },
           {
-            "ratio": 99.7,
+            "ratio": 89.9,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we are sorry"
           },
           {
-            "ratio": 99.7,
+            "ratio": 89.9,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we are changing"
           },
           {
-            "ratio": 99.7,
+            "ratio": 89.9,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "is the reason"
           },
           {
-            "ratio": 99.7,
+            "ratio": 89.9,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "and confirm the"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "was not an"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the working set"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the p 99"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the kubelet cannot"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "that point the"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "should have been"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "round trip on"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "prefix that was"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "pod that is"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "on the ubuntu"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "of the profile"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "of it the"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "measure your own"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "comparison and the"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "are the same"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "and each one"
           },
           {
-            "ratio": 74.8,
+            "ratio": 67.4,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "an attack and"
           }
         ]
       },
-      "headline_over_represented_mass_pct": 2.6727,
+      "headline_over_represented_mass_pct": 2.6132,
       "stylometric": {
         "2gram": {
           "candidate_ngram_tokens": 24490,
-          "distinct_over_represented": 38,
-          "over_represented_mass_pct": 1.078,
+          "distinct_over_represented": 41,
+          "over_represented_mass_pct": 1.0943,
           "top": [
             {
-              "ratio": 93.1,
+              "ratio": 80.9,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "one one"
             },
             {
-              "ratio": 93.1,
+              "ratio": 80.9,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "it so"
             },
             {
-              "ratio": 67.2,
+              "ratio": 58.4,
               "candidate_n": 13,
               "train_n": 1,
               "ngram": "so a"
             },
             {
-              "ratio": 62.0,
+              "ratio": 53.9,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "us the"
             },
             {
-              "ratio": 62.0,
+              "ratio": 53.9,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "one a"
             },
             {
-              "ratio": 62.0,
+              "ratio": 53.9,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "from it"
             },
             {
-              "ratio": 62.0,
+              "ratio": 53.9,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "and both"
             },
             {
-              "ratio": 46.5,
+              "ratio": 40.4,
               "candidate_n": 9,
               "train_n": 1,
               "ngram": "against the"
             },
             {
-              "ratio": 46.5,
+              "ratio": 40.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "than three"
             },
             {
-              "ratio": 46.5,
+              "ratio": 40.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "behind it"
             },
             {
-              "ratio": 46.5,
+              "ratio": 40.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "and does"
             },
             {
-              "ratio": 46.5,
+              "ratio": 40.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "<w> beside"
             },
             {
-              "ratio": 33.2,
+              "ratio": 28.9,
               "candidate_n": 15,
               "train_n": 3,
               "ngram": "and no"
             },
             {
-              "ratio": 25.8,
+              "ratio": 27.0,
+              "candidate_n": 6,
+              "train_n": 1,
+              "ngram": "all three"
+            },
+            {
+              "ratio": 22.5,
               "candidate_n": 5,
               "train_n": 1,
               "ngram": "not and"
             },
             {
-              "ratio": 22.2,
+              "ratio": 19.3,
               "candidate_n": 30,
               "train_n": 10,
               "ngram": "<w> three"
             },
             {
-              "ratio": 20.7,
+              "ratio": 18.0,
               "candidate_n": 4,
               "train_n": 1,
               "ngram": "so an"
             },
             {
-              "ratio": 18.6,
-              "candidate_n": 6,
-              "train_n": 2,
-              "ngram": "all three"
+              "ratio": 16.5,
+              "candidate_n": 11,
+              "train_n": 4,
+              "ngram": "was not"
             },
             {
-              "ratio": 17.9,
+              "ratio": 15.9,
+              "candidate_n": 13,
+              "train_n": 5,
+              "ngram": "it the"
+            },
+            {
+              "ratio": 15.6,
               "candidate_n": 15,
               "train_n": 6,
               "ngram": "with no"
             },
             {
-              "ratio": 15.5,
+              "ratio": 15.4,
+              "candidate_n": 8,
+              "train_n": 3,
+              "ngram": "<w> near"
+            },
+            {
+              "ratio": 13.5,
+              "candidate_n": 9,
+              "train_n": 4,
+              "ngram": "on every"
+            },
+            {
+              "ratio": 13.5,
+              "candidate_n": 7,
+              "train_n": 3,
+              "ngram": "them the"
+            },
+            {
+              "ratio": 13.5,
               "candidate_n": 7,
               "train_n": 3,
               "ngram": "and every"
             },
             {
-              "ratio": 15.5,
+              "ratio": 13.5,
               "candidate_n": 5,
               "train_n": 2,
               "ngram": "to every"
-            },
-            {
-              "ratio": 15.5,
-              "candidate_n": 5,
-              "train_n": 2,
-              "ngram": "had no"
-            },
-            {
-              "ratio": 15.5,
-              "candidate_n": 5,
-              "train_n": 2,
-              "ngram": "<w> neither"
-            },
-            {
-              "ratio": 15.5,
-              "candidate_n": 3,
-              "train_n": 1,
-              "ngram": "or above"
-            },
-            {
-              "ratio": 15.5,
-              "candidate_n": 3,
-              "train_n": 1,
-              "ngram": "it had"
-            },
-            {
-              "ratio": 15.5,
-              "candidate_n": 3,
-              "train_n": 1,
-              "ngram": "during that"
             }
           ]
         },
         "3gram": {
           "candidate_ngram_tokens": 24489,
-          "distinct_over_represented": 114,
-          "over_represented_mass_pct": 2.6379,
+          "distinct_over_represented": 117,
+          "over_represented_mass_pct": 2.6338,
           "top": [
             {
-              "ratio": 79.8,
+              "ratio": 69.6,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "so <w> it"
             },
             {
-              "ratio": 79.8,
+              "ratio": 69.6,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "it was not"
             },
             {
-              "ratio": 79.8,
+              "ratio": 69.6,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "<w> it so"
             },
             {
-              "ratio": 79.8,
+              "ratio": 69.6,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "<w> <w> near"
             },
             {
-              "ratio": 69.1,
+              "ratio": 60.3,
               "candidate_n": 13,
               "train_n": 1,
               "ngram": "so a <w>"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 12,
               "train_n": 1,
               "ngram": "<w> so a"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "what we are"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "we have not"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "us the <w>"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "three <w> and"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "the <w> own"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "same <w> same"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "one one one"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "one a <w>"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "is about <w>"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "are <w> we"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "<w> us the"
             },
             {
-              "ratio": 63.8,
+              "ratio": 55.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "<w> from it"
             },
             {
-              "ratio": 47.9,
+              "ratio": 41.8,
               "candidate_n": 9,
               "train_n": 1,
               "ngram": "against the <w>"
             },
             {
-              "ratio": 47.9,
+              "ratio": 41.8,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "we <w> from"
             },
             {
-              "ratio": 47.9,
+              "ratio": 41.8,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "was not an"
             },
             {
-              "ratio": 47.9,
+              "ratio": 41.8,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "two <w> from"
             },
             {
-              "ratio": 47.9,
+              "ratio": 41.8,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "the <w> three"
             },
             {
-              "ratio": 47.9,
+              "ratio": 41.8,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "than three <w>"
             },
             {
-              "ratio": 47.9,
+              "ratio": 41.8,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "should have been"
             }
           ]
         },
-        "headline_over_represented_mass_pct": 1.858
+        "headline_over_represented_mass_pct": 1.864
       }
     },
     "C": {
       "n_documents": 40,
       "2gram": {
         "candidate_ngram_tokens": 14794,
-        "distinct_over_represented": 220,
-        "over_represented_mass_pct": 5.4211,
+        "distinct_over_represented": 223,
+        "over_represented_mass_pct": 5.8199,
         "top": [
           {
-            "ratio": 186.2,
+            "ratio": 165.9,
             "candidate_n": 6,
             "train_n": 0,
             "ngram": "the board"
           },
           {
-            "ratio": 186.2,
+            "ratio": 165.9,
             "candidate_n": 6,
             "train_n": 0,
             "ngram": "are sorry"
           },
           {
-            "ratio": 155.2,
+            "ratio": 138.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "we cannot"
           },
           {
-            "ratio": 155.2,
+            "ratio": 138.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "that date"
           },
           {
-            "ratio": 155.2,
+            "ratio": 138.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "minutes after"
           },
           {
-            "ratio": 155.2,
+            "ratio": 138.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "are changing"
           },
           {
-            "ratio": 155.2,
+            "ratio": 138.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "against your"
           },
           {
-            "ratio": 155.2,
+            "ratio": 138.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "100 gbytes"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "utc summary"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the observed"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the codemod"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "q queues"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "prefixes that"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "one number"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "on 20"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "october 6"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "node's swap"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "loop the"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "instance type"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "gbytes and"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "costs a"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "attack and"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "at 22"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "and confirm"
           },
           {
-            "ratio": 124.2,
+            "ratio": 110.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "ahead of"
@@ -1446,633 +1446,633 @@
       },
       "3gram": {
         "candidate_ngram_tokens": 20720,
-        "distinct_over_represented": 79,
-        "over_represented_mass_pct": 1.4189,
+        "distinct_over_represented": 81,
+        "over_represented_mass_pct": 1.4913,
         "top": [
           {
-            "ratio": 148.2,
+            "ratio": 133.6,
             "candidate_n": 6,
             "train_n": 0,
             "ngram": "what we are"
           },
           {
-            "ratio": 148.2,
+            "ratio": 133.6,
             "candidate_n": 6,
             "train_n": 0,
             "ngram": "we are sorry"
           },
           {
-            "ratio": 123.5,
+            "ratio": 111.3,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "we are changing"
           },
           {
-            "ratio": 123.5,
+            "ratio": 111.3,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "pod that is"
           },
           {
-            "ratio": 98.8,
+            "ratio": 89.1,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we have not"
           },
           {
-            "ratio": 98.8,
+            "ratio": 89.1,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "times utc summary"
           },
           {
-            "ratio": 98.8,
+            "ratio": 89.1,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the failure mode"
           },
           {
-            "ratio": 98.8,
+            "ratio": 89.1,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "on 20 february"
           },
           {
-            "ratio": 98.8,
+            "ratio": 89.1,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "is the whole"
           },
           {
-            "ratio": 98.8,
+            "ratio": 89.1,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "an attack and"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "will bring a"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "weeks which puts"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "we will bring"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "we deployed a"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "we are asking"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "three asks for"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the working set"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the q queues"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the node's swap"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the largest single"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the kubelet has"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "so there is"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "share of the"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "same instance type"
           },
           {
-            "ratio": 74.1,
+            "ratio": 66.8,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "reading is that"
           }
         ]
       },
-      "headline_over_represented_mass_pct": 3.42,
+      "headline_over_represented_mass_pct": 3.6556,
       "stylometric": {
         "2gram": {
           "candidate_ngram_tokens": 25033,
-          "distinct_over_represented": 47,
-          "over_represented_mass_pct": 1.0746,
+          "distinct_over_represented": 45,
+          "over_represented_mass_pct": 1.0147,
           "top": [
             {
-              "ratio": 91.0,
+              "ratio": 79.1,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "one one"
             },
             {
-              "ratio": 80.9,
+              "ratio": 70.3,
               "candidate_n": 16,
               "train_n": 1,
               "ngram": "so a"
             },
             {
-              "ratio": 75.9,
+              "ratio": 65.9,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "against your"
             },
             {
-              "ratio": 60.7,
+              "ratio": 52.7,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "it against"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "you what"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "what an"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "was our"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "us the"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "us on"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "than three"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "one a"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "it which"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "by how"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "and does"
             },
             {
-              "ratio": 45.5,
+              "ratio": 39.6,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "and both"
             },
             {
-              "ratio": 40.5,
+              "ratio": 35.2,
               "candidate_n": 8,
               "train_n": 1,
               "ngram": "against the"
             },
             {
-              "ratio": 25.3,
+              "ratio": 26.4,
+              "candidate_n": 6,
+              "train_n": 1,
+              "ngram": "at or"
+            },
+            {
+              "ratio": 26.4,
+              "candidate_n": 6,
+              "train_n": 1,
+              "ngram": "all three"
+            },
+            {
+              "ratio": 22.0,
               "candidate_n": 5,
               "train_n": 1,
               "ngram": "in at"
             },
             {
-              "ratio": 25.3,
+              "ratio": 22.0,
               "candidate_n": 5,
               "train_n": 1,
               "ngram": "and on"
             },
             {
-              "ratio": 24.3,
+              "ratio": 21.1,
               "candidate_n": 8,
               "train_n": 2,
               "ngram": "<w> neither"
             },
             {
-              "ratio": 20.2,
+              "ratio": 17.6,
+              "candidate_n": 12,
+              "train_n": 4,
+              "ngram": "was not"
+            },
+            {
+              "ratio": 17.6,
               "candidate_n": 4,
               "train_n": 1,
               "ngram": "or above"
             },
             {
-              "ratio": 20.2,
+              "ratio": 17.6,
               "candidate_n": 4,
               "train_n": 1,
               "ngram": "not on"
             },
             {
-              "ratio": 20.2,
+              "ratio": 17.6,
               "candidate_n": 4,
               "train_n": 1,
               "ngram": "during that"
-            },
-            {
-              "ratio": 20.2,
-              "candidate_n": 4,
-              "train_n": 1,
-              "ngram": "across a"
-            },
-            {
-              "ratio": 19.8,
-              "candidate_n": 17,
-              "train_n": 6,
-              "ngram": "with no"
-            },
-            {
-              "ratio": 18.2,
-              "candidate_n": 6,
-              "train_n": 2,
-              "ngram": "at or"
             }
           ]
         },
         "3gram": {
           "candidate_ngram_tokens": 25032,
-          "distinct_over_represented": 126,
-          "over_represented_mass_pct": 2.6846,
+          "distinct_over_represented": 131,
+          "over_represented_mass_pct": 2.7525,
           "top": [
             {
-              "ratio": 93.7,
+              "ratio": 81.7,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "what we are"
             },
             {
-              "ratio": 93.7,
+              "ratio": 81.7,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "<w> <w> neither"
             },
             {
-              "ratio": 83.3,
+              "ratio": 72.6,
               "candidate_n": 16,
               "train_n": 1,
               "ngram": "so a <w>"
             },
             {
-              "ratio": 67.6,
+              "ratio": 59.0,
               "candidate_n": 13,
               "train_n": 1,
               "ngram": "<w> so a"
             },
             {
-              "ratio": 62.4,
+              "ratio": 54.5,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "which <w> no"
             },
             {
-              "ratio": 62.4,
+              "ratio": 54.5,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "what <w> a"
             },
             {
-              "ratio": 62.4,
+              "ratio": 54.5,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "we have not"
             },
             {
-              "ratio": 62.4,
+              "ratio": 54.5,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "or above <w>"
             },
             {
-              "ratio": 62.4,
+              "ratio": 54.5,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "one one one"
             },
             {
-              "ratio": 62.4,
+              "ratio": 54.5,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "at or above"
             },
             {
-              "ratio": 62.4,
+              "ratio": 54.5,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "<w> it against"
             },
             {
-              "ratio": 62.4,
+              "ratio": 54.5,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "<w> against your"
             },
             {
-              "ratio": 46.8,
+              "ratio": 51.8,
+              "candidate_n": 19,
+              "train_n": 2,
+              "ngram": "which is the"
+            },
+            {
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "what an <w>"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "us on <w>"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "two <w> from"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "three <w> and"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "the <w> own"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "than three <w>"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "so there is"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "second <w> on"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "same <w> on"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "one a <w>"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "one <w> one"
             },
             {
-              "ratio": 46.8,
+              "ratio": 40.9,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "of them was"
-            },
-            {
-              "ratio": 46.8,
-              "candidate_n": 3,
-              "train_n": 0,
-              "ngram": "no <w> had"
             }
           ]
         },
-        "headline_over_represented_mass_pct": 1.8796
+        "headline_over_represented_mass_pct": 1.8836
       }
     },
     "D": {
       "n_documents": 40,
       "2gram": {
         "candidate_ngram_tokens": 15066,
-        "distinct_over_represented": 248,
-        "over_represented_mass_pct": 6.299,
+        "distinct_over_represented": 237,
+        "over_represented_mass_pct": 6.0135,
         "top": [
           {
-            "ratio": 213.4,
+            "ratio": 190.0,
             "candidate_n": 7,
             "train_n": 0,
             "ngram": "a kubelet"
           },
           {
-            "ratio": 182.9,
+            "ratio": 162.9,
             "candidate_n": 6,
             "train_n": 0,
             "ngram": "utc we"
           },
           {
-            "ratio": 182.9,
+            "ratio": 162.9,
             "candidate_n": 6,
             "train_n": 0,
             "ngram": "the board"
           },
           {
-            "ratio": 182.9,
+            "ratio": 162.9,
             "candidate_n": 6,
             "train_n": 0,
             "ngram": "minutes after"
           },
           {
-            "ratio": 182.9,
+            "ratio": 162.9,
             "candidate_n": 6,
             "train_n": 0,
             "ngram": "and neither"
           },
           {
-            "ratio": 152.4,
+            "ratio": 135.7,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "the codemod"
           },
           {
-            "ratio": 152.4,
+            "ratio": 135.7,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "swap device"
           },
           {
-            "ratio": 152.4,
+            "ratio": 135.7,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "reverted the"
           },
           {
-            "ratio": 152.4,
+            "ratio": 135.7,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "production traffic"
           },
           {
-            "ratio": 152.4,
+            "ratio": 135.7,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "path so"
           },
           {
-            "ratio": 152.4,
+            "ratio": 135.7,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "kubelet that"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "will report"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we reverted"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "transaction that"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "this week"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the vdso"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the population"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the observed"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the guardrail"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the defect"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the ceiling"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "tail is"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "per service"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "no node"
           },
           {
-            "ratio": 121.9,
+            "ratio": 108.6,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "m of"
@@ -2081,633 +2081,633 @@
       },
       "3gram": {
         "candidate_ngram_tokens": 21327,
-        "distinct_over_represented": 85,
-        "over_represented_mass_pct": 1.4676,
+        "distinct_over_represented": 81,
+        "over_represented_mass_pct": 1.4114,
         "top": [
           {
-            "ratio": 144.0,
+            "ratio": 129.8,
             "candidate_n": 6,
             "train_n": 0,
             "ngram": "after the first"
           },
           {
-            "ratio": 120.0,
+            "ratio": 108.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "we have no"
           },
           {
-            "ratio": 120.0,
+            "ratio": 108.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "the mechanism is"
           },
           {
-            "ratio": 120.0,
+            "ratio": 108.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "the file is"
           },
           {
-            "ratio": 120.0,
+            "ratio": 108.2,
             "candidate_n": 5,
             "train_n": 0,
             "ngram": "minutes after the"
           },
           {
-            "ratio": 96.0,
+            "ratio": 86.5,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we reverted the"
           },
           {
-            "ratio": 96.0,
+            "ratio": 86.5,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "we have not"
           },
           {
-            "ratio": 96.0,
+            "ratio": 86.5,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "the swap device"
           },
           {
-            "ratio": 96.0,
+            "ratio": 86.5,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "nothing in the"
           },
           {
-            "ratio": 96.0,
+            "ratio": 86.5,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "and we should"
           },
           {
-            "ratio": 96.0,
+            "ratio": 86.5,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "a kubelet that"
           },
           {
-            "ratio": 96.0,
+            "ratio": 86.5,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "a call that"
           },
           {
-            "ratio": 96.0,
+            "ratio": 86.5,
             "candidate_n": 4,
             "train_n": 0,
             "ngram": "a 100 gbyte"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "what makes the"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "what it does"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "we are sorry"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "we are making"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "was not an"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "under cgroups v"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the working set"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the tail is"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the incident was"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the first two"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the first thing"
           },
           {
-            "ratio": 72.0,
+            "ratio": 64.9,
             "candidate_n": 3,
             "train_n": 0,
             "ngram": "the difference is"
           }
         ]
       },
-      "headline_over_represented_mass_pct": 3.8833,
+      "headline_over_represented_mass_pct": 3.7124,
       "stylometric": {
         "2gram": {
           "candidate_ngram_tokens": 25150,
-          "distinct_over_represented": 53,
-          "over_represented_mass_pct": 1.6541,
+          "distinct_over_represented": 58,
+          "over_represented_mass_pct": 1.7296,
           "top": [
             {
-              "ratio": 95.7,
+              "ratio": 83.1,
               "candidate_n": 19,
               "train_n": 1,
               "ngram": "so a"
             },
             {
-              "ratio": 95.7,
+              "ratio": 83.1,
               "candidate_n": 19,
               "train_n": 1,
               "ngram": "against the"
             },
             {
-              "ratio": 90.6,
+              "ratio": 78.7,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "one one"
             },
             {
-              "ratio": 90.6,
+              "ratio": 78.7,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "and neither"
             },
             {
-              "ratio": 90.6,
+              "ratio": 78.7,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "and both"
             },
             {
-              "ratio": 75.5,
+              "ratio": 65.6,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "so each"
             },
             {
-              "ratio": 75.5,
+              "ratio": 65.6,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "it so"
             },
             {
-              "ratio": 60.4,
+              "ratio": 52.5,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "by how"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "us what"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "toward the"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "three of"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "than three"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "so every"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "since been"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "one an"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "first two"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "every one"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "behind it"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "are what"
             },
             {
-              "ratio": 45.3,
+              "ratio": 39.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "against your"
             },
             {
-              "ratio": 36.7,
+              "ratio": 31.9,
               "candidate_n": 17,
               "train_n": 3,
               "ngram": "and no"
             },
             {
-              "ratio": 30.2,
+              "ratio": 30.6,
+              "candidate_n": 7,
+              "train_n": 1,
+              "ngram": "all three"
+            },
+            {
+              "ratio": 26.2,
               "candidate_n": 6,
               "train_n": 1,
               "ngram": "and on"
             },
             {
-              "ratio": 25.2,
+              "ratio": 21.9,
               "candidate_n": 5,
               "train_n": 1,
               "ngram": "or above"
             },
             {
-              "ratio": 23.2,
-              "candidate_n": 20,
-              "train_n": 6,
-              "ngram": "with no"
-            },
-            {
-              "ratio": 21.6,
-              "candidate_n": 10,
-              "train_n": 3,
-              "ngram": "and every"
+              "ratio": 21.9,
+              "candidate_n": 5,
+              "train_n": 1,
+              "ngram": "at or"
             }
           ]
         },
         "3gram": {
           "candidate_ngram_tokens": 25149,
-          "distinct_over_represented": 152,
-          "over_represented_mass_pct": 3.7815,
+          "distinct_over_represented": 159,
+          "over_represented_mass_pct": 3.7019,
           "top": [
             {
-              "ratio": 139.8,
+              "ratio": 122.0,
               "candidate_n": 9,
               "train_n": 0,
               "ngram": "the <w> against"
             },
             {
-              "ratio": 98.4,
+              "ratio": 85.9,
               "candidate_n": 19,
               "train_n": 1,
               "ngram": "so a <w>"
             },
             {
-              "ratio": 98.4,
+              "ratio": 85.9,
               "candidate_n": 19,
               "train_n": 1,
               "ngram": "against the <w>"
             },
             {
-              "ratio": 93.2,
+              "ratio": 81.3,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "the <w> own"
             },
             {
-              "ratio": 93.2,
+              "ratio": 81.3,
               "candidate_n": 6,
               "train_n": 0,
               "ngram": "after the first"
             },
             {
-              "ratio": 88.1,
+              "ratio": 76.8,
               "candidate_n": 17,
               "train_n": 1,
               "ngram": "<w> against the"
             },
             {
-              "ratio": 82.9,
+              "ratio": 72.3,
               "candidate_n": 16,
               "train_n": 1,
               "ngram": "<w> so a"
             },
             {
-              "ratio": 77.7,
+              "ratio": 67.8,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "we have no"
             },
             {
-              "ratio": 77.7,
+              "ratio": 67.8,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "so each <w>"
             },
             {
-              "ratio": 77.7,
+              "ratio": 67.8,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "at or above"
             },
             {
-              "ratio": 77.7,
+              "ratio": 67.8,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "<w> so each"
             },
             {
-              "ratio": 77.7,
+              "ratio": 67.8,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "<w> it so"
             },
             {
-              "ratio": 77.7,
+              "ratio": 67.8,
               "candidate_n": 5,
               "train_n": 0,
               "ngram": "<w> and neither"
             },
             {
-              "ratio": 62.2,
+              "ratio": 54.2,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "which is what"
             },
             {
-              "ratio": 62.2,
+              "ratio": 54.2,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "we have not"
             },
             {
-              "ratio": 62.2,
+              "ratio": 54.2,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "the <w> through"
             },
             {
-              "ratio": 62.2,
+              "ratio": 54.2,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "or above <w>"
             },
             {
-              "ratio": 62.2,
+              "ratio": 54.2,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "one one one"
             },
             {
-              "ratio": 62.2,
+              "ratio": 54.2,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "neither <w> is"
             },
             {
-              "ratio": 62.2,
+              "ratio": 54.2,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "and we should"
             },
             {
-              "ratio": 62.2,
+              "ratio": 54.2,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "<w> had not"
             },
             {
-              "ratio": 62.2,
+              "ratio": 54.2,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "<w> and both"
             },
             {
-              "ratio": 46.6,
+              "ratio": 51.5,
+              "candidate_n": 19,
+              "train_n": 2,
+              "ngram": "which is the"
+            },
+            {
+              "ratio": 40.7,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "will <w> at"
             },
             {
-              "ratio": 46.6,
+              "ratio": 40.7,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "what it does"
-            },
-            {
-              "ratio": 46.6,
-              "candidate_n": 3,
-              "train_n": 0,
-              "ngram": "was not an"
             }
           ]
         },
-        "headline_over_represented_mass_pct": 2.7178
+        "headline_over_represented_mass_pct": 2.7157
       }
     },
     "H": {
       "n_documents": 32,
       "2gram": {
         "candidate_ngram_tokens": 11770,
-        "distinct_over_represented": 181,
-        "over_represented_mass_pct": 6.9329,
+        "distinct_over_represented": 179,
+        "over_represented_mass_pct": 6.8394,
         "top": [
           {
-            "ratio": 780.3,
+            "ratio": 695.0,
             "candidate_n": 20,
             "train_n": 0,
             "ngram": "4 0"
           },
           {
-            "ratio": 546.2,
+            "ratio": 486.5,
             "candidate_n": 14,
             "train_n": 0,
             "ngram": "0.00 0.00"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "wrqm s"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "wkb s"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "w s"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "w await"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "user nice"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "system iowait"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "svctm util"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "steal idle"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s wrqm"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s wkb"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s w"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s rkb"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s r"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s avgrq-sz"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "rrqm s"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "nice system"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "iowait steal"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "hits 4"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "device rrqm"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "await w"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "await svctm"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "await r"
           },
           {
-            "ratio": 351.1,
+            "ratio": 312.8,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "avgrq-sz avgqu-sz"
@@ -2720,366 +2720,378 @@
         "over_represented_mass_pct": 2.7561,
         "top": [
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "wrqm s r"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "wkb s avgrq-sz"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "w s rkb"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "w await svctm"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "user nice system"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "system iowait steal"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s wrqm s"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s wkb s"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s w s"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s rkb s"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s r s"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "s avgrq-sz avgqu-sz"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "rrqm s wrqm"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "rkb s wkb"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "r s w"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "r await w"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "nice system iowait"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "iowait steal idle"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "hits 4 0"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "device rrqm s"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "await w await"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "await svctm util"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "await r await"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "avgrq-sz avgqu-sz await"
           },
           {
-            "ratio": 296.7,
+            "ratio": 267.4,
             "candidate_n": 9,
             "train_n": 0,
             "ngram": "avgqu-sz await r"
           }
         ]
       },
-      "headline_over_represented_mass_pct": 4.8445,
+      "headline_over_represented_mass_pct": 4.7978,
       "stylometric": {
         "2gram": {
           "candidate_ngram_tokens": 17530,
           "distinct_over_represented": 9,
-          "over_represented_mass_pct": 0.2054,
+          "over_represented_mass_pct": 0.1997,
           "top": [
             {
-              "ratio": 65.0,
+              "ratio": 56.5,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "has since"
             },
             {
-              "ratio": 28.9,
+              "ratio": 25.1,
               "candidate_n": 4,
               "train_n": 1,
               "ngram": "the i"
             },
             {
-              "ratio": 21.7,
+              "ratio": 21.5,
+              "candidate_n": 8,
+              "train_n": 3,
+              "ngram": "had been"
+            },
+            {
+              "ratio": 18.8,
               "candidate_n": 3,
               "train_n": 1,
               "ngram": "us that"
             },
             {
-              "ratio": 21.7,
+              "ratio": 18.8,
               "candidate_n": 3,
               "train_n": 1,
               "ngram": "than on"
             },
             {
-              "ratio": 21.7,
+              "ratio": 18.8,
               "candidate_n": 3,
               "train_n": 1,
               "ngram": "by our"
             },
             {
-              "ratio": 21.7,
+              "ratio": 18.8,
               "candidate_n": 3,
               "train_n": 1,
               "ngram": "but was"
             },
             {
-              "ratio": 19.3,
-              "candidate_n": 8,
-              "train_n": 4,
-              "ngram": "had been"
-            },
-            {
-              "ratio": 13.0,
+              "ratio": 11.3,
               "candidate_n": 3,
               "train_n": 2,
               "ngram": "this with"
             },
             {
-              "ratio": 10.0,
-              "candidate_n": 6,
-              "train_n": 6,
-              "ngram": "this as"
+              "ratio": 10.5,
+              "candidate_n": 5,
+              "train_n": 4,
+              "ngram": "was not"
             }
           ]
         },
         "3gram": {
           "candidate_ngram_tokens": 17529,
-          "distinct_over_represented": 23,
-          "over_represented_mass_pct": 0.5077,
+          "distinct_over_represented": 27,
+          "over_represented_mass_pct": 0.5876,
           "top": [
             {
-              "ratio": 89.2,
+              "ratio": 77.8,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "were <w> the"
             },
             {
-              "ratio": 89.2,
+              "ratio": 77.8,
               "candidate_n": 4,
               "train_n": 0,
               "ngram": "and <w> was"
             },
             {
-              "ratio": 66.9,
+              "ratio": 58.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "up on a"
             },
             {
-              "ratio": 66.9,
+              "ratio": 58.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "here is the"
             },
             {
-              "ratio": 66.9,
+              "ratio": 58.4,
               "candidate_n": 3,
               "train_n": 0,
               "ngram": "<w> than on"
             },
             {
-              "ratio": 52.0,
+              "ratio": 45.4,
               "candidate_n": 7,
               "train_n": 1,
               "ngram": "<w> had been"
             },
             {
-              "ratio": 29.7,
+              "ratio": 25.9,
               "candidate_n": 4,
               "train_n": 1,
               "ngram": "the i <w>"
             },
             {
-              "ratio": 22.3,
+              "ratio": 19.5,
+              "candidate_n": 7,
+              "train_n": 3,
+              "ngram": "had been <w>"
+            },
+            {
+              "ratio": 19.5,
               "candidate_n": 3,
               "train_n": 1,
               "ngram": "to <w> during"
             },
             {
-              "ratio": 22.3,
+              "ratio": 19.5,
               "candidate_n": 3,
               "train_n": 1,
               "ngram": "that <w> us"
             },
             {
-              "ratio": 22.3,
+              "ratio": 19.5,
               "candidate_n": 3,
               "train_n": 1,
               "ngram": "by our <w>"
             },
             {
-              "ratio": 22.3,
+              "ratio": 19.5,
+              "candidate_n": 3,
+              "train_n": 1,
+              "ngram": "an <w> was"
+            },
+            {
+              "ratio": 19.5,
               "candidate_n": 3,
               "train_n": 1,
               "ngram": "<w> us that"
             },
             {
-              "ratio": 22.3,
+              "ratio": 19.5,
               "candidate_n": 3,
               "train_n": 1,
               "ngram": "<w> by our"
             },
             {
-              "ratio": 22.3,
+              "ratio": 19.5,
               "candidate_n": 3,
               "train_n": 1,
               "ngram": "<w> but was"
             },
             {
-              "ratio": 17.3,
+              "ratio": 15.1,
               "candidate_n": 7,
               "train_n": 4,
-              "ngram": "had been <w>"
-            },
-            {
-              "ratio": 14.2,
-              "candidate_n": 7,
-              "train_n": 5,
               "ngram": "<w> did not"
             },
             {
-              "ratio": 13.4,
+              "ratio": 11.7,
+              "candidate_n": 3,
+              "train_n": 2,
+              "ngram": "was <w> as"
+            },
+            {
+              "ratio": 11.7,
               "candidate_n": 3,
               "train_n": 2,
               "ngram": "those that <w>"
             },
             {
-              "ratio": 13.4,
+              "ratio": 11.7,
+              "candidate_n": 3,
+              "train_n": 2,
+              "ngram": "this <w> me"
+            },
+            {
+              "ratio": 11.7,
               "candidate_n": 3,
               "train_n": 2,
               "ngram": "first <w> was"
             },
             {
-              "ratio": 13.4,
-              "candidate_n": 3,
-              "train_n": 2,
-              "ngram": "an <w> was"
-            },
-            {
-              "ratio": 13.4,
+              "ratio": 11.7,
               "candidate_n": 3,
               "train_n": 2,
               "ngram": "about <w> of"
             },
             {
-              "ratio": 13.4,
+              "ratio": 11.7,
+              "candidate_n": 3,
+              "train_n": 2,
+              "ngram": "<w> up on"
+            },
+            {
+              "ratio": 11.7,
               "candidate_n": 3,
               "train_n": 2,
               "ngram": "<w> for those"
             },
             {
-              "ratio": 12.7,
+              "ratio": 11.1,
               "candidate_n": 4,
               "train_n": 3,
               "ngram": "only <w> the"
             },
             {
-              "ratio": 12.7,
+              "ratio": 11.1,
               "candidate_n": 4,
               "train_n": 3,
               "ngram": "<w> less than"
-            },
-            {
-              "ratio": 12.2,
-              "candidate_n": 6,
-              "train_n": 5,
-              "ngram": "<w> this as"
             }
           ]
         },
-        "headline_over_represented_mass_pct": 0.3566
+        "headline_over_represented_mass_pct": 0.3936
       }
     }
   }

@@ -7,9 +7,9 @@ measurements in references/voice.md rather than intuition.
 FAILS: things that are a violated constraint, checkable with near-zero false positives - a prose
 em dash under R11, more than one "so" in a sentence under R2, a tier-1 negative-set pattern.
 
-REPORTS: everything whose corpus spread makes a threshold dishonest. 22.8% of sentences in expert
-engineering writing run over 30 words and 47% of danluu's do, so a length cap would fail the corpus
-it was derived from. 17.2% of measured paragraphs exceed 120 words. Numbers per 100 words has a
+REPORTS: everything whose corpus spread makes a threshold dishonest. 21.9% of sentences in expert
+engineering writing run over 30 words and 46.7% of danluu's do, so a length cap would fail the
+corpus it was derived from. 15.8% of measured paragraphs exceed 120 words. Numbers per 100 words has a
 standard deviation almost equal to its mean. For these the script tells you where to look and
 refuses to pretend it knows the answer.
 
@@ -45,15 +45,16 @@ except ImportError:  # the skill may be installed without the repo's tools/ besi
         return not s.rstrip().endswith("?") and len(WORD.findall(s)) >= 5
 
 CORPUS = {  # from corpus/measurements-train.json, train split, n=30 documents
-    "claim_first_mean": 0.893, "claim_first_floor": 0.758,
-    "sent_over_30_pct": 22.77, "para_over_120_pct": 17.23,
-    "numbers_per_100w_mean": 1.334, "numbers_per_100w_sd": 1.267,
-    "hedges_per_100w_mean": 1.383,
-    # Measured over the eval corpus, per 1000 words. These exist because R2 and R3 were found to
-    # produce the constructions they license: with the full skill, causal "so" ran at 3.46 against
-    # 0.80 in the train corpus and 1.14 in held-out human writing, and "instead of" ran at 1.29
-    # against 0.36, having absorbed the "rather than" the rule suppressed.
-    "causal_so_per_1000w_train": 0.798, "causal_so_per_1000w_human": 1.137,
+    "claim_first_mean": 0.898, "claim_first_floor": 0.757,
+    "sent_over_30_pct": 21.88, "para_over_120_pct": 15.80,
+    "numbers_per_100w_mean": 1.152, "numbers_per_100w_sd": 1.049,
+    "hedges_per_100w_mean": 1.379,
+    # Measured over the eval corpus, per 1000 words, counting causal "so" per sentence and
+    # excluding degree uses. EVERY model condition runs about 3.0 to 3.5 whether or not it has the
+    # skill, against 0.88 in the train corpus and 1.38 in held-out human writing, so the skill does
+    # not cause this - models over-use causal "so" on their own. What the gate does is remove it:
+    # reporting this rate after writing took the full-skill condition from 3.50 to 1.17.
+    "causal_so_per_1000w_train": 0.88, "causal_so_per_1000w_human": 1.38,
     "instead_of_per_1000w_train": 0.355, "instead_of_per_1000w_human": 0.239,
     "rather_than_per_1000w_train": 0.186, "rather_than_per_1000w_human": 0.060,
 }
