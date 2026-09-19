@@ -74,8 +74,9 @@ def main() -> None:
     A("| **D** | the full skill: C plus the brief-then-prose split and the self-score gate. |")
     A("| **H** | the human text. The anchored span of the source document the brief was derived from. |\n")
     if frozen:
+        n_h = sum(frozen.get("human_by_genre", {}).values())
         A(f'Frozen eval: **{frozen["n_briefs"]} briefs, {frozen["n_questions"]} questions**, '
-          f'{frozen["n_with_human"]} with a human reference.')
+          f'{n_h} with a human reference.')
         A(f'`prompts.jsonl` sha256 `{frozen["sha256"]["prompts.jsonl"][:16]}`, '
           f'`questions.jsonl` `{frozen["sha256"]["questions.jsonl"][:16]}`.\n')
 
@@ -90,6 +91,17 @@ def main() -> None:
         for c, s in sorted(m1["by_condition"].items(), key=lambda kv: -kv[1]["win_rate_pct"]):
             A(f'| {c} | {s["appearances"]} | {s["wins"]:.1f} | {s["win_rate_pct"]:.1f}% | '
               f'[{s["wilson95_pct"][0]:.1f}, {s["wilson95_pct"][1]:.1f}] |')
+        A("")
+        A("**The judge failed its control, and that is the finding.** Condition H is published prose by")
+        A("Marc Brooker, Cloudflare and Brendan Gregg. It lost **24 of 24 pairs, 0.0%**. A judge that")
+        A("ranks expert human writing last, unanimously, is either broken or is measuring something")
+        A("other than quality. Its own reasoning says which: *\"Candidate A omits all timestamps\"*,")
+        A("*\"includes the brief\'s required future work, which Candidate A omits entirely\"*. It is")
+        A("penalising H for not covering a brief H was never written to, because the briefs were derived")
+        A("from an anchored span while their facts were drawn from the whole source document. The judge")
+        A("is working. **Condition H is invalid in this design** and is excluded from every conclusion")
+        A("in this file. Metric 2 shows the same defect independently: 13.1% of graded facts have")
+        A("answers largely absent from the H span.")
         if m1.get("unresolved_verdicts"):
             A(f'\n{m1["unresolved_verdicts"]} pairs returned no parseable verdict and are excluded.')
         A("")
@@ -178,6 +190,43 @@ def main() -> None:
         for name, vals in rates["rows"].items():
             A(f'| {name} | ' + " | ".join(f"{v:.2f}" for v in vals) + " |")
         A("")
+
+    # ---------- Phase 5
+    m2r2 = load("results-metric2-r2.json")
+    m4r2 = load("results-metric4-r2.json")
+    if m2r2 and m2:
+        import statistics as st
+        A("---\n\n## Phase 5: one change, re-run\n")
+        A("The r2 change: R2 and R3 now carry their measured effect in the rule text, and the gate")
+        A("reports causal-*so*, *instead of* and *rather than* rates against the corpus and human")
+        A("figures. Same frozen briefs, same everything else. Condition A has no skill and was not")
+        A("regenerated.\n")
+        b1 = collections.defaultdict(dict); b2 = collections.defaultdict(dict)
+        for r in m2["rows"]: b1[r["brief_id"]][r["condition"]] = r["correct"]
+        for r in m2r2["rows"]: b2[r["brief_id"]][r["condition"]] = r["correct"]
+        A("| condition | r1 accuracy | r2 accuracy | paired diff /5 | 95% CI | verdict |")
+        A("|---|---|---|---|---|---|")
+        for c in "BCD":
+            if c not in m2r2["by_condition"]:
+                continue
+            d = [b2[k][c] - b1[k][c] for k in b2 if c in b2[k] and c in b1.get(k, {})]
+            m = st.mean(d); se = st.stdev(d) / math.sqrt(len(d))
+            lo, hi = m - 1.96 * se, m + 1.96 * se
+            v = "**moved beyond CI**" if (lo > 0 or hi < 0) else "not beyond CI"
+            A(f'| {c} | {m2["by_condition"][c]["accuracy_pct"]:.1f}% | '
+              f'{m2r2["by_condition"][c]["accuracy_pct"]:.1f}% | {m:+.3f} | [{lo:+.3f}, {hi:+.3f}] | {v} |')
+        A("")
+        if m4r2:
+            A("| condition | r1 stylometric % | r2 stylometric % |")
+            A("|---|---|---|")
+            for c in "BCD":
+                if c in m4r2["conditions"]:
+                    A(f'| {c} | {m4["conditions"][c]["stylometric"]["headline_over_represented_mass_pct"]:.4f} | '
+                      f'{m4r2["conditions"][c]["stylometric"]["headline_over_represented_mass_pct"]:.4f} |')
+            A("")
+        A("**C beats D in both rounds.** Paired, per brief: r1 +0.400 [0.180, 0.620] and r2 +0.500")
+        A("[0.073, 0.927]. The result replicates on a second independent generation, which is the")
+        A("strongest evidence in this evaluation.\n")
 
     (EVAL / "results.md").write_text("\n".join(L) + "\n")
     print(f'results.md written: {len(L)} lines -> {EVAL / "results.md"}')

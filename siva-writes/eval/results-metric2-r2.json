@@ -1,0 +1,4725 @@
+{
+  "reader_model": "gemini-3.5-flash",
+  "reader_sees": "candidate write-up and questions only, never the brief",
+  "grading": "deterministic normalised match; non-matches recorded in results-metric2-unmatched.json for adjudication",
+  "by_condition": {
+    "B": {
+      "documents": 40,
+      "items": 200,
+      "correct": 151,
+      "accuracy_pct": 75.5,
+      "wilson95_pct": [
+        69.1,
+        80.94
+      ],
+      "adjudicated": 76,
+      "reader_errors": 0
+    },
+    "C": {
+      "documents": 40,
+      "items": 200,
+      "correct": 142,
+      "accuracy_pct": 71.0,
+      "wilson95_pct": [
+        64.36,
+        76.85
+      ],
+      "adjudicated": 69,
+      "reader_errors": 0
+    },
+    "D": {
+      "documents": 40,
+      "items": 200,
+      "correct": 122,
+      "accuracy_pct": 61.0,
+      "wilson95_pct": [
+        54.09,
+        67.49
+      ],
+      "adjudicated": 56,
+      "reader_errors": 0
+    }
+  },
+  "rows": [
+    {
+      "condition": "B",
+      "brief_id": "design_doc-01",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-01-q1",
+          "reply": "52% (or 0.5171)",
+          "correct": true,
+          "how": "numeric:['0.5171', '52']"
+        },
+        {
+          "id": "design_doc-01-q2",
+          "reply": "About 99% (or 0.9938)",
+          "correct": true,
+          "how": "numeric:['0.9938', '99']"
+        },
+        {
+          "id": "design_doc-01-q3",
+          "reply": "Occupancy (the share of busy threads held by requests that will finish at or above the Pth",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "design_doc-01-q4",
+          "reply": "L = sum(sorted(x)[:k]) / sum(x), where k = P*n and x are the raw samples",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "design_doc-01-q5",
+          "reply": "Above 0.5, and sometimes above 0.75",
+          "correct": true,
+          "how": "numeric:['0.5', '0.75']"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "design_doc-02",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "design_doc-02-q1",
+          "reply": "Operator: MTTR under 1 minute; Customer: mean outage length of 1 hour.",
+          "correct": true,
+          "how": "lexical:MTTR a minute, customer outage an hour"
+        },
+        {
+          "id": "design_doc-02-q2",
+          "reply": "E_a[X] = E[X^2] / (2 E[X]) = 0.5",
+          "correct": true,
+          "how": "numeric:['0.5', '2']"
+        },
+        {
+          "id": "design_doc-02-q3",
+          "reply": "Service: mean request time of 100 ms; User: mean wait of 1 s.",
+          "correct": true,
+          "how": "numeric:['1', '100']"
+        },
+        {
+          "id": "design_doc-02-q4",
+          "reply": "Log-normal distribution with failure_mu=1.0 and failure_sigma=3.0; Poisson process at rate 100",
+          "correct": true,
+          "how": "numeric:['1.0', '100', '3.0']"
+        },
+        {
+          "id": "design_doc-02-q5",
+          "reply": "Retries (retry logic); recovery-time tail.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "design_doc-03",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-03-q1",
+          "reply": "Authorized customer id",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "design_doc-03-q2",
+          "reply": "O(customers) queues and O(customers) dequeue work; SFQ reduces both to O(1)",
+          "correct": true,
+          "how": "numeric+lexical:['1'] 0.55"
+        },
+        {
+          "id": "design_doc-03-q3",
+          "reply": "Bit-by-bit round-robin; they experience longer delays, higher loss, and their own queue grows",
+          "correct": true,
+          "how": "adjudicate:lexical 0.56 -> YES"
+        },
+        {
+          "id": "design_doc-03-q4",
+          "reply": "Assigned to the shorter of two queues in the customer's subset; assignments are perturbed",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "design_doc-03-q5",
+          "reply": "Only a small fraction of customers are noisy at once (so at least one queue in a quiet",
+          "correct": true,
+          "how": "substring:only a small fraction of customers are n"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "design_doc-04",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "design_doc-04-q1",
+          "reply": "It falls at approximately sqrt(N) for N loads, and the Firecracker paper.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.56 -> YES"
+        },
+        {
+          "id": "design_doc-04-q2",
+          "reply": "It improves the margin, as cost scales with provisioned peak while revenue scales with average",
+          "correct": true,
+          "how": "lexical:cost scales with peak, revenue with aver"
+        },
+        {
+          "id": "design_doc-04-q3",
+          "reply": "Avoid large caches, offer strongly consistent scalable reads, and push expensive operations down",
+          "correct": true,
+          "how": "adjudicate:lexical 0.77 -> YES"
+        },
+        {
+          "id": "design_doc-04-q4",
+          "reply": "It separates replication from transaction isolation, and both of those from storage.",
+          "correct": true,
+          "how": "lexical:It completely separates replication from"
+        },
+        {
+          "id": "design_doc-04-q5",
+          "reply": "Coding agents are weak at long-horizon tasks (like database operations), so absorbing these",
+          "correct": true,
+          "how": "adjudicate:lexical 0.71 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "design_doc-05",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-05-q1",
+          "reply": "Client-to-client performance cross talk; pessimistic relational engine.",
+          "correct": true,
+          "how": "lexical:performance cross talk on a pessimistic "
+        },
+        {
+          "id": "design_doc-05-q2",
+          "reply": "Fast SELECT and UPDATE latency; database running across regions.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "design_doc-05-q3",
+          "reply": "Lock contention and retry storms; metastable failure.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "design_doc-05-q4",
+          "reply": "How time is distributed, how data-centre networks are built, how power/cooling are provisioned,",
+          "correct": true,
+          "how": "lexical:how time is distributed, how data-centre"
+        },
+        {
+          "id": "design_doc-05-q5",
+          "reply": "Duller failures produced by badly behaved clients and client code on a shared engine.",
+          "correct": true,
+          "how": "lexical:failures caused by badly behaved clients"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "design_doc-06",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-06-q1",
+          "reply": "Building efficient, reliable, secure, end-to-end systems; it is \"getting cheaper too, but",
+          "correct": false,
+          "how": "adjudicate:lexical 0.70 -> NO"
+        },
+        {
+          "id": "design_doc-06-q2",
+          "reply": "The wager that serious customers would reject digital logic; the 74 series.",
+          "correct": true,
+          "how": "numeric:['74']"
+        },
+        {
+          "id": "design_doc-06-q3",
+          "reply": "Ten or more orders of magnitude; he still made a small fortune.",
+          "correct": true,
+          "how": "lexical:ten or more orders of magnitude, but he "
+        },
+        {
+          "id": "design_doc-06-q4",
+          "reply": "First: programming is ending as a high-value economic craft. Second: new tools open new",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        },
+        {
+          "id": "design_doc-06-q5",
+          "reply": "Solved: integration, translation, simple analysis, and small-scale synthesis. Scarce/Rising:",
+          "correct": true,
+          "how": "lexical:solved: integration, translation, simple"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "design_doc-07",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "design_doc-07-q1",
+          "reply": "Roughly 100,000,000,000 times.",
+          "correct": true,
+          "how": "numeric:['000', '100']"
+        },
+        {
+          "id": "design_doc-07-q2",
+          "reply": "At least 85 years; Marian Rejewski's team.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        },
+        {
+          "id": "design_doc-07-q3",
+          "reply": "An opamp and an analog multiplier IC; MC1495.",
+          "correct": true,
+          "how": "numeric:['1495']"
+        },
+        {
+          "id": "design_doc-07-q4",
+          "reply": "The opamp drives its two inputs to equality, forcing output-times-output to equal the input.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "design_doc-07-q5",
+          "reply": "Feedback loops suppress component errors to extract excellent outputs; similarly, wrapping a",
+          "correct": false,
+          "how": "adjudicate:lexical 0.42 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "design_doc-08",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 4,
+      "items": [
+        {
+          "id": "design_doc-08-q1",
+          "reply": "The availability of accurate feedback.",
+          "correct": true,
+          "how": "substring:availability of accurate feedback"
+        },
+        {
+          "id": "design_doc-08-q2",
+          "reply": "For architecture: know-it-when-I-see-it; for concurrency: silent corruption at runtime, hours",
+          "correct": true,
+          "how": "adjudicate:lexical 0.62 -> YES"
+        },
+        {
+          "id": "design_doc-08-q3",
+          "reply": "Building a delightful, ergonomic photo-editing website vs. building a correct, high-performance",
+          "correct": false,
+          "how": "adjudicate:lexical 0.56 -> NO"
+        },
+        {
+          "id": "design_doc-08-q4",
+          "reply": "The website's bottleneck is human attention (slow, squishy, inconsistent feedback), whereas the",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        },
+        {
+          "id": "design_doc-08-q5",
+          "reply": "At the scale of RocksDB or InnoDB, and not Aurora DSQL or all of PostgreSQL.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "perf_analysis-01",
+      "n": 5,
+      "correct": 0,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "perf_analysis-01-q1",
+          "reply": "Colleagues had not encountered the issue, and searching the internet returned nothing. The",
+          "correct": false,
+          "how": "no match:lexical 0.36"
+        },
+        {
+          "id": "perf_analysis-01-q2",
+          "reply": "It accounted for 32.1% of samples in total. The single block in the middle of the graph that",
+          "correct": false,
+          "how": "adjudicate:lexical 0.75 -> NO"
+        },
+        {
+          "id": "perf_analysis-01-q3",
+          "reply": "Theory A: Syscall tracing is enabled on Ubuntu but not on CentOS. Theory B: Fetching the time is",
+          "correct": false,
+          "how": "adjudicate:lexical 0.62 -> NO"
+        },
+        {
+          "id": "perf_analysis-01-q4",
+          "reply": "Collapsing the Java frames merged all call sites reaching os::javaTimeMillis() into a single",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        },
+        {
+          "id": "perf_analysis-01-q5",
+          "reply": "It was a Xen guest profiled with software cpu-clock soft interrupts rather than hardware NMI.",
+          "correct": false,
+          "how": "adjudicate:lexical 0.43 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "perf_analysis-02",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "perf_analysis-02-q1",
+          "reply": "100,000,000 iterations; a comparison against the constant 87362 and a println.",
+          "correct": true,
+          "how": "numeric:['000', '100', '87362']"
+        },
+        {
+          "id": "perf_analysis-02-q2",
+          "reply": "CentOS: 0m12.989s, Ubuntu: 1m8.300s.",
+          "correct": true,
+          "how": "numeric:['1', '12.989', '8.300']"
+        },
+        {
+          "id": "perf_analysis-02-q3",
+          "reply": "A loop in C calling gettimeofday(2) directly; you can disassemble the binary and read the loop",
+          "correct": false,
+          "how": "no match:lexical 0.29"
+        },
+        {
+          "id": "perf_analysis-02-q4",
+          "reply": "Netflix's fault-tolerant architecture and the ease of reverting the change tipped the balance; a",
+          "correct": false,
+          "how": "no match:lexical 0.14"
+        },
+        {
+          "id": "perf_analysis-02-q5",
+          "reply": "0m3.370s; it was 20.3x faster than pre-fix Ubuntu and 3.9x faster than CentOS.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.78 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "perf_analysis-03",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "perf_analysis-03-q1",
+          "reply": "38%; notable because Netflix workloads are user-space services, making such a large system-time",
+          "correct": true,
+          "how": "numeric:['38']"
+        },
+        {
+          "id": "perf_analysis-03-q2",
+          "reply": "arc_reclaim_thread and spl_kmem_cache_reap_now(); they were suspected of contending on the same",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "perf_analysis-03-q3",
+          "reply": "Every counter was pinned at zero; this proved ZFS was completely unused and had never held a",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "perf_analysis-03-q4",
+          "reply": "ARC lists were split one per CPU; the kernel's cryptographically-secure random generator was",
+          "correct": true,
+          "how": "adjudicate:lexical 0.46 -> YES"
+        },
+        {
+          "id": "perf_analysis-03-q5",
+          "reply": "ZFS issue \u001b]8;id=md-1spo86y;https://github.com/asamadiya/agent-tools/issues/6531\u0007#6531\u001b]8;;\u0007\u001b]8;;\u0007; the first fix made arc_reclaim_thread bail out earlier when ZFS is unused.\u001b]8;;\u0007",
+          "correct": true,
+          "how": "numeric:['6531']"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "perf_analysis-04",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "perf_analysis-04-q1",
+          "reply": "10%, first noticed when an orange tower for page-fault handling caught Vadim's eye on a CPU",
+          "correct": true,
+          "how": "numeric:['10']"
+        },
+        {
+          "id": "perf_analysis-04-q2",
+          "reply": "__memcpy_avx_unaligned(), surprising because the process had been up for hours and RSS growth",
+          "correct": true,
+          "how": "adjudicate:lexical 0.56 -> YES"
+        },
+        {
+          "id": "perf_analysis-04-q3",
+          "reply": "By reading mm/advise.c in the kernel source; alternatively by tracing sys_madvise() flags",
+          "correct": true,
+          "how": "adjudicate:lexical 0.70 -> YES"
+        },
+        {
+          "id": "perf_analysis-04-q4",
+          "reply": "0.8%, zap_page_range().",
+          "correct": true,
+          "how": "numeric:['0.8']"
+        },
+        {
+          "id": "perf_analysis-04-q5",
+          "reply": "NOT STATED",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "perf_analysis-05",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "perf_analysis-05-q1",
+          "reply": "Uploads of around 100 Gbytes took hours, whereas uploads of up to 40 Gbytes finished in minutes.",
+          "correct": true,
+          "how": "numeric:['100', '40']"
+        },
+        {
+          "id": "perf_analysis-05-q2",
+          "reply": "Read rate (rkB/s) was 91,656 to 92,152, and device utilization (%util) was pegged at 100%.",
+          "correct": true,
+          "how": "lexical:~750 r/s at 100% util"
+        },
+        {
+          "id": "perf_analysis-05-q3",
+          "reply": "r_await was 33 to 34 ms and average queue size was about 25, indicating the wait was expected",
+          "correct": true,
+          "how": "numeric:['25', '33', '34']"
+        },
+        {
+          "id": "perf_analysis-05-q4",
+          "reply": "I/O sizes were large and uniform, with 1,682 I/O in the 128-255 Kbyte bucket, issued by the java",
+          "correct": true,
+          "how": "numeric:['1', '128', '255', '682']"
+        },
+        {
+          "id": "perf_analysis-05-q5",
+          "reply": "The 32-63 ms bucket held the most I/O with 8,139, and outliers reached the 512-1023 ms bucket.",
+          "correct": true,
+          "how": "numeric:['139', '32', '63', '8']"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "perf_analysis-06",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "perf_analysis-06-q1",
+          "reply": "Total 64,414 MB, buff/cache 48,643 MB, free 349 MB",
+          "correct": true,
+          "how": "numeric:['349', '414', '48', '64', '643']"
+        },
+        {
+          "id": "perf_analysis-06-q2",
+          "reply": "Swing between 6.5% and 74.1%, misses climbed to 23,341",
+          "correct": true,
+          "how": "numeric:['23', '341', '6.5', '74.1']"
+        },
+        {
+          "id": "perf_analysis-06-q3",
+          "reply": "100.0% hit ratio, 0 misses, file size 32 Gbytes",
+          "correct": true,
+          "how": "numeric:['100.0', '32']"
+        },
+        {
+          "id": "perf_analysis-06-q4",
+          "reply": "free -m showed used 18,421, free 11,218, buff/cache 34,773; iostat showed almost no disk I/O",
+          "correct": true,
+          "how": "numeric:['11', '218', '34', '773']"
+        },
+        {
+          "id": "perf_analysis-06-q5",
+          "reply": "Proposed putting statistics in /proc; engineers objected because page cache counters are on a",
+          "correct": true,
+          "how": "adjudicate:lexical 0.45 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "perf_analysis-07",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "perf_analysis-07-q1",
+          "reply": "Increased four allocatable registers to five (six to seven counting %si/%di); the target already",
+          "correct": false,
+          "how": "adjudicate:lexical 0.44 -> NO"
+        },
+        {
+          "id": "perf_analysis-07-q2",
+          "reply": "To beat Intel's icc on benchmarks and because contemporary debuggers supported other",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        },
+        {
+          "id": "perf_analysis-07-q3",
+          "reply": "A 17th register enables no new optimizations; the practice goes off the rails when people",
+          "correct": true,
+          "how": "numeric:['17']"
+        },
+        {
+          "id": "perf_analysis-07-q4",
+          "reply": "Crossing into libc; off-CPU flame graphs.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.44 -> YES"
+        },
+        {
+          "id": "perf_analysis-07-q5",
+          "reply": "Building a local libc with frame pointers and collaborating with Canonical to create the",
+          "correct": true,
+          "how": "adjudicate:lexical 0.47 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "perf_analysis-08",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "perf_analysis-08-q1",
+          "reply": "Under 1% overhead; performance wins of 5% to 500%.",
+          "correct": true,
+          "how": "numeric:['1', '5', '500']"
+        },
+        {
+          "id": "perf_analysis-08-q2",
+          "reply": "They were more than 1000 frames deep, generated through Groovy, and too deep for Linux's perf",
+          "correct": true,
+          "how": "numeric:['1000']"
+        },
+        {
+          "id": "perf_analysis-08-q3",
+          "reply": "10%; they consist of one small function executed in a loop where any added instructions risk",
+          "correct": true,
+          "how": "numeric:['10']"
+        },
+        {
+          "id": "perf_analysis-08-q4",
+          "reply": "The instance was a virtual machine without low-level hardware profiling or cycle analysis to",
+          "correct": true,
+          "how": "lexical:it ran on a VM without low-level hardwar"
+        },
+        {
+          "id": "perf_analysis-08-q5",
+          "reply": "scimark_sparse_mat_mult, diagnosed by Andrii Nakryiko; gcc switched from %rsp-relative",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "postmortem-01",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "postmortem-01-q1",
+          "reply": "The load returned an Err, the calling code unwrapped it, the worker thread panicked, and every",
+          "correct": true,
+          "how": "adjudicate:lexical 0.45 -> YES"
+        },
+        {
+          "id": "postmortem-01-q2",
+          "reply": "The query filtered on table name but not database name, so the same column was returned once for",
+          "correct": true,
+          "how": "lexical:the query did not filter by database nam"
+        },
+        {
+          "id": "postmortem-01-q3",
+          "reply": "FL1 customers saw no errors and instead received a bot score of 0 on every request, unlike FL2",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "postmortem-01-q4",
+          "reply": "The permissions change rolled out gradually, so whether the five-minute regeneration produced a",
+          "correct": false,
+          "how": "no match:lexical 0.25"
+        },
+        {
+          "id": "postmortem-01-q5",
+          "reply": "An unconnected outage of Cloudflare's status page coincided with the oscillating global failure.",
+          "correct": false,
+          "how": "no match:lexical 0.30"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "postmortem-02",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "postmortem-02-q1",
+          "reply": "Shipped a patch letting the Workers KV gateway bypass the core proxy entirely.",
+          "correct": true,
+          "how": "lexical:Workers KV was made to bypass the core p"
+        },
+        {
+          "id": "postmortem-02-q2",
+          "reply": "Debugging and observability systems enriching uncaught errors.",
+          "correct": true,
+          "how": "lexical:the debugging and observability systems "
+        },
+        {
+          "id": "postmortem-02-q3",
+          "reply": "11:30 to 13:10 and 14:40 to 15:30; a backlog of queued login attempts and client retries",
+          "correct": true,
+          "how": "numeric:['10', '11', '13', '14', '15', '30', '40']"
+        },
+        {
+          "id": "postmortem-02-q4",
+          "reply": "Scaling control plane concurrency.",
+          "correct": true,
+          "how": "lexical:Scaling up control plane concurrency, ar"
+        },
+        {
+          "id": "postmortem-02-q5",
+          "reply": "Detection quality degraded (reduced spam-detection accuracy, suppressed domain-age detections,",
+          "correct": false,
+          "how": "no match:lexical 0.36"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "postmortem-03",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "postmortem-03-q1",
+          "reply": "From 128KB to 1MB; to inspect request bodies up to the Next.js default limit to cover customers",
+          "correct": true,
+          "how": "numeric:['1', '128']"
+        },
+        {
+          "id": "postmortem-03-q2",
+          "reply": "The request-body buffer increase (via a gradual deployment system) and disabling the testing",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "postmortem-03-q3",
+          "reply": "A killswitch being applied to a rule whose action is \"execute\".",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "postmortem-03-q4",
+          "reply": "A Lua nil index error at init.lua line 314 inside FL1, caused by dereferencing the non-existent",
+          "correct": true,
+          "how": "numeric:['1', '314']"
+        },
+        {
+          "id": "postmortem-03-q5",
+          "reply": "Affected: Customers whose traffic ran through FL1 with the Cloudflare Managed Ruleset deployed.",
+          "correct": true,
+          "how": "numeric+lexical:['1'] 0.50"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "postmortem-04",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "postmortem-04-q1",
+          "reply": "GET /v1/prefixes?pending_delete; the server read the empty parameter as no filter (wildcard).",
+          "correct": true,
+          "how": "numeric+lexical:['1'] 0.55"
+        },
+        {
+          "id": "postmortem-04-q2",
+          "reply": "Roughly 1,100 prefixes withdrawn out of 4,306, between 17:48 (or 17:56 impact start) and 23:03",
+          "correct": false,
+          "how": "adjudicate:lexical 0.67 -> NO"
+        },
+        {
+          "id": "postmortem-04-q3",
+          "reply": "They hit BGP path hunting, causing routers to try candidate routes sequentially until connection",
+          "correct": false,
+          "how": "no match:lexical 0.31"
+        },
+        {
+          "id": "postmortem-04-q4",
+          "reply": "The website served HTTP 403 (Edge IP Restricted); the 1.1.1.1 resolver continued answering",
+          "correct": true,
+          "how": "numeric:['1.1', '403']"
+        },
+        {
+          "id": "postmortem-04-q5",
+          "reply": "Because they had to be restored by hand (manual repair).",
+          "correct": false,
+          "how": "no match:lexical 0.14"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "postmortem-05",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "postmortem-05-q1",
+          "reply": "It traveled as an untyped string; the planned fix is a stricter schema with enumerated values",
+          "correct": true,
+          "how": "adjudicate:lexical 0.44 -> YES"
+        },
+        {
+          "id": "postmortem-05-q2",
+          "reply": "Rolled out as staged snapshots gated by health metrics; it allows near-instant reversion of",
+          "correct": true,
+          "how": "adjudicate:lexical 0.60 -> YES"
+        },
+        {
+          "id": "postmortem-05-q3",
+          "reply": "NOT STATED",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-05-q4",
+          "reply": "Tripped by a burst of BGP prefix withdrawals, deletion counts far outside the normal band, or",
+          "correct": false,
+          "how": "no match:lexical 0.18"
+        },
+        {
+          "id": "postmortem-05-q5",
+          "reply": "Only withdrawn, withdrawn with some bindings removed, and withdrawn with all bindings removed;",
+          "correct": false,
+          "how": "adjudicate:lexical 0.41 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "postmortem-06",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "postmortem-06-q1",
+          "reply": "A React useEffect dependency array holding a rebuilt-on-render object; it caused multiple",
+          "correct": true,
+          "how": "adjudicate:lexical 0.58 -> YES"
+        },
+        {
+          "id": "postmortem-06-q2",
+          "reply": "A 17:50 Tenant Service deployment forced restarts/re-authentication, multiplying the client",
+          "correct": true,
+          "how": "numeric:['17', '50']"
+        },
+        {
+          "id": "postmortem-06-q3",
+          "reply": "The 18:58 change deepened the API impact; reverting the changes at 19:12 restored availability.",
+          "correct": true,
+          "how": "numeric:['12', '19']"
+        },
+        {
+          "id": "postmortem-06-q4",
+          "reply": "Retries versus first attempts; they could not tell if demand was falling or if clients were",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        },
+        {
+          "id": "postmortem-06-q5",
+          "reply": "Argo Rollouts; the 18:58 change meant to remove erroring codepaths.",
+          "correct": true,
+          "how": "numeric:['18', '58']"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "postmortem-07",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "postmortem-07-q1",
+          "reply": "62 minutes, from 21:52 to 22:54 UTC on 14 July 2025.",
+          "correct": true,
+          "how": "substring:62 minutes, from 21:52 to 22:54 UTC"
+        },
+        {
+          "id": "postmortem-07-q2",
+          "reply": "A release attached 1.1.1.1 prefixes to a non-production service; unnoticed because no traffic",
+          "correct": true,
+          "how": "numeric:['1.1']"
+        },
+        {
+          "id": "postmortem-07-q3",
+          "reply": "An engineer attached an offline test location to the non-production service, triggering a",
+          "correct": false,
+          "how": "adjudicate:lexical 0.43 -> NO"
+        },
+        {
+          "id": "postmortem-07-q4",
+          "reply": "77% of pre-incident traffic. The remainder was due to 23% of edge servers losing IP bindings",
+          "correct": true,
+          "how": "numeric:['23', '77']"
+        },
+        {
+          "id": "postmortem-07-q5",
+          "reply": "Internal health alerts; declared 9 minutes after.",
+          "correct": true,
+          "how": "numeric+lexical:['9'] 0.56"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "postmortem-08",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 4,
+      "items": [
+        {
+          "id": "postmortem-08-q1",
+          "reply": "A single customer requesting cached objects; it doubled total traffic.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.60 -> YES"
+        },
+        {
+          "id": "postmortem-08-q2",
+          "reply": "Withdrew BGP advertisements; it pulled prefixes off uncongested paths, preventing traffic",
+          "correct": true,
+          "how": "adjudicate:lexical 0.44 -> YES"
+        },
+        {
+          "id": "postmortem-08-q3",
+          "reply": "One degraded peering link and an uncompleted Data Center Interconnect upgrade.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.62 -> YES"
+        },
+        {
+          "id": "postmortem-08-q4",
+          "reply": "Customer rate-limiting (19:05) and traffic engineering (19:27).",
+          "correct": true,
+          "how": "numeric:['05', '19', '27']"
+        },
+        {
+          "id": "postmortem-08-q5",
+          "reply": "Both networks were still renormalizing prefix advertisements while announcements converged.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "rfc-01",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "rfc-01-q1",
+          "reply": "Services running two replicas, StatefulSet members, and batch jobs bear the real cost; stateless",
+          "correct": true,
+          "how": "lexical:stateless, versus stateful, batch and lo"
+        },
+        {
+          "id": "rfc-01-q2",
+          "reply": "Load rising (causing CPU throttling or memory OOM kills), load falling (allocation sitting",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "rfc-01-q3",
+          "reply": "Changing pod QoS class, resizing non-restartable init containers, evicting lower-priority pods,",
+          "correct": false,
+          "how": "adjudicate:lexical 0.78 -> NO"
+        },
+        {
+          "id": "rfc-01-q4",
+          "reply": "No CRI call lets the kubelet read back the CPU and memory limits a runtime currently has",
+          "correct": true,
+          "how": "adjudicate:lexical 0.62 -> YES"
+        },
+        {
+          "id": "rfc-01-q5",
+          "reply": "The initiator of the resize (such as a user, VPA, StatefulSet controller, or JobController).",
+          "correct": true,
+          "how": "lexical:the initiator (user, VPA, StatefulSet, J"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "rfc-02",
+      "n": 5,
+      "correct": 1,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "rfc-02-q1",
+          "reply": "The configuration handed to the runtime through CreateContainer or UpdateContainerResources and",
+          "correct": false,
+          "how": "adjudicate:lexical 0.56 -> NO"
+        },
+        {
+          "id": "rfc-02-q2",
+          "reply": "Linux kernel clamps to minimums, systemd cgroup driver rounding CPU quota to the nearest 10ms,",
+          "correct": false,
+          "how": "adjudicate:lexical 0.67 -> NO"
+        },
+        {
+          "id": "rfc-02-q3",
+          "reply": "A restart between the CRI call and the checkpoint write loses the record, causing the kubelet to",
+          "correct": false,
+          "how": "no match:lexical 0.25"
+        },
+        {
+          "id": "rfc-02-q4",
+          "reply": "It retries on every subsequent pod sync and stops when UpdateContainerResources returns success",
+          "correct": false,
+          "how": "adjudicate:lexical 0.56 -> NO"
+        },
+        {
+          "id": "rfc-02-q5",
+          "reply": "It skips the resize, leaves PodResizeInProgress in place, and reports reason Error with a",
+          "correct": true,
+          "how": "lexical:skips the resize; PodResizeInProgress st"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "rfc-03",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "rfc-03-q1",
+          "reply": "It sends those fields as nil, and the API server reads nil as \"unchanged\" and copies the non-nil",
+          "correct": true,
+          "how": "adjudicate:lexical 0.57 -> YES"
+        },
+        {
+          "id": "rfc-03-q2",
+          "reply": ".status.containerStatuses[*].resources",
+          "correct": true,
+          "how": "substring:.status.containerStatuses[*].resources"
+        },
+        {
+          "id": "rfc-03-q3",
+          "reply": "The kubelet restarted the container with the new values, risking node over-subscription since",
+          "correct": true,
+          "how": "lexical:restarted the container using the new va"
+        },
+        {
+          "id": "rfc-03-q4",
+          "reply": "Allow the resize.",
+          "correct": false,
+          "how": "no match:lexical 0.17"
+        },
+        {
+          "id": "rfc-03-q5",
+          "reply": "An empty object {}",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "rfc-04",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "rfc-04-q1",
+          "reply": "This proposal covers scenarios 1 and 2, while scenario 3 is deferred.",
+          "correct": true,
+          "how": "numeric+lexical:['1', '2', '3'] 1.00"
+        },
+        {
+          "id": "rfc-04-q2",
+          "reply": "Node administrators want swap to tune node-level performance and stability; application",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "rfc-04-q3",
+          "reply": "zram, zswap, and SGX EPC.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.40 -> YES"
+        },
+        {
+          "id": "rfc-04-q4",
+          "reply": "Making the eviction manager swap-aware is out of scope, and eviction keeps the existing QoS-tier",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "rfc-04-q5",
+          "reply": "An overcommitted resource.",
+          "correct": true,
+          "how": "substring:an overcommitted resource"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "rfc-05",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "rfc-05-q1",
+          "reply": "The container's memory request and the node's total physical memory.",
+          "correct": true,
+          "how": "lexical:memory request, physical memory"
+        },
+        {
+          "id": "rfc-05-q2",
+          "reply": "A proportion of zero, and a swap limit of zero.",
+          "correct": true,
+          "how": "lexical:0 proportion and 0 swap"
+        },
+        {
+          "id": "rfc-05-q3",
+          "reply": "Node's total swap minus configured system-reserved memory; subtracted to reserve space for",
+          "correct": true,
+          "how": "lexical:total swap minus system reserved memory;"
+        },
+        {
+          "id": "rfc-05-q4",
+          "reply": "Container A: 19 GB, Container B: 9.5 GB.",
+          "correct": true,
+          "how": "numeric:['19', '9.5']"
+        },
+        {
+          "id": "rfc-05-q5",
+          "reply": "Burstable pods; the kubelet.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.40 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "rfc-06",
+      "n": 5,
+      "correct": 1,
+      "adjudicated": 4,
+      "items": [
+        {
+          "id": "rfc-06-q1",
+          "reply": "UnlimitedSwap; it allowed a single badly behaved container to consume the entire node's swap,",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "rfc-06-q2",
+          "reply": "Secrets and memory-backed emptyDir volumes; the kubelet mounts these tmpfs volumes with the",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        },
+        {
+          "id": "rfc-06-q3",
+          "reply": "Once kernels carrying the noswap option are widespread.",
+          "correct": false,
+          "how": "no match:lexical 0.29"
+        },
+        {
+          "id": "rfc-06-q4",
+          "reply": "It mounts a dummy tmpfs volume with noswap to check for backports, using it if successful or",
+          "correct": false,
+          "how": "adjudicate:lexical 0.67 -> NO"
+        },
+        {
+          "id": "rfc-06-q5",
+          "reply": "sig-node, because it was too difficult to implement correctly; tolerable because Kubernetes",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "rfc-07",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "rfc-07-q1",
+          "reply": "Scheduling throughput drops as eligible pods wait behind retries, and Cluster Autoscaler may",
+          "correct": true,
+          "how": "adjudicate:lexical 0.57 -> YES"
+        },
+        {
+          "id": "rfc-07-q2",
+          "reply": "A default enqueue plugin; it is required to implement the semantics of the new API.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "rfc-07-q3",
+          "reply": "Extending pod conditions with richer context about why a pod is paused, and designing around",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "rfc-07-q4",
+          "reply": "Hierarchical quota, gang scheduling, and similar admission policies.",
+          "correct": true,
+          "how": "substring:Hierarchical quota"
+        },
+        {
+          "id": "rfc-07-q5",
+          "reply": "Permission control on individual scheduling gates, which depends on a fine-grained permissions",
+          "correct": true,
+          "how": "lexical:permission/RBAC control on individual sc"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "rfc-08",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "rfc-08-q1",
+          "reply": "During creation (in the create request) or during admission (by a mutating admission webhook).",
+          "correct": true,
+          "how": "lexical:during pod creation, including via a mut"
+        },
+        {
+          "id": "rfc-08-q2",
+          "reply": "Unordered.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "rfc-08-q3",
+          "reply": "It breaks the invariant that a bound pod has no gates; the API server rejects the request with a",
+          "correct": false,
+          "how": "no match:lexical 0.31"
+        },
+        {
+          "id": "rfc-08-q4",
+          "reply": "Part (c) (the PreEnqueue extension point); it allows out-of-tree plugins to run a hook before a",
+          "correct": false,
+          "how": "adjudicate:lexical 0.43 -> NO"
+        },
+        {
+          "id": "rfc-08-q5",
+          "reply": "It gains a new phase literal, SchedulingPaused, in the PHASE column.",
+          "correct": true,
+          "how": "substring:A new phase literal, SchedulingPaused, i"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "status_update-01",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "status_update-01-q1",
+          "reply": "744 services out of 1,240 total in scope (60%)",
+          "correct": true,
+          "how": "numeric:['1', '240', '60', '744']"
+        },
+        {
+          "id": "status_update-01-q2",
+          "reply": "96 services; October 9, 2026",
+          "correct": true,
+          "how": "numeric:['2026', '9', '96']"
+        },
+        {
+          "id": "status_update-01-q3",
+          "reply": "$310,000 per month",
+          "correct": true,
+          "how": "numeric:['310']"
+        },
+        {
+          "id": "status_update-01-q4",
+          "reply": "9 minutes; 12% of push notifications",
+          "correct": true,
+          "how": "numeric:['12', '9']"
+        },
+        {
+          "id": "status_update-01-q5",
+          "reply": "The expiration of the Pylon hardware lease on February 28, 2027",
+          "correct": true,
+          "how": "numeric:['2027', '28']"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "status_update-02",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-02-q1",
+          "reply": "Canary hosts: 311 ms, control fleet: 184 ms, SLO: under 250 ms.",
+          "correct": true,
+          "how": "numeric:['184', '250', '311']"
+        },
+        {
+          "id": "status_update-02-q2",
+          "reply": "It exercised only 300 schemas, which fit entirely within the 512-entry cache, avoiding the",
+          "correct": true,
+          "how": "numeric:['300', '512']"
+        },
+        {
+          "id": "status_update-02-q3",
+          "reply": "71% on canary versus 99.6% in the load test.",
+          "correct": true,
+          "how": "numeric:['71', '99.6']"
+        },
+        {
+          "id": "status_update-02-q4",
+          "reply": "0.9 ms at the median versus 94 ms at p99, dominated by schema recompilation.",
+          "correct": true,
+          "how": "numeric:['0.9', '94', '99']"
+        },
+        {
+          "id": "status_update-02-q5",
+          "reply": "Reverting the interceptor, raising the schema cache to 8,192 entries, and moving validation",
+          "correct": false,
+          "how": "adjudicate:lexical 0.60 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "status_update-03",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "status_update-03-q1",
+          "reply": "1,050 QPS per host, implying a total fleet QPS ceiling of 2.2M QPS.",
+          "correct": true,
+          "how": "numeric:['050', '1', '2.2']"
+        },
+        {
+          "id": "status_update-03-q2",
+          "reply": "4.2% per month compounded, crossing the ceiling in late February 2027.",
+          "correct": true,
+          "how": "numeric:['2027', '4.2']"
+        },
+        {
+          "id": "status_update-03-q3",
+          "reply": "400 additional hosts, reaching a fleet size of 2,500, costing $2.9M annualized.",
+          "correct": true,
+          "how": "numeric:['2', '2.9', '400', '500']"
+        },
+        {
+          "id": "status_update-03-q4",
+          "reply": "Nov 3 2026, driven by a 14-week hardware lead time to rack hosts before traffic crosses the",
+          "correct": true,
+          "how": "numeric:['14', '2026', '3']"
+        },
+        {
+          "id": "status_update-03-q5",
+          "reply": "Columnar serialization, which cuts query CPU by 18% (raising capacity to 1,280 QPS per host),",
+          "correct": true,
+          "how": "numeric:['18']"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "status_update-04",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "status_update-04-q1",
+          "reply": "388 out of 1,000 total migrated; 612 remain on v3.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "status_update-04-q2",
+          "reply": "CVE-2026-31819 (HTTP request-smuggling), CVSS 7.5, Netty 4.1.79.",
+          "correct": true,
+          "how": "numeric:['2026', '31819', '4.1', '7.5', '79']"
+        },
+        {
+          "id": "status_update-04-q3",
+          "reply": "7,910 handled automatically out of 9,417 total; 1,507 need hand edits.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "status_update-04-q4",
+          "reply": "December 1, 2026 (builds fail) and January 31, 2027 (end of life).",
+          "correct": true,
+          "how": "numeric:['1', '2026', '2027', '31']"
+        },
+        {
+          "id": "status_update-04-q5",
+          "reply": "HTTP/1.0; 17 upstreams.",
+          "correct": true,
+          "how": "numeric:['1.0', '17']"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "status_update-05",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "status_update-05-q1",
+          "reply": "10%; point estimate of -0.11% with a 95% confidence interval of -0.41% to +0.19%.",
+          "correct": true,
+          "how": "numeric:['0.11', '0.19', '0.41', '10', '95']"
+        },
+        {
+          "id": "status_update-05-q2",
+          "reply": "Downstream sessions per member; fell by 0.6% at p = 0.003.",
+          "correct": true,
+          "how": "numeric:['0.003', '0.6']"
+        },
+        {
+          "id": "status_update-05-q3",
+          "reply": "Cost increased by 31% (to 4,100 GPU-hours per day); p99 latency increased by 19 ms (to 57 ms).",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "status_update-05-q4",
+          "reply": "Top decile gained +1.9% CTR, light-session members (<3 weekly sessions) lost 0.8%; the",
+          "correct": false,
+          "how": "adjudicate:lexical 0.57 -> NO"
+        },
+        {
+          "id": "status_update-05-q5",
+          "reply": "It requires at least four prior sessions; below that, it falls back to a near-constant vector.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.62 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "status_update-06",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "status_update-06-q1",
+          "reply": "11 approved versus 7 filled; open requisitions have been open since February with an average age",
+          "correct": false,
+          "how": "adjudicate:lexical 0.78 -> NO"
+        },
+        {
+          "id": "status_update-06-q2",
+          "reply": "New date: Feb 23 2027; original date: Nov 17 2026; slip: fourteen weeks.",
+          "correct": true,
+          "how": "numeric:['17', '2026', '2027', '23']"
+        },
+        {
+          "id": "status_update-06-q3",
+          "reply": "Cross-region async replication is paused with zero engineers; compaction rewrite has one",
+          "correct": true,
+          "how": "lexical:async cross-region replication paused, 0"
+        },
+        {
+          "id": "status_update-06-q4",
+          "reply": "Transfer candidates start earliest Nov 30 and take eight weeks to ramp, delaying useful output",
+          "correct": true,
+          "how": "lexical:3 candidates, earliest start November 30"
+        },
+        {
+          "id": "status_update-06-q5",
+          "reply": "Index team loan (costs five weeks of Index's query-planner goal); vendor contract (costs $480K",
+          "correct": false,
+          "how": "adjudicate:lexical 0.75 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "status_update-07",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-07-q1",
+          "reply": "Target of $28M annualized by the end of FY27, with $16.4M booked so far.",
+          "correct": true,
+          "how": "lexical:$28M annualised by end of FY27; $16.4M b"
+        },
+        {
+          "id": "status_update-07-q2",
+          "reply": "$9.1M, produced by right-sizing 6,800 over-provisioned pods and moving the median CPU request",
+          "correct": true,
+          "how": "lexical:$9.1M, right-sizing 6,800 pods (median C"
+        },
+        {
+          "id": "status_update-07-q3",
+          "reply": "Five incidents (four SEV-3 and one SEV-2) caused by CPU throttling on a service whose p99 CPU",
+          "correct": true,
+          "how": "numeric:['2', '3', '99']"
+        },
+        {
+          "id": "status_update-07-q4",
+          "reply": "Blocks any cut where measured p99 CPU exceeds 70% of the proposed request; it has rejected 410",
+          "correct": true,
+          "how": "lexical:blocks cuts where p99 CPU > 70% of the p"
+        },
+        {
+          "id": "status_update-07-q5",
+          "reply": "$7.0M, blocked on a scheduler change owned by another organization that carries no committed",
+          "correct": false,
+          "how": "adjudicate:lexical 0.64 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "B",
+      "brief_id": "status_update-08",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "status_update-08-q1",
+          "reply": "1,432 endpoints in scope, across 318 services, and 1,189 have been remediated.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "status_update-08-q2",
+          "reply": "61 in services with no registered owner, and 12 in systems already declared end-of-life.",
+          "correct": true,
+          "how": "numeric:['12', '61']"
+        },
+        {
+          "id": "status_update-08-q3",
+          "reply": "NOT STATED",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "status_update-08-q4",
+          "reply": "November 23, 2026, which is three weeks after the October 31, 2026 deadline.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.57 -> YES"
+        },
+        {
+          "id": "status_update-08-q5",
+          "reply": "Switching mesh ingress to deny-by-default; it is known to break four cross-team callers.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.56 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "design_doc-01",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-01-q1",
+          "reply": "51.7 percent (or 51.71 percent)",
+          "correct": true,
+          "how": "numeric:['51.7']"
+        },
+        {
+          "id": "design_doc-01-q2",
+          "reply": "99.4 percent (or 99.38 percent)",
+          "correct": true,
+          "how": "numeric:['99.4']"
+        },
+        {
+          "id": "design_doc-01-q3",
+          "reply": "A share of system concurrency (or share of busy threads occupied at any instant by requests that",
+          "correct": true,
+          "how": "adjudicate:lexical 0.71 -> YES"
+        },
+        {
+          "id": "design_doc-01-q4",
+          "reply": "sort the n samples, take k = P*n, and compute L = sum(sorted(x)[:k]) / sum(x)",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "design_doc-01-q5",
+          "reply": "Above 0.5 and above 0.75",
+          "correct": true,
+          "how": "numeric:['0.5', '0.75']"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "design_doc-02",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "design_doc-02-q1",
+          "reply": "Operator: MTTR under one minute; Customer: mean outage of one hour.",
+          "correct": true,
+          "how": "lexical:MTTR a minute, customer outage an hour"
+        },
+        {
+          "id": "design_doc-02-q2",
+          "reply": "E_a[X] = E[X^2] / (2 E[X]) = 0.5",
+          "correct": true,
+          "how": "numeric:['0.5', '2']"
+        },
+        {
+          "id": "design_doc-02-q3",
+          "reply": "Service: mean request time of 100 ms; User: mean wait is 1 s.",
+          "correct": true,
+          "how": "numeric:['1', '100']"
+        },
+        {
+          "id": "design_doc-02-q4",
+          "reply": "Lognormal(mu=1.0, sigma=3.0) and Poisson client arrivals at rate 100.",
+          "correct": true,
+          "how": "numeric:['1.0', '100', '3.0']"
+        },
+        {
+          "id": "design_doc-02-q5",
+          "reply": "Timeouts and retries; it fails against the recovery-time tail.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "design_doc-03",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-03-q1",
+          "reply": "Authorized customer id",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "design_doc-03-q2",
+          "reply": "Classic: O(customers) queue-count (memory) and dequeue time. SFQ: O(1) queues and O(1) dequeue",
+          "correct": true,
+          "how": "numeric+lexical:['1'] 0.86"
+        },
+        {
+          "id": "design_doc-03-q3",
+          "reply": "Serviced bit-by-bit round-robin; conversations exceeding their fair share experience longer",
+          "correct": false,
+          "how": "adjudicate:lexical 0.58 -> NO"
+        },
+        {
+          "id": "design_doc-03-q4",
+          "reply": "Assigned to the shorter of two queues in the customer's mapped subset; assignments are perturbed",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "design_doc-03-q5",
+          "reply": "Noisy customers must remain a small fraction of the population.",
+          "correct": true,
+          "how": "lexical:only a small fraction of customers are n"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "design_doc-04",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-04-q1",
+          "reply": "Roughly the rate of the square root of the number of loads, and the Firecracker paper.",
+          "correct": true,
+          "how": "lexical:square root of the number of loads; Fire"
+        },
+        {
+          "id": "design_doc-04-q2",
+          "reply": "It increases the margin, as cost scales with peak load and revenue scales with average load.",
+          "correct": true,
+          "how": "lexical:cost scales with peak, revenue with aver"
+        },
+        {
+          "id": "design_doc-04-q3",
+          "reply": "Avoid large caches, offer strongly consistent scalable reads, and push expensive operations into",
+          "correct": true,
+          "how": "adjudicate:lexical 0.77 -> YES"
+        },
+        {
+          "id": "design_doc-04-q4",
+          "reply": "It separates replication from transaction isolation and from storage.",
+          "correct": true,
+          "how": "lexical:It completely separates replication from"
+        },
+        {
+          "id": "design_doc-04-q5",
+          "reply": "Agents are weak at long-horizon database tasks and will eventually set exposed knobs wrong",
+          "correct": true,
+          "how": "adjudicate:lexical 0.57 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "design_doc-05",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-05-q1",
+          "reply": "One client's behavior showing up in another client's latency; pessimistic engine.",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        },
+        {
+          "id": "design_doc-05-q2",
+          "reply": "SELECT and UPDATE latency staying fast; database running across regions.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "design_doc-05-q3",
+          "reply": "Lock contention, and the retries that follow a failed lock acquisition; metastable failure.",
+          "correct": true,
+          "how": "lexical:lock contention and retries, leading to "
+        },
+        {
+          "id": "design_doc-05-q4",
+          "reply": "How time is distributed, how data-centre networks are built, how power and cooling are",
+          "correct": false,
+          "how": "adjudicate:lexical 0.73 -> NO"
+        },
+        {
+          "id": "design_doc-05-q5",
+          "reply": "Duller failures (caused by a badly behaved client or by client code holding a transaction open",
+          "correct": true,
+          "how": "lexical:failures caused by badly behaved clients"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "design_doc-06",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "design_doc-06-q1",
+          "reply": "Building efficient, reliable, secure, end-to-end systems; getting cheaper, but slowly.",
+          "correct": true,
+          "how": "lexical:Building efficient, reliable, secure end"
+        },
+        {
+          "id": "design_doc-06-q2",
+          "reply": "Serious customers would reject digital logic; the 74 series had just launched.",
+          "correct": true,
+          "how": "numeric:['74']"
+        },
+        {
+          "id": "design_doc-06-q3",
+          "reply": "Wrong by ten or more orders of magnitude; he still made a small fortune.",
+          "correct": true,
+          "how": "lexical:ten orders of magnitude wrong, still pro"
+        },
+        {
+          "id": "design_doc-06-q4",
+          "reply": "One: Programming is ending as a high-value craft. Two: New tools create new industries, raising",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "design_doc-06-q5",
+          "reply": "Solved: Integration, translation, simple analysis, and small-scale synthesis. Scarce: Genuinely",
+          "correct": true,
+          "how": "lexical:solved: integration, translation, simple"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "design_doc-07",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-07-q1",
+          "reply": "Roughly 100,000,000,000 times faster.",
+          "correct": true,
+          "how": "numeric:['000', '100']"
+        },
+        {
+          "id": "design_doc-07-q2",
+          "reply": "About 85 years, starting with Marian Rejewski's work.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        },
+        {
+          "id": "design_doc-07-q3",
+          "reply": "An opamp and an analog multiplier IC (MC1495).",
+          "correct": true,
+          "how": "numeric:['1495']"
+        },
+        {
+          "id": "design_doc-07-q4",
+          "reply": "By feeding the output back through the multiplier to satisfy the opamp's input-equality",
+          "correct": true,
+          "how": "adjudicate:lexical 0.60 -> YES"
+        },
+        {
+          "id": "design_doc-07-q5",
+          "reply": "The loop, not the component, sets accuracy; for agents, a compiler/test feedback loop drives the",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "design_doc-08",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-08-q1",
+          "reply": "The quality of the feedback available to it.",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "design_doc-08-q2",
+          "reply": "A human reading the diff (for architecture review), and silent corruption discovered later (for",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        },
+        {
+          "id": "design_doc-08-q3",
+          "reply": "A photo-editing website and a storage engine; the photo-editing website is easier.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.78 -> YES"
+        },
+        {
+          "id": "design_doc-08-q4",
+          "reply": "The website requires slow, expensive human feedback, whereas the storage engine can be checked",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "design_doc-08-q5",
+          "reply": "At the scale of RocksDB or InnoDB, not a distributed database.",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "perf_analysis-01",
+      "n": 5,
+      "correct": 1,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "perf_analysis-01-q1",
+          "reply": "Colleagues had not hit the problem, and internet searches returned nothing. The search terms",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        },
+        {
+          "id": "perf_analysis-01-q2",
+          "reply": "It accounted for 32.1% of CPU in total; a single block of 30.14% in the middle first drew",
+          "correct": true,
+          "how": "numeric:['30.14', '32.1']"
+        },
+        {
+          "id": "perf_analysis-01-q3",
+          "reply": "Theory A (syscall tracing is enabled on Ubuntu and not on CentOS) and Theory B (fetching the",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        },
+        {
+          "id": "perf_analysis-01-q4",
+          "reply": "They merged call sites that would otherwise be distinguished, collapsing the",
+          "correct": false,
+          "how": "no match:lexical 0.15"
+        },
+        {
+          "id": "perf_analysis-01-q5",
+          "reply": "perf sampled using software cpu-clock soft interrupts, which cannot fire while interrupts are",
+          "correct": false,
+          "how": "no match:lexical 0.27"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "perf_analysis-02",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "perf_analysis-02-q1",
+          "reply": "100,000,000 iterations; a comparison against the constant 87362 and a conditional println.",
+          "correct": true,
+          "how": "numeric:['000', '100', '87362']"
+        },
+        {
+          "id": "perf_analysis-02-q2",
+          "reply": "CentOS: 0m12.989s; Ubuntu: 1m8.300s.",
+          "correct": true,
+          "how": "numeric:['1', '12.989', '8.300']"
+        },
+        {
+          "id": "perf_analysis-02-q3",
+          "reply": "A C version calling gettimeofday(2) directly (compiled -O0); it can be disassembled to provide",
+          "correct": false,
+          "how": "adjudicate:lexical 0.40 -> NO"
+        },
+        {
+          "id": "perf_analysis-02-q4",
+          "reply": "A large expected win, a weak but non-zero prior on correctness, and a cheap failure mode; a",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "perf_analysis-02-q5",
+          "reply": "0m3.370s; over 20x faster than the Ubuntu run and nearly 4x faster than CentOS.",
+          "correct": true,
+          "how": "numeric:['20', '3.370', '4']"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "perf_analysis-03",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "perf_analysis-03-q1",
+          "reply": "38%, which is not a normal number for Netflix cloud workloads.",
+          "correct": true,
+          "how": "numeric:['38']"
+        },
+        {
+          "id": "perf_analysis-03-q2",
+          "reply": "The left tower was arc_reclaim_thread and the right was spl_kmem_cache_reap_now(); it was",
+          "correct": false,
+          "how": "adjudicate:lexical 0.55 -> NO"
+        },
+        {
+          "id": "perf_analysis-03-q3",
+          "reply": "Every counter was at zero (including hits and misses), proving that the ARC had never cached",
+          "correct": true,
+          "how": "lexical:Every counter was zero, including hits a"
+        },
+        {
+          "id": "perf_analysis-03-q4",
+          "reply": "The ARC lists were converted to multilists (one per CPU); the eviction path used the kernel's",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        },
+        {
+          "id": "perf_analysis-03-q5",
+          "reply": "ZFS issue \u001b]8;id=md-1spo86y;https://github.com/asamadiya/agent-tools/issues/6531\u0007#6531\u001b]8;;\u0007\u001b]8;;\u0007; the first fix made arc_reclaim_thread bail out earlier when ZFS is unused.\u001b]8;;\u0007",
+          "correct": true,
+          "how": "numeric:['6531']"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "perf_analysis-04",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "perf_analysis-04-q1",
+          "reply": "10% (a tenth); noticed by Vadim reading a CPU flame graph from a TensorFlow job and picking out",
+          "correct": true,
+          "how": "numeric:['10']"
+        },
+        {
+          "id": "perf_analysis-04-q2",
+          "reply": "__memcpy_avx_unaligned(); surprising because the process had been up for hours, by which point",
+          "correct": false,
+          "how": "adjudicate:lexical 0.56 -> NO"
+        },
+        {
+          "id": "perf_analysis-04-q3",
+          "reply": "By reading the kernel's madvise implementation in mm/madvise.c; tracing the flags to",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        },
+        {
+          "id": "perf_analysis-04-q4",
+          "reply": "0.8% of CPU; zap_page_range().",
+          "correct": true,
+          "how": "numeric:['0.8']"
+        },
+        {
+          "id": "perf_analysis-04-q5",
+          "reply": "jemalloc; glibc; page-fault work dropped to 3% of CPU against the 10% the team had in mind.",
+          "correct": true,
+          "how": "numeric:['10', '3']"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "perf_analysis-05",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "perf_analysis-05-q1",
+          "reply": "40-Gbyte uploads finished in minutes, while 100-Gbyte uploads took hours.",
+          "correct": true,
+          "how": "numeric:['100', '40']"
+        },
+        {
+          "id": "perf_analysis-05-q2",
+          "reply": "Read rate of 91,656 to 92,152 rkB/s and 100% utilization.",
+          "correct": true,
+          "how": "lexical:~750 r/s at 100% util"
+        },
+        {
+          "id": "perf_analysis-05-q3",
+          "reply": "r_await was 33 to 34 ms and average queue size was about 25, indicating queueing/workload rather",
+          "correct": true,
+          "how": "numeric:['25', '33', '34']"
+        },
+        {
+          "id": "perf_analysis-05-q4",
+          "reply": "1,682 I/O in the 128-255 kbyte bucket, issued by the \"java\" process.",
+          "correct": true,
+          "how": "numeric:['1', '128', '255', '682']"
+        },
+        {
+          "id": "perf_analysis-05-q5",
+          "reply": "The 32-63 ms bucket held 8,139 I/O, and outliers reached 0.5-1.0 s.",
+          "correct": true,
+          "how": "numeric:['0.5', '1.0', '139', '32', '63', '8']"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "perf_analysis-06",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "perf_analysis-06-q1",
+          "reply": "Total 64,414 MB, buff/cache 48,643 MB, free 349 MB.",
+          "correct": true,
+          "how": "numeric:['349', '414', '48', '64', '643']"
+        },
+        {
+          "id": "perf_analysis-06-q2",
+          "reply": "Hit ratio swung between 6.5% and 74.1%, and per-second misses got as high as 23,341.",
+          "correct": true,
+          "how": "numeric:['23', '341', '6.5', '74.1']"
+        },
+        {
+          "id": "perf_analysis-06-q3",
+          "reply": "100.0% hit ratio and 0 misses on a 32-Gbyte file.",
+          "correct": true,
+          "how": "numeric:['100.0', '32']"
+        },
+        {
+          "id": "perf_analysis-06-q4",
+          "reply": "free -m showed used 18,421 MB, free 11,218 MB, and buff/cache 34,773 MB, while iostat showed",
+          "correct": true,
+          "how": "numeric:['11', '218', '34', '773']"
+        },
+        {
+          "id": "perf_analysis-06-q5",
+          "reply": "NOT STATED",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "perf_analysis-07",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "perf_analysis-07-q1",
+          "reply": "Freeing it increased the pool from four to five (or six to seven with %si/%di); the x86-64",
+          "correct": false,
+          "how": "adjudicate:lexical 0.56 -> NO"
+        },
+        {
+          "id": "perf_analysis-07-q2",
+          "reply": "Wanting to beat Intel's icc on benchmarks, and judging that contemporary debuggers could already",
+          "correct": false,
+          "how": "no match:lexical 0.25"
+        },
+        {
+          "id": "perf_analysis-07-q3",
+          "reply": "A 17th register opens no new class of compiler optimization; the practice goes off the rails",
+          "correct": true,
+          "how": "numeric:['17']"
+        },
+        {
+          "id": "perf_analysis-07-q4",
+          "reply": "Libc omitting frame pointers; off-CPU flame graphs.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "perf_analysis-07-q5",
+          "reply": "Running a locally built frame-pointer libc in production, and then building libc6-prof with",
+          "correct": true,
+          "how": "numeric+lexical:['6'] 0.58"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "perf_analysis-08",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "perf_analysis-08-q1",
+          "reply": "Under 1%, set against performance wins in the 5% to 500% range.",
+          "correct": true,
+          "how": "numeric:['1', '5', '500']"
+        },
+        {
+          "id": "perf_analysis-08-q2",
+          "reply": "They were more than 1000 frames deep through Groovy.",
+          "correct": true,
+          "how": "numeric:['1000']"
+        },
+        {
+          "id": "perf_analysis-08-q3",
+          "reply": "10%, produced because a microbenchmark reduces to one small function in a loop with an",
+          "correct": true,
+          "how": "numeric:['10']"
+        },
+        {
+          "id": "perf_analysis-08-q4",
+          "reply": "The instance was a virtual machine without low-level hardware profiling, preventing cycle",
+          "correct": true,
+          "how": "adjudicate:lexical 0.71 -> YES"
+        },
+        {
+          "id": "perf_analysis-08-q5",
+          "reply": "scimark_sparse_mat_mult, Andrii Nakryiko, and gcc switching from %rsp-relative addressing to",
+          "correct": false,
+          "how": "no match:lexical 0.25"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "postmortem-01",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "postmortem-01-q1",
+          "reply": "It returned an Err into an unwrap, causing thread fl2_worker_thread to panic and produce HTTP",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "postmortem-01-q2",
+          "reply": "The query filtered on table name but not database name, matching columns twice (once for default",
+          "correct": true,
+          "how": "lexical:the query did not filter by database nam"
+        },
+        {
+          "id": "postmortem-01-q3",
+          "reply": "FL1 customers saw no errors but silently blocked real users due to a bot=0 fall-through score,",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        },
+        {
+          "id": "postmortem-01-q4",
+          "reply": "The permissions change rolled out gradually, causing five-minute regenerations to alternate",
+          "correct": false,
+          "how": "no match:lexical 0.20"
+        },
+        {
+          "id": "postmortem-01-q5",
+          "reply": "The five-minute flapping failure cadence combined with the simultaneous, unrelated outage of",
+          "correct": false,
+          "how": "no match:lexical 0.10"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "postmortem-02",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "postmortem-02-q1",
+          "reply": "Shipped a patch letting the Workers KV gateway bypass the core proxy entirely.",
+          "correct": true,
+          "how": "lexical:Workers KV was made to bypass the core p"
+        },
+        {
+          "id": "postmortem-02-q2",
+          "reply": "Debugging and observability systems enriching a high volume of uncaught errors.",
+          "correct": true,
+          "how": "lexical:the debugging and observability systems "
+        },
+        {
+          "id": "postmortem-02-q3",
+          "reply": "11:30-13:10 and 14:40-15:30; the second was caused by a backlog of queued logins and client",
+          "correct": true,
+          "how": "numeric:['10', '11', '13', '14', '15', '30', '40']"
+        },
+        {
+          "id": "postmortem-02-q4",
+          "reply": "Scaling control plane concurrency.",
+          "correct": true,
+          "how": "lexical:Scaling up control plane concurrency, ar"
+        },
+        {
+          "id": "postmortem-02-q5",
+          "reply": "Detection quality degraded (lost one IP reputation source, reducing spam-detection accuracy),",
+          "correct": false,
+          "how": "adjudicate:lexical 0.45 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "postmortem-03",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "postmortem-03-q1",
+          "reply": "From 128KB to 1MB to cover against CVE-2025-55182, which requires inspecting bodies up to the",
+          "correct": true,
+          "how": "numeric:['1', '128']"
+        },
+        {
+          "id": "postmortem-03-q2",
+          "reply": "Raising buffer (gradual deployment system) and disabling a testing tool (global configuration",
+          "correct": false,
+          "how": "adjudicate:lexical 0.40 -> NO"
+        },
+        {
+          "id": "postmortem-03-q3",
+          "reply": "A killswitch being applied to a rule whose action was execute.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "postmortem-03-q4",
+          "reply": "Lua raised a nil index error at init.lua line 314 inside FL1 proxy when reading the nonexistent",
+          "correct": true,
+          "how": "numeric:['1', '314']"
+        },
+        {
+          "id": "postmortem-03-q5",
+          "reply": "Affected: Customers served by FL1 with Cloudflare Managed Ruleset. Unaffected: Endpoints like",
+          "correct": true,
+          "how": "numeric+lexical:['1'] 0.60"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "postmortem-04",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "postmortem-04-q1",
+          "reply": "GET /v1/prefixes?pending_delete; it returned all prefixes because the API interpreted the empty",
+          "correct": true,
+          "how": "adjudicate:lexical 0.47 -> YES"
+        },
+        {
+          "id": "postmortem-04-q2",
+          "reply": "Roughly 1,100 prefixes out of 4,306 BYOIP prefixes; withdrawals happened between 17:56 and 18:46",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "postmortem-04-q3",
+          "reply": "BGP withdrawals caused router path hunting, making connections hang until timeout before",
+          "correct": true,
+          "how": "adjudicate:lexical 0.64 -> YES"
+        },
+        {
+          "id": "postmortem-04-q4",
+          "reply": "The website served HTTP 403 (Edge IP Restricted), while 1.1.1.1 DNS resolution kept working.",
+          "correct": true,
+          "how": "numeric:['1.1', '403']"
+        },
+        {
+          "id": "postmortem-04-q5",
+          "reply": "They lost service bindings that automated restore couldn't reconstruct, requiring manual",
+          "correct": false,
+          "how": "no match:lexical 0.30"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "postmortem-05",
+      "n": 5,
+      "correct": 1,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "postmortem-05-q1",
+          "reply": "It was passed as an untyped string; the planned fix is to standardize internal API schemas to",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "postmortem-05-q2",
+          "reply": "Deployed as a snapshot of the database that is staged, gated by health metrics, and revertible;",
+          "correct": true,
+          "how": "adjudicate:lexical 0.40 -> YES"
+        },
+        {
+          "id": "postmortem-05-q3",
+          "reply": "NOT STATED",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-05-q4",
+          "reply": "Trip conditions: Unusual volume of BGP prefix withdrawals/deletions or signals from direct",
+          "correct": false,
+          "how": "no match:lexical 0.32"
+        },
+        {
+          "id": "postmortem-05-q5",
+          "reply": "The three classes are: prefixes only withdrawn, prefixes withdrawn with some service bindings",
+          "correct": false,
+          "how": "adjudicate:lexical 0.42 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "postmortem-06",
+      "n": 5,
+      "correct": 1,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "postmortem-06-q1",
+          "reply": "A React useEffect dependency array held an object reconstructed on every state or prop change,",
+          "correct": false,
+          "how": "adjudicate:lexical 0.43 -> NO"
+        },
+        {
+          "id": "postmortem-06-q2",
+          "reply": "The system had enough headroom to absorb the load until a new Tenant API Service version was",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "postmortem-06-q3",
+          "reply": "It made the API impact worse; availability was restored after publishing a temporary",
+          "correct": false,
+          "how": "adjudicate:lexical 0.57 -> NO"
+        },
+        {
+          "id": "postmortem-06-q4",
+          "reply": "Retries and new requests; request-rate graphs showed high load but couldn't reveal that a single",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "postmortem-06-q5",
+          "reply": "Argo Rollouts; the 17:50 deploy.",
+          "correct": false,
+          "how": "no match:lexical 0.20"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "postmortem-07",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "postmortem-07-q1",
+          "reply": "62 minutes, from 21:52 to 22:54 UTC.",
+          "correct": true,
+          "how": "substring:62 minutes, from 21:52 to 22:54 UTC"
+        },
+        {
+          "id": "postmortem-07-q2",
+          "reply": "Resolver prefixes were attached to a non-production service; it produced no configuration diff",
+          "correct": false,
+          "how": "adjudicate:lexical 0.55 -> NO"
+        },
+        {
+          "id": "postmortem-07-q3",
+          "reply": "Attaching an offline test location to the non-production service, collapsing the topology to",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        },
+        {
+          "id": "postmortem-07-q4",
+          "reply": "77% returned; the remaining 23% gap was due to torn-down edge server IP bindings.",
+          "correct": true,
+          "how": "numeric:['23', '77']"
+        },
+        {
+          "id": "postmortem-07-q5",
+          "reply": "Internal health alerts; 9 minutes.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "postmortem-08",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "postmortem-08-q1",
+          "reply": "A single customer requested large volumes of cached objects from origins in AWS us-east-1, which",
+          "correct": true,
+          "how": "numeric+lexical:['1'] 0.60"
+        },
+        {
+          "id": "postmortem-08-q2",
+          "reply": "AWS withdrew BGP advertisements on congested private network interconnects, which made response",
+          "correct": false,
+          "how": "no match:lexical 0.25"
+        },
+        {
+          "id": "postmortem-08-q3",
+          "reply": "One direct peering link was running at half capacity following a failure, and a Data Center",
+          "correct": false,
+          "how": "adjudicate:lexical 0.62 -> NO"
+        },
+        {
+          "id": "postmortem-08-q4",
+          "reply": "Rate-limiting the originating customer at 19:05, and traffic engineering fully clearing the",
+          "correct": true,
+          "how": "lexical:rate-limiting the customer (19:05) and t"
+        },
+        {
+          "id": "postmortem-08-q5",
+          "reply": "Both networks were still renormalizing prefix advertisements while the links had already",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "rfc-01",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "rfc-01-q1",
+          "reply": "Stateful workloads and batch jobs bear the cost; stateless replicas in a Deployment mostly",
+          "correct": true,
+          "how": "lexical:stateless, versus stateful, batch and lo"
+        },
+        {
+          "id": "rfc-01-q2",
+          "reply": "Load rose, load fell, or initial resource values were wrong.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "rfc-01-q3",
+          "reply": "Changing QoS class, resizing non-restartable init containers, evicting lower-priority pods,",
+          "correct": false,
+          "how": "adjudicate:lexical 0.78 -> NO"
+        },
+        {
+          "id": "rfc-01-q4",
+          "reply": "No CRI call lets kubelet read back the CPU and memory limits a runtime has applied.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        },
+        {
+          "id": "rfc-01-q5",
+          "reply": "The actor that initiated the resize.",
+          "correct": true,
+          "how": "substring:the actor that initiated the resize"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "rfc-02",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "rfc-02-q1",
+          "reply": "The resource configuration handed to the runtime through CreateContainer or",
+          "correct": false,
+          "how": "adjudicate:lexical 0.44 -> NO"
+        },
+        {
+          "id": "rfc-02-q2",
+          "reply": "Linux kernel clamping CPU values, systemd cgroup driver rounding CPU quota, and NRI plugin",
+          "correct": true,
+          "how": "lexical:kernel, systemd, NRI plugin"
+        },
+        {
+          "id": "rfc-02-q3",
+          "reply": "A restart between the non-atomic checkpoint write and CRI call causes the kubelet to repeat the",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "rfc-02-q4",
+          "reply": "Retried on every subsequent pod sync; stops when it succeeds or the container terminates.",
+          "correct": true,
+          "how": "lexical:every pod sync, until it succeeds or the"
+        },
+        {
+          "id": "rfc-02-q5",
+          "reply": "Skips the resize, and reports PodResizeInProgress condition with reason Error showing observed",
+          "correct": true,
+          "how": "lexical:skips the resize; PodResizeInProgress st"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "rfc-03",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "rfc-03-q1",
+          "reply": "Sends them as nil, and the API server copies non-nil values from the old pod forward.",
+          "correct": true,
+          "how": "lexical:nil fields; API server copies non-nil va"
+        },
+        {
+          "id": "rfc-03-q2",
+          "reply": ".status.containerStatuses[*].resources",
+          "correct": true,
+          "how": "substring:.status.containerStatuses[*].resources"
+        },
+        {
+          "id": "rfc-03-q3",
+          "reply": "It restarted the container with the new values, which risked over-subscribing the node.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.71 -> YES"
+        },
+        {
+          "id": "rfc-03-q4",
+          "reply": "Allow.",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "rfc-03-q5",
+          "reply": "An empty {}",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "rfc-04",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "rfc-04-q1",
+          "reply": "This KEP covers scenarios 1 and 2, while scenario 3 is deferred to a follow-up KEP.",
+          "correct": true,
+          "how": "numeric+lexical:['1', '2', '3'] 1.00"
+        },
+        {
+          "id": "rfc-04-q2",
+          "reply": "Node administrators want swap as a node-level tuning knob for node stability; application",
+          "correct": true,
+          "how": "lexical:node admin tuning, application developer"
+        },
+        {
+          "id": "rfc-04-q3",
+          "reply": "zram, zswap, and SGX EPC.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.40 -> YES"
+        },
+        {
+          "id": "rfc-04-q4",
+          "reply": "It is a non-goal; the existing QoS-tier eviction hierarchy is kept as is, to be revisited once",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "rfc-04-q5",
+          "reply": "An overcommitted resource.",
+          "correct": true,
+          "how": "substring:an overcommitted resource"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "rfc-05",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "rfc-05-q1",
+          "reply": "Container's memory request (container-level) and node's total physical memory (node-level).",
+          "correct": true,
+          "how": "lexical:The container's memory request divided b"
+        },
+        {
+          "id": "rfc-05-q2",
+          "reply": "A proportion of zero and a swap limit of zero.",
+          "correct": true,
+          "how": "lexical:0 proportion and 0 swap"
+        },
+        {
+          "id": "rfc-05-q3",
+          "reply": "It is derived by subtracting system-reserved memory from the total swap configured on the",
+          "correct": false,
+          "how": "adjudicate:lexical 0.70 -> NO"
+        },
+        {
+          "id": "rfc-05-q4",
+          "reply": "Container A: 19 GB; Container B: 9.5 GB.",
+          "correct": true,
+          "how": "numeric:['19', '9.5']"
+        },
+        {
+          "id": "rfc-05-q5",
+          "reply": "NOT STATED",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "rfc-06",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 5,
+      "items": [
+        {
+          "id": "rfc-06-q1",
+          "reply": "UnlimitedSwap; it allowed a single workload to exhaust node swap, making the node unhealthy.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.78 -> YES"
+        },
+        {
+          "id": "rfc-06-q2",
+          "reply": "Secrets and memory-backed emptyDirs; the kubelet mounts them using the tmpfs noswap option.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.58 -> YES"
+        },
+        {
+          "id": "rfc-06-q3",
+          "reply": "Widespread noswap support across supported distributions.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "rfc-06-q4",
+          "reply": "It attempts a dummy tmpfs mount with noswap to detect a backport, warning and proceeding if it",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "rfc-06-q5",
+          "reply": "sig-node; correctly limiting swap in v1 is very difficult; tolerable because v1 is being",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "rfc-07",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "rfc-07-q1",
+          "reply": "Scheduling attempts are wasted on unplaceable Pods, and overall scheduling throughput drops.",
+          "correct": false,
+          "how": "adjudicate:lexical 0.71 -> NO"
+        },
+        {
+          "id": "rfc-07-q2",
+          "reply": "A default enqueue plugin, which is required to implement the semantics of the new API.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "rfc-07-q3",
+          "reply": "Forcing Pod conditions to carry more context about why a Pod is paused, and designing around",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        },
+        {
+          "id": "rfc-07-q4",
+          "reply": "Hierarchical quota.",
+          "correct": true,
+          "how": "substring:Hierarchical quota"
+        },
+        {
+          "id": "rfc-07-q5",
+          "reply": "Permission control on individual scheduling gates, which depends on a fine-grained permissions",
+          "correct": true,
+          "how": "lexical:permission/RBAC control on individual sc"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "rfc-08",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "rfc-08-q1",
+          "reply": "At creation time (for an unscheduled pod).",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "rfc-08-q2",
+          "reply": "In any order.",
+          "correct": true,
+          "how": "substring:in any"
+        },
+        {
+          "id": "rfc-08-q3",
+          "reply": "It breaks the invariant that a scheduled pod always carries empty scheduling gates, and the API",
+          "correct": false,
+          "how": "adjudicate:lexical 0.46 -> NO"
+        },
+        {
+          "id": "rfc-08-q4",
+          "reply": "Part (c), the new PreEnqueue extension point, which allows a plugin developer to build their own",
+          "correct": true,
+          "how": "adjudicate:lexical 0.64 -> YES"
+        },
+        {
+          "id": "rfc-08-q5",
+          "reply": "It displays a new phase literal, SchedulingPaused, in the phase column for pods with a non-empty",
+          "correct": true,
+          "how": "substring:A new phase literal, SchedulingPaused, i"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "status_update-01",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "status_update-01-q1",
+          "reply": "744 services out of 1,240 total in scope (60%).",
+          "correct": true,
+          "how": "numeric:['1', '240', '60', '744']"
+        },
+        {
+          "id": "status_update-01-q2",
+          "reply": "96 services; the compatibility shim is expected on October 9, 2026.",
+          "correct": true,
+          "how": "numeric:['2026', '9', '96']"
+        },
+        {
+          "id": "status_update-01-q3",
+          "reply": "$310K ($310,000) per month.",
+          "correct": true,
+          "how": "numeric:['310']"
+        },
+        {
+          "id": "status_update-01-q4",
+          "reply": "It lasted for 9 minutes, affecting 12% of push notifications.",
+          "correct": true,
+          "how": "numeric:['12', '9']"
+        },
+        {
+          "id": "status_update-01-q5",
+          "reply": "The Pylon hardware lease expiration on February 28, 2027.",
+          "correct": true,
+          "how": "numeric:['2027', '28']"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "status_update-02",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-02-q1",
+          "reply": "Canary hosts: 311 ms, control fleet: 184 ms; service's p99 SLO: 250 ms.",
+          "correct": true,
+          "how": "numeric:['184', '250', '311']"
+        },
+        {
+          "id": "status_update-02-q2",
+          "reply": "It exercised 300 schemas, fitting within the 512-entry cache, thus measuring only steady-state",
+          "correct": true,
+          "how": "numeric:['300', '512']"
+        },
+        {
+          "id": "status_update-02-q3",
+          "reply": "71% on canary; 99.6% in the load test.",
+          "correct": true,
+          "how": "numeric:['71', '99.6']"
+        },
+        {
+          "id": "status_update-02-q4",
+          "reply": "Median cost: 0.9 ms, p99 cost: 94 ms, dominated by schema recompilation on a cache miss.",
+          "correct": true,
+          "how": "numeric:['0.9', '94', '99']"
+        },
+        {
+          "id": "status_update-02-q5",
+          "reply": "Cache expanded to 8,192 entries, validation sampled at 1%, and load-test schema corpus drawn",
+          "correct": false,
+          "how": "adjudicate:lexical 0.60 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "status_update-03",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-03-q1",
+          "reply": "1,050 QPS per host; total fleet ceiling is 2.205M QPS.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        },
+        {
+          "id": "status_update-03-q2",
+          "reply": "4.2% per month compounded; crosses in late February 2027.",
+          "correct": true,
+          "how": "numeric:['2027', '4.2']"
+        },
+        {
+          "id": "status_update-03-q3",
+          "reply": "400 hosts, reaching a 2,500 host fleet, costing $2.9M annualized.",
+          "correct": true,
+          "how": "numeric:['2', '2.9', '400', '500']"
+        },
+        {
+          "id": "status_update-03-q4",
+          "reply": "November 3, 2026, driven by a 14-week hardware lead time.",
+          "correct": true,
+          "how": "numeric:['14', '2026', '3']"
+        },
+        {
+          "id": "status_update-03-q5",
+          "reply": "Moving read path to columnar serialization (cuts CPU by 18%, pushes crossing to July 2027).",
+          "correct": true,
+          "how": "numeric:['18', '2027']"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "status_update-04",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-04-q1",
+          "reply": "388 migrated to v4, out of 1,000 total, and 612 remain on v3.",
+          "correct": true,
+          "how": "numeric:['000', '1', '3', '388', '4', '612']"
+        },
+        {
+          "id": "status_update-04-q2",
+          "reply": "CVE-2026-31819, CVSS 7.5, Netty 4.1.79.",
+          "correct": true,
+          "how": "numeric:['2026', '31819', '4.1', '7.5', '79']"
+        },
+        {
+          "id": "status_update-04-q3",
+          "reply": "7,910 handled by codemod, out of 9,417 total, and 1,507 need hand edits.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "status_update-04-q4",
+          "reply": "Builds start failing on Dec 1 2026, and end of life is Jan 31 2027.",
+          "correct": true,
+          "how": "numeric:['1', '2026', '2027', '31']"
+        },
+        {
+          "id": "status_update-04-q5",
+          "reply": "HTTP/1.0, 17 upstreams.",
+          "correct": true,
+          "how": "numeric:['1.0', '17']"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "status_update-05",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "status_update-05-q1",
+          "reply": "10% traffic; Notification CTR moved -0.11% with a 95% confidence interval of -0.41% to +0.19%.",
+          "correct": true,
+          "how": "numeric:['0.11', '0.19', '0.41', '10', '95']"
+        },
+        {
+          "id": "status_update-05-q2",
+          "reply": "Downstream sessions per member regressed by -0.6% at a significance level of p = 0.003.",
+          "correct": true,
+          "how": "numeric:['0.003', '0.6']"
+        },
+        {
+          "id": "status_update-05-q3",
+          "reply": "Serving cost increased by 970 GPU-hours per day (31%, from 3,130 to 4,100 GPU-hours/day); p99",
+          "correct": false,
+          "how": "adjudicate:lexical 0.67 -> NO"
+        },
+        {
+          "id": "status_update-05-q4",
+          "reply": "Top decile members by weekly session count gained +1.9% CTR, while members with fewer than three",
+          "correct": false,
+          "how": "adjudicate:lexical 0.62 -> NO"
+        },
+        {
+          "id": "status_update-05-q5",
+          "reply": "A cold-start floor in the session encoder, where the head requires at least four prior sessions",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "status_update-06",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-06-q1",
+          "reply": "Borrow Index engineers (costs Index 5 weeks on query-planner); 2) Vendor contract ($480K plus",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "status_update-06-q2",
+          "reply": "New: Feb 23, 2027; Original: Nov 17, 2026; Slip: 14 weeks.",
+          "correct": true,
+          "how": "numeric:['17', '2026', '2027', '23']"
+        },
+        {
+          "id": "status_update-06-q3",
+          "reply": ".",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "status_update-06-q4",
+          "reply": "Transfers start Nov 30 with an 8-week ramp (output near Jan 25); external hires are unlikely",
+          "correct": true,
+          "how": "adjudicate:lexical 0.60 -> YES"
+        },
+        {
+          "id": "status_update-06-q5",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "status_update-07",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-07-q1",
+          "reply": "Target is $28M (FY27); $16.4M has been booked so far.",
+          "correct": true,
+          "how": "lexical:$28M annualised by end of FY27; $16.4M b"
+        },
+        {
+          "id": "status_update-07-q2",
+          "reply": "Right-sizing pods ($9.1M), by reducing the median CPU request from 4.0 to 1.5 cores.",
+          "correct": true,
+          "how": "lexical:$9.1M from right-sizing 6,800 over-provi"
+        },
+        {
+          "id": "status_update-07-q3",
+          "reply": "Five incidents (four SEV-3, one SEV-2); CPU throttling due to removing peak headroom.",
+          "correct": true,
+          "how": "lexical:5 incidents: 4 SEV-3, 1 SEV-2, all CPU t"
+        },
+        {
+          "id": "status_update-07-q4",
+          "reply": "Blocks cuts if measured p99 CPU exceeds 70% of the proposed request; 410 cuts rejected.",
+          "correct": true,
+          "how": "lexical:blocks cuts where p99 CPU > 70% of the p"
+        },
+        {
+          "id": "status_update-07-q5",
+          "reply": "$7.0M; blocked on an external scheduler change from another org with no committed delivery date.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.78 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "C",
+      "brief_id": "status_update-08",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "status_update-08-q1",
+          "reply": "1,432 endpoints in scope, across 318 services, and 1,189 have been remediated.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "status_update-08-q2",
+          "reply": "61 sit in services with no registered owner, and 12 are in systems already declared end-of-life.",
+          "correct": true,
+          "how": "numeric:['12', '61']"
+        },
+        {
+          "id": "status_update-08-q3",
+          "reply": "96 endpoints; being reachable from outside the service mesh made them P1; they were closed on",
+          "correct": true,
+          "how": "lexical:96 P1 endpoints, those reachable from ou"
+        },
+        {
+          "id": "status_update-08-q4",
+          "reply": "They finish on Nov 23, which is three weeks past the Oct 31 P2 deadline.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        },
+        {
+          "id": "status_update-08-q5",
+          "reply": "Switching mesh ingress to deny-by-default on Oct 6, breaking four known cross-team callers.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.56 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "design_doc-01",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-01-q1",
+          "reply": "51.71%",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "design_doc-01-q2",
+          "reply": "99.38%",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "design_doc-01-q3",
+          "reply": "Concurrency share (or share of busy threads)",
+          "correct": true,
+          "how": "adjudicate:lexical 0.57 -> YES"
+        },
+        {
+          "id": "design_doc-01-q4",
+          "reply": "L = sum(sorted(x)[:k]) / sum(x) where k = P*n",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "design_doc-01-q5",
+          "reply": "Above 0.5, and often above 0.75",
+          "correct": true,
+          "how": "numeric:['0.5', '0.75']"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "design_doc-02",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "design_doc-02-q1",
+          "reply": "Operator quotes MTTR under 1 minute; customer quotes a mean outage length of 1 hour.",
+          "correct": true,
+          "how": "lexical:The operator quotes an MTTR of under a m"
+        },
+        {
+          "id": "design_doc-02-q2",
+          "reply": "E_a[X] = E[X^2] / (2 E[X]) = 0.5",
+          "correct": true,
+          "how": "numeric:['0.5', '2']"
+        },
+        {
+          "id": "design_doc-02-q3",
+          "reply": "Service reports 100 ms; user reports 1 s.",
+          "correct": true,
+          "how": "numeric:['1', '100']"
+        },
+        {
+          "id": "design_doc-02-q4",
+          "reply": "Log-normal distribution with mu = 1.0 and sigma = 3.0; Poisson process at rate 100.",
+          "correct": true,
+          "how": "numeric:['1.0', '100', '3.0']"
+        },
+        {
+          "id": "design_doc-02-q5",
+          "reply": "Client-side timeout with retry; fails against the recovery-time tail.",
+          "correct": true,
+          "how": "lexical:timeout and retry; no help against the r"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "design_doc-03",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "design_doc-03-q1",
+          "reply": "Authorized customer id",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "design_doc-03-q2",
+          "reply": "Classic: O(customers) queues and O(customers) work. SFQ: O(1) queues and O(1) work.",
+          "correct": true,
+          "how": "numeric+lexical:['1'] 0.57"
+        },
+        {
+          "id": "design_doc-03-q3",
+          "reply": "Serviced bit-by-bit round-robin; they absorb their own delay and packet loss.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.44 -> YES"
+        },
+        {
+          "id": "design_doc-03-q4",
+          "reply": "Mapped to a subset of queues and enqueued into the shorter of them; these subsets are",
+          "correct": false,
+          "how": "adjudicate:lexical 0.44 -> NO"
+        },
+        {
+          "id": "design_doc-03-q5",
+          "reply": "Noisy customers must be a small portion of the population.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.60 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "design_doc-04",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "design_doc-04-q1",
+          "reply": "Roughly the rate of the square root of the number of loads; the Firecracker paper.",
+          "correct": true,
+          "how": "lexical:square root of the number of loads; Fire"
+        },
+        {
+          "id": "design_doc-04-q2",
+          "reply": "The headroom you buy drops by more than five times.",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "design_doc-04-q3",
+          "reply": "Avoid large caches, offer strongly consistent scalable reads, and push expensive operations into",
+          "correct": true,
+          "how": "adjudicate:lexical 0.77 -> YES"
+        },
+        {
+          "id": "design_doc-04-q4",
+          "reply": "It disaggregates replication from transaction isolation and from storage.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        },
+        {
+          "id": "design_doc-04-q5",
+          "reply": "Agents are weak at long-horizon tasks, which database operations are.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.71 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "design_doc-05",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-05-q1",
+          "reply": "NOT STATED",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "design_doc-05-q2",
+          "reply": "SELECT and UPDATE latency stay fast, with the database running across regions.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "design_doc-05-q3",
+          "reply": "Lock contention and retries following a failed lock acquisition, which drive metastable failure.",
+          "correct": true,
+          "how": "lexical:lock contention and retries, leading to "
+        },
+        {
+          "id": "design_doc-05-q4",
+          "reply": "How time is distributed, how data-centre networks are built, how power and cooling are",
+          "correct": false,
+          "how": "adjudicate:lexical 0.73 -> NO"
+        },
+        {
+          "id": "design_doc-05-q5",
+          "reply": "Duller failures that come from badly behaved clients and client code.",
+          "correct": true,
+          "how": "lexical:failures caused by badly behaved clients"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "design_doc-06",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-06-q1",
+          "reply": "Building efficient, reliable, secure, end-to-end systems; it is getting cheaper slowly with no",
+          "correct": true,
+          "how": "lexical:Building efficient, reliable, secure end"
+        },
+        {
+          "id": "design_doc-06-q2",
+          "reply": "That serious customers would reject digital logic; the 74 series had just launched.",
+          "correct": true,
+          "how": "numeric:['74']"
+        },
+        {
+          "id": "design_doc-06-q3",
+          "reply": "By ten or more orders of magnitude; he still made a small fortune.",
+          "correct": true,
+          "how": "lexical:ten or more orders of magnitude, but he "
+        },
+        {
+          "id": "design_doc-06-q4",
+          "reply": "First: programming ends as a high-value economic craft. Second: new tools open new industries,",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "design_doc-06-q5",
+          "reply": "Solved: integration, translation, simple analysis, and small-scale synthesis. Rising in value:",
+          "correct": false,
+          "how": "adjudicate:lexical 0.70 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "design_doc-07",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-07-q1",
+          "reply": "Roughly 100,000,000,000 times faster.",
+          "correct": true,
+          "how": "numeric:['000', '100']"
+        },
+        {
+          "id": "design_doc-07-q2",
+          "reply": "At least 85 years; Marian Rejewski's work.",
+          "correct": true,
+          "how": "lexical:at least 85 years; Rejewski's 1930s work"
+        },
+        {
+          "id": "design_doc-07-q3",
+          "reply": "An opamp and an analog multiplier IC; MC1495.",
+          "correct": true,
+          "how": "numeric:['1495']"
+        },
+        {
+          "id": "design_doc-07-q4",
+          "reply": "The opamp drives its inputs to equality, which is achieved when output squared equals input due",
+          "correct": true,
+          "how": "adjudicate:lexical 0.56 -> YES"
+        },
+        {
+          "id": "design_doc-07-q5",
+          "reply": "Excellent outputs are extracted from poor components using a sharp comparison loop; LLMs are the",
+          "correct": false,
+          "how": "adjudicate:lexical 0.58 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "design_doc-08",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "design_doc-08-q1",
+          "reply": "The availability of accurate feedback",
+          "correct": true,
+          "how": "substring:availability of accurate feedback"
+        },
+        {
+          "id": "design_doc-08-q2",
+          "reply": "\"know-it-when-I-see-it\" feedback and silent data corruption at runtime",
+          "correct": true,
+          "how": "adjudicate:lexical 0.70 -> YES"
+        },
+        {
+          "id": "design_doc-08-q3",
+          "reply": "Building a delightful, ergonomic photo-editing website versus building a correct,",
+          "correct": false,
+          "how": "adjudicate:lexical 0.56 -> NO"
+        },
+        {
+          "id": "design_doc-08-q4",
+          "reply": "The website's loop terminates in a person, while the storage engine's loop terminates in a",
+          "correct": false,
+          "how": "no match:lexical 0.36"
+        },
+        {
+          "id": "design_doc-08-q5",
+          "reply": "The scale of RocksDB or InnoDB",
+          "correct": false,
+          "how": "no match:lexical 0.25"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "perf_analysis-01",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 4,
+      "items": [
+        {
+          "id": "perf_analysis-01-q1",
+          "reply": "Nothing came back; search terms tried were: os::javaTimeMillis, clocksource, tracesys, Ubuntu,",
+          "correct": false,
+          "how": "adjudicate:lexical 0.78 -> NO"
+        },
+        {
+          "id": "perf_analysis-01-q2",
+          "reply": "32.1% in total; the single block was 30.14% wide.",
+          "correct": true,
+          "how": "numeric:['30.14', '32.1']"
+        },
+        {
+          "id": "perf_analysis-01-q3",
+          "reply": "Theory A (syscall tracing enabled by auditing or apparmor) and Theory B (slower time fetching",
+          "correct": false,
+          "how": "adjudicate:lexical 0.75 -> NO"
+        },
+        {
+          "id": "perf_analysis-01-q4",
+          "reply": "They caused all os::javaTimeMillis() call sites to merge into a single leaf block instead of",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "perf_analysis-01-q5",
+          "reply": "Because the profile used software cpu-clock soft interrupts instead of hardware NMI sampling;",
+          "correct": false,
+          "how": "adjudicate:lexical 0.40 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "perf_analysis-02",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "perf_analysis-02-q1",
+          "reply": "100,000,000 iterations; comparing the result against the constant 87362 and doing a println on",
+          "correct": true,
+          "how": "numeric:['000', '100', '87362']"
+        },
+        {
+          "id": "perf_analysis-02-q2",
+          "reply": "CentOS took 0m12.989s, and Ubuntu took 1m8.300s.",
+          "correct": true,
+          "how": "numeric:['1', '12.989', '8.300']"
+        },
+        {
+          "id": "perf_analysis-02-q3",
+          "reply": "A C implementation calling gettimeofday(2); disassembling it takes only a few minutes to confirm",
+          "correct": false,
+          "how": "no match:lexical 0.20"
+        },
+        {
+          "id": "perf_analysis-02-q4",
+          "reply": "One expert opinion from a processor engineer combined with a fault-tolerant cloud tipped the",
+          "correct": false,
+          "how": "no match:lexical 0.36"
+        },
+        {
+          "id": "perf_analysis-02-q5",
+          "reply": "0m3.370s; this is over 20x faster than the pre-fix Ubuntu run and nearly 4x faster than CentOS.",
+          "correct": true,
+          "how": "numeric:['20', '3.370', '4']"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "perf_analysis-03",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "perf_analysis-03-q1",
+          "reply": "38%. It was notable because it was unusual enough for Netflix cloud workloads to warrant an",
+          "correct": true,
+          "how": "numeric:['38']"
+        },
+        {
+          "id": "perf_analysis-03-q2",
+          "reply": "arc_reclaim_thread and spl_kmem_cache_reap_now(). They were suspected of contending on the same",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "perf_analysis-03-q3",
+          "reply": "Hits, misses, and all other counters at",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        },
+        {
+          "id": "perf_analysis-03-q4",
+          "reply": "ARC eviction lists were split to one per CPU; get_random_bytes() and extract_entropy() were used",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        },
+        {
+          "id": "perf_analysis-03-q5",
+          "reply": "ZFS issue \u001b]8;id=md-1spo86y;https://github.com/asamadiya/agent-tools/issues/6531\u0007#6531\u001b]8;;\u0007\u001b]8;;\u0007. It made arc_reclaim_thread bail out earlier when ZFS is unused.\u001b]8;;\u0007",
+          "correct": true,
+          "how": "numeric:['6531']"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "perf_analysis-04",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "perf_analysis-04-q1",
+          "reply": "10%; noticed on a CPU flame graph as an orange kernel tower that did not belong.",
+          "correct": true,
+          "how": "numeric:['10']"
+        },
+        {
+          "id": "perf_analysis-04-q2",
+          "reply": "__memcpy_avx_unaligned(); surprising because the process had run for hours and RSS growth should",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "perf_analysis-04-q3",
+          "reply": "Reading the kernel's mm/advise.c; tracing sys_madvise() flags with kprobes or tracepoints.",
+          "correct": true,
+          "how": "lexical:reading mm/advise.c, or tracing the madv"
+        },
+        {
+          "id": "perf_analysis-04-q4",
+          "reply": "0.8%; zap_page_range().",
+          "correct": true,
+          "how": "numeric:['0.8']"
+        },
+        {
+          "id": "perf_analysis-04-q5",
+          "reply": "jemalloc; glibc; 3% versus the 10% the team had in mind.",
+          "correct": true,
+          "how": "numeric:['10', '3']"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "perf_analysis-05",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "perf_analysis-05-q1",
+          "reply": "Uploads of roughly 100-Gbyte files ran for hours, while uploads of up to 40 Gbytes finished in",
+          "correct": true,
+          "how": "numeric:['100', '40']"
+        },
+        {
+          "id": "perf_analysis-05-q2",
+          "reply": "Read rate: 91,656 to 92,152 rkB/s (734 to 750 r/s); device utilization: pegged at 100%.",
+          "correct": true,
+          "how": "numeric:['100', '734', '750']"
+        },
+        {
+          "id": "perf_analysis-05-q3",
+          "reply": "r_await: 33 to 34 ms; average queue size: about",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "perf_analysis-05-q4",
+          "reply": "Almost all I/O was in the 128-255 Kbyte bucket, issued by the \"java\" process.",
+          "correct": true,
+          "how": "numeric:['128', '255']"
+        },
+        {
+          "id": "perf_analysis-05-q5",
+          "reply": "The 32-63 ms bucket held 8,139 I/O; outliers reached out to 512-1023 ms (0.5-1.0 s).",
+          "correct": true,
+          "how": "numeric:['0.5', '1.0', '1023', '139', '32', '512', '63', '8']"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "perf_analysis-06",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "perf_analysis-06-q1",
+          "reply": "Total memory: 64,414 MB, buff/cache: 48,643 MB, free memory: 349 MB.",
+          "correct": true,
+          "how": "numeric:['349', '414', '48', '64', '643']"
+        },
+        {
+          "id": "perf_analysis-06-q2",
+          "reply": "Hit ratio swung between 6.5% and 74.1%; per-second misses got up to 23,341.",
+          "correct": true,
+          "how": "numeric:['23', '341', '6.5', '74.1']"
+        },
+        {
+          "id": "perf_analysis-06-q3",
+          "reply": "100.0% hit ratio and 0 misses; the file size was 32-Gbyte.",
+          "correct": true,
+          "how": "numeric:['100.0', '32']"
+        },
+        {
+          "id": "perf_analysis-06-q4",
+          "reply": "free -m showed used 18,421 MB, free 11,218 MB, buff/cache 34,773 MB; iostat showed almost no",
+          "correct": true,
+          "how": "numeric:['11', '218', '34', '773']"
+        },
+        {
+          "id": "perf_analysis-06-q5",
+          "reply": "It was proposed that page cache hit statistics belong in /proc; engineers cited difficulties in",
+          "correct": false,
+          "how": "adjudicate:lexical 0.45 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "perf_analysis-07",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "perf_analysis-07-q1",
+          "reply": "It increased the usable general-purpose register count from four to five (or six to seven);",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "perf_analysis-07-q2",
+          "reply": "Wanting to beat Intel's icc and judging that contemporary debuggers would be unharmed.",
+          "correct": false,
+          "how": "no match:lexical 0.27"
+        },
+        {
+          "id": "perf_analysis-07-q3",
+          "reply": "A 17th register opened no new optimizations while sacrificing debuggability; compiling /usr/bin",
+          "correct": true,
+          "how": "numeric:['17']"
+        },
+        {
+          "id": "perf_analysis-07-q4",
+          "reply": "libc; off-CPU flame graphs.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.44 -> YES"
+        },
+        {
+          "id": "perf_analysis-07-q5",
+          "reply": "Running a private build compiled with frame pointers in production, then releasing a prebuilt",
+          "correct": true,
+          "how": "adjudicate:lexical 0.63 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "perf_analysis-08",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "perf_analysis-08-q1",
+          "reply": "Under 1% overhead; performance wins in the range of 5% to 500%.",
+          "correct": true,
+          "how": "numeric:['1', '5', '500']"
+        },
+        {
+          "id": "perf_analysis-08-q2",
+          "reply": "They ran more than 1000 frames deep, generated through Groovy.",
+          "correct": true,
+          "how": "numeric:['1000']"
+        },
+        {
+          "id": "perf_analysis-08-q3",
+          "reply": "10%; they usually reduce to one small function executed in a loop, so every added instruction is",
+          "correct": true,
+          "how": "numeric:['10']"
+        },
+        {
+          "id": "perf_analysis-08-q4",
+          "reply": "The instance was a virtual machine with no low-level hardware profiling, making cycle analysis",
+          "correct": true,
+          "how": "adjudicate:lexical 0.71 -> YES"
+        },
+        {
+          "id": "perf_analysis-08-q5",
+          "reply": "scimark_sparse_mat_mult, diagnosed by Andrii Nakryiko at Meta; caused by gcc stopping",
+          "correct": false,
+          "how": "no match:lexical 0.31"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "postmortem-01",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "postmortem-01-q1",
+          "reply": "It reached an unwrap on an Err value and panicked, returning HTTP 5xx responses.",
+          "correct": true,
+          "how": "lexical:an unwrap on an Err value panicked the f"
+        },
+        {
+          "id": "postmortem-01-q2",
+          "reply": "The query filtered on table name without filtering on database name, matching columns twice",
+          "correct": true,
+          "how": "lexical:the query did not filter by database nam"
+        },
+        {
+          "id": "postmortem-01-q3",
+          "reply": "FL1 customers received no errors but got a bot score of 0 on all traffic, whereas FL2 customers",
+          "correct": false,
+          "how": "adjudicate:lexical 0.67 -> NO"
+        },
+        {
+          "id": "postmortem-01-q4",
+          "reply": "The permissions change rolled out gradually, causing regenerations to alternate between good and",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "postmortem-01-q5",
+          "reply": "The regular five-minute failure oscillation and the coincidental outage of their external status",
+          "correct": false,
+          "how": "no match:lexical 0.30"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "postmortem-02",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "postmortem-02-q1",
+          "reply": "A patch let Workers KV bypass the core proxy.",
+          "correct": true,
+          "how": "lexical:Workers KV was made to bypass the core p"
+        },
+        {
+          "id": "postmortem-02-q2",
+          "reply": "Debugging and observability systems enriching uncaught errors.",
+          "correct": true,
+          "how": "lexical:the debugging and observability systems "
+        },
+        {
+          "id": "postmortem-02-q3",
+          "reply": "Windows: 11:30 to 13:10 and 14:40 to 15:30. Cause of second: Restoring the feature file released",
+          "correct": true,
+          "how": "numeric:['10', '11', '13', '14', '15', '30', '40']"
+        },
+        {
+          "id": "postmortem-02-q4",
+          "reply": "Scaling control plane concurrency.",
+          "correct": true,
+          "how": "lexical:Scaling up control plane concurrency, ar"
+        },
+        {
+          "id": "postmortem-02-q5",
+          "reply": "Degraded: Detection accuracy. Kept working: Mail processing and delivery.",
+          "correct": false,
+          "how": "no match:lexical 0.30"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "postmortem-03",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "postmortem-03-q1",
+          "reply": "Changed from 128KB to 1MB to protect against CVE-2025-55182 by inspecting request bodies up to",
+          "correct": true,
+          "how": "numeric:['1', '128']"
+        },
+        {
+          "id": "postmortem-03-q2",
+          "reply": "The buffer increase (gradual deployment system with staged rollout) and disabling the testing",
+          "correct": false,
+          "how": "adjudicate:lexical 0.50 -> NO"
+        },
+        {
+          "id": "postmortem-03-q3",
+          "reply": "A killswitch had never previously been applied to a rule with an \"execute\" action.",
+          "correct": true,
+          "how": "lexical:A killswitch had never previously been a"
+        },
+        {
+          "id": "postmortem-03-q4",
+          "reply": "Indexing nil on the non-existent rule_result.execute field in Lua, at init.lua line 314 in the",
+          "correct": true,
+          "how": "numeric:['314']"
+        },
+        {
+          "id": "postmortem-03-q5",
+          "reply": "Affected: Customers on FL1 with the Cloudflare Managed Ruleset deployed. Unaffected: Endpoints",
+          "correct": true,
+          "how": "numeric+lexical:['1'] 0.60"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "postmortem-04",
+      "n": 5,
+      "correct": 0,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "postmortem-04-q1",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-04-q2",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-04-q3",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-04-q4",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-04-q5",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "postmortem-05",
+      "n": 5,
+      "correct": 1,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "postmortem-05-q1",
+          "reply": "It travelled as an untyped string with no schema; the planned fix is standardizing the API",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "postmortem-05-q2",
+          "reply": "Placed into snapshots rolled out like binaries; it allows operators to revert one or all",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "postmortem-05-q3",
+          "reply": "Blocking customers from direct API updates during an outage.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "postmortem-05-q4",
+          "reply": "An unusual rate/breadth of change (such as a burst of BGP prefix withdrawals/deletions) or",
+          "correct": false,
+          "how": "no match:lexical 0.22"
+        },
+        {
+          "id": "postmortem-05-q5",
+          "reply": "Only withdrawn, withdrawn with some service bindings removed, and withdrawn with all bindings",
+          "correct": false,
+          "how": "adjudicate:lexical 0.41 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "postmortem-06",
+      "n": 5,
+      "correct": 0,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "postmortem-06-q1",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-06-q2",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-06-q3",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-06-q4",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-06-q5",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "postmortem-07",
+      "n": 5,
+      "correct": 0,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "postmortem-07-q1",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-07-q2",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-07-q3",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-07-q4",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-07-q5",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "postmortem-08",
+      "n": 5,
+      "correct": 0,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "postmortem-08-q1",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-08-q2",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-08-q3",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-08-q4",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "postmortem-08-q5",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "rfc-01",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 4,
+      "items": [
+        {
+          "id": "rfc-01-q1",
+          "reply": "Services running one or two replicas, stateful workloads, and batch jobs bear the real cost;",
+          "correct": false,
+          "how": "adjudicate:lexical 0.60 -> NO"
+        },
+        {
+          "id": "rfc-01-q2",
+          "reply": "Load rising (making allocation short), load falling (leaving allocation idle), and values set",
+          "correct": false,
+          "how": "adjudicate:lexical 0.58 -> NO"
+        },
+        {
+          "id": "rfc-01-q3",
+          "reply": "Changing a pod's QoS class, resizing init containers that cannot be restarted, evicting",
+          "correct": false,
+          "how": "adjudicate:lexical 0.44 -> NO"
+        },
+        {
+          "id": "rfc-01-q4",
+          "reply": "No CRI call lets kubelet read back the CPU and memory limits a runtime has applied.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        },
+        {
+          "id": "rfc-01-q5",
+          "reply": "The initiator of the resize (such as the user, VPA, StatefulSet controller, or JobController).",
+          "correct": true,
+          "how": "lexical:the initiator (user, VPA, StatefulSet, J"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "rfc-02",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "rfc-02-q1",
+          "reply": "The configuration handed to the runtime through CreateContainer or UpdateContainerResources that",
+          "correct": false,
+          "how": "adjudicate:lexical 0.56 -> NO"
+        },
+        {
+          "id": "rfc-02-q2",
+          "reply": "Linux kernel clamping CPU shares/quota to minimums, systemd cgroup driver rounding CPU quota to",
+          "correct": false,
+          "how": "adjudicate:lexical 0.67 -> NO"
+        },
+        {
+          "id": "rfc-02-q3",
+          "reply": "A restart between the CRI call returning and its checkpoint being written causes the kubelet to",
+          "correct": false,
+          "how": "no match:lexical 0.25"
+        },
+        {
+          "id": "rfc-02-q4",
+          "reply": "Retried on every subsequent pod sync, stopping when it succeeds or the container terminates.",
+          "correct": true,
+          "how": "lexical:every pod sync, until it succeeds or the"
+        },
+        {
+          "id": "rfc-02-q5",
+          "reply": "Skips the resize, leaving PodResizeInProgress on the pod with reason Error and a message",
+          "correct": true,
+          "how": "lexical:skips the resize; PodResizeInProgress st"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "rfc-03",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "rfc-03-q1",
+          "reply": "It sends them as nil, and the API server copies the non-nil values from the old pod forward.",
+          "correct": true,
+          "how": "lexical:nil fields; API server copies non-nil va"
+        },
+        {
+          "id": "rfc-03-q2",
+          "reply": ".status.containerStatuses[*].resources on the first running container.",
+          "correct": true,
+          "how": "substring:.status.containerStatuses[*].resources"
+        },
+        {
+          "id": "rfc-03-q3",
+          "reply": "The kubelet restarted the container; the danger was that the node could be over-subscribed by",
+          "correct": true,
+          "how": "adjudicate:lexical 0.62 -> YES"
+        },
+        {
+          "id": "rfc-03-q4",
+          "reply": "The resize is allowed.",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "rfc-03-q5",
+          "reply": "An empty {}.",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "rfc-04",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "rfc-04-q1",
+          "reply": "Covers scenarios 1 and 2; scenario 3 is deferred.",
+          "correct": true,
+          "how": "numeric+lexical:['1', '2', '3'] 1.00"
+        },
+        {
+          "id": "rfc-04-q2",
+          "reply": "Node administrators (want node-level performance and stability) and application developers (want",
+          "correct": true,
+          "how": "lexical:node admin, app developer"
+        },
+        {
+          "id": "rfc-04-q3",
+          "reply": "zram, zswap, and SGX EPC.",
+          "correct": false,
+          "how": "adjudicate:lexical 0.40 -> NO"
+        },
+        {
+          "id": "rfc-04-q4",
+          "reply": "It is a non-goal; the existing QoS-tier eviction hierarchy is kept as is, deferred to a",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "rfc-04-q5",
+          "reply": "An overcommitted resource.",
+          "correct": true,
+          "how": "substring:an overcommitted resource"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "rfc-05",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "rfc-05-q1",
+          "reply": "Container's memory request and node's total physical memory.",
+          "correct": true,
+          "how": "lexical:memory request, physical memory"
+        },
+        {
+          "id": "rfc-05-q2",
+          "reply": "A proportion of zero and a swap limit of zero.",
+          "correct": true,
+          "how": "lexical:0 proportion and 0 swap"
+        },
+        {
+          "id": "rfc-05-q3",
+          "reply": "Total swap minus configured system-reserved memory; subtraction is used because the kernel lacks",
+          "correct": true,
+          "how": "lexical:total swap minus system reserved memory;"
+        },
+        {
+          "id": "rfc-05-q4",
+          "reply": "Container A: 19 GB, Container B: 9.5 GB.",
+          "correct": true,
+          "how": "numeric:['19', '9.5']"
+        },
+        {
+          "id": "rfc-05-q5",
+          "reply": "NOT STATED",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "rfc-06",
+      "n": 5,
+      "correct": 4,
+      "adjudicated": 5,
+      "items": [
+        {
+          "id": "rfc-06-q1",
+          "reply": "UnlimitedSwap; it allowed a single workload to exhaust node swap and push the node unhealthy.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.78 -> YES"
+        },
+        {
+          "id": "rfc-06-q2",
+          "reply": "Secrets and memory-backed emptyDirs; the kubelet passes the tmpfs noswap mount option to keep",
+          "correct": true,
+          "how": "adjudicate:lexical 0.58 -> YES"
+        },
+        {
+          "id": "rfc-06-q3",
+          "reply": "Widespread noswap support, allowing the kubelet to rely solely on the version test or drop it",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        },
+        {
+          "id": "rfc-06-q4",
+          "reply": "It attempts a dummy mount with noswap to check for backports, warning if the mount fails.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "rfc-06-q5",
+          "reply": "sig-node, because v1 support is very difficult; tolerable because cgroup v1's expected",
+          "correct": false,
+          "how": "adjudicate:lexical 0.75 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "rfc-07",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "rfc-07-q1",
+          "reply": "Occupying scheduling cycles that other pending pods could have used, and triggering downstream",
+          "correct": false,
+          "how": "adjudicate:lexical 0.57 -> NO"
+        },
+        {
+          "id": "rfc-07-q2",
+          "reply": "A default enqueue plugin; it is required to implement the semantics of the new API.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "rfc-07-q3",
+          "reply": "Extending pod conditions to expose more context about why a pod is paused, and cataloguing",
+          "correct": false,
+          "how": "no match:lexical 0.38"
+        },
+        {
+          "id": "rfc-07-q4",
+          "reply": "Hierarchical quota.",
+          "correct": true,
+          "how": "substring:Hierarchical quota"
+        },
+        {
+          "id": "rfc-07-q5",
+          "reply": "Permission control on individual scheduling gates, which depends on a fine-grained permissions",
+          "correct": true,
+          "how": "lexical:permission/RBAC control on individual sc"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "rfc-08",
+      "n": 5,
+      "correct": 0,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "rfc-08-q1",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "rfc-08-q2",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "rfc-08-q3",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "rfc-08-q4",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "rfc-08-q5",
+          "reply": "",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "status_update-01",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "status_update-01-q1",
+          "reply": "744 of 1,240 services (60%)",
+          "correct": true,
+          "how": "numeric:['1', '240', '60', '744']"
+        },
+        {
+          "id": "status_update-01-q2",
+          "reply": "96 services; October 9",
+          "correct": true,
+          "how": "numeric:['9', '96']"
+        },
+        {
+          "id": "status_update-01-q3",
+          "reply": "$310K per month",
+          "correct": true,
+          "how": "substring:$310K per month"
+        },
+        {
+          "id": "status_update-01-q4",
+          "reply": "9 minutes; 12% of push notifications",
+          "correct": true,
+          "how": "numeric:['12', '9']"
+        },
+        {
+          "id": "status_update-01-q5",
+          "reply": "The Pylon hardware lease expiration; February 28, 2027",
+          "correct": true,
+          "how": "numeric:['2027', '28']"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "status_update-02",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-02-q1",
+          "reply": "Canary hosts p99 was 311 ms versus 184 ms on the control fleet; the service's p99 SLO is under",
+          "correct": false,
+          "how": "adjudicate:lexical 0.75 -> NO"
+        },
+        {
+          "id": "status_update-02-q2",
+          "reply": "It exercised only 300 schemas which fit inside the 512-entry cache, measuring the interceptor",
+          "correct": true,
+          "how": "numeric:['300', '512']"
+        },
+        {
+          "id": "status_update-02-q3",
+          "reply": "71% on the canary; 99.6% in the pre-release load test.",
+          "correct": true,
+          "how": "numeric:['71', '99.6']"
+        },
+        {
+          "id": "status_update-02-q4",
+          "reply": "Median cost was 0.9 ms versus 94 ms at p99; the p99 cost was dominated by synchronous schema",
+          "correct": true,
+          "how": "numeric:['0.9', '94', '99']"
+        },
+        {
+          "id": "status_update-02-q5",
+          "reply": "NOT STATED",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "status_update-03",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 0,
+      "items": [
+        {
+          "id": "status_update-03-q1",
+          "reply": "1,050 QPS per host, implying a fleet ceiling of 2.2M QPS.",
+          "correct": true,
+          "how": "numeric:['050', '1', '2.2']"
+        },
+        {
+          "id": "status_update-03-q2",
+          "reply": "4.2% per month compounded, crossing in late February 2027.",
+          "correct": true,
+          "how": "numeric:['2027', '4.2']"
+        },
+        {
+          "id": "status_update-03-q3",
+          "reply": "400 additional hosts, reaching 2,500 hosts, costing $2.9M annualized.",
+          "correct": true,
+          "how": "numeric:['2', '2.9', '400', '500']"
+        },
+        {
+          "id": "status_update-03-q4",
+          "reply": "November 3, 2026, driven by a 14-week hardware lead time before the February 2027 crossing.",
+          "correct": true,
+          "how": "numeric:['14', '2026', '3']"
+        },
+        {
+          "id": "status_update-03-q5",
+          "reply": "Columnar serialization (reduces CPU by 18%, pushing crossing to August 2027); not planned",
+          "correct": true,
+          "how": "numeric:['18', '2027']"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "status_update-04",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-04-q1",
+          "reply": "388 have moved to v4, out of 1,000 total, and 612 remain on v3.",
+          "correct": true,
+          "how": "numeric:['000', '1', '3', '388', '4', '612']"
+        },
+        {
+          "id": "status_update-04-q2",
+          "reply": "CVE-2026-31819 (HTTP request smuggling), CVSS 7.5, Netty (specifically Netty 4.1.79).",
+          "correct": true,
+          "how": "numeric:['2026', '31819', '4.1', '7.5', '79']"
+        },
+        {
+          "id": "status_update-04-q3",
+          "reply": "7,910 call sites, out of 9,417 total, and 1,507 need hand edits.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.62 -> YES"
+        },
+        {
+          "id": "status_update-04-q4",
+          "reply": "Builds start failing on Dec 1 2026; end of life is Jan 31 2027.",
+          "correct": true,
+          "how": "numeric:['1', '2026', '2027', '31']"
+        },
+        {
+          "id": "status_update-04-q5",
+          "reply": "HTTP/1.0, 17 upstreams.",
+          "correct": true,
+          "how": "numeric:['1.0', '17']"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "status_update-05",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-05-q1",
+          "reply": "10% ramp; CTR moved -0.11% (95% CI: -0.41% to +0.19%).",
+          "correct": true,
+          "how": "numeric:['0.11', '0.19', '0.41', '10', '95']"
+        },
+        {
+          "id": "status_update-05-q2",
+          "reply": "Sessions per member; fell 0.6% at p = 0.003.",
+          "correct": true,
+          "how": "substring:Sessions per member fell 0.6% at p = 0.0"
+        },
+        {
+          "id": "status_update-05-q3",
+          "reply": "Cost rose 31% (+970 GPU-hours/day); p99 latency rose 50% (+19 ms).",
+          "correct": true,
+          "how": "lexical:+31% cost (4,100 vs 3,130 GPU-hours/day)"
+        },
+        {
+          "id": "status_update-05-q4",
+          "reply": "Heavy users gained +1.9% CTR while light users lost 0.8% CTR; light users (62% of members)",
+          "correct": true,
+          "how": "numeric:['0.8', '1.9', '62']"
+        },
+        {
+          "id": "status_update-05-q5",
+          "reply": "Requires at least four prior sessions; otherwise falls back to a near-constant vector that",
+          "correct": true,
+          "how": "adjudicate:lexical 0.75 -> YES"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "status_update-06",
+      "n": 5,
+      "correct": 2,
+      "adjudicated": 2,
+      "items": [
+        {
+          "id": "status_update-06-q1",
+          "reply": "Approved: 11, Filled:",
+          "correct": false,
+          "how": "no match:lexical 0.33"
+        },
+        {
+          "id": "status_update-06-q2",
+          "reply": "New date: February 23,",
+          "correct": false,
+          "how": "no match:lexical 0.17"
+        },
+        {
+          "id": "status_update-06-q3",
+          "reply": "Cross-region async replication is paused with 0 engineers. Compaction rewrite has 1 engineer",
+          "correct": true,
+          "how": "lexical:async cross-region replication paused, 0"
+        },
+        {
+          "id": "status_update-06-q4",
+          "reply": "Earliest start is Nov 30 and ramp takes 8 weeks, putting first independent work at Jan 25 2027",
+          "correct": true,
+          "how": "adjudicate:lexical 0.57 -> YES"
+        },
+        {
+          "id": "status_update-06-q5",
+          "reply": "Borrowing Index engineers (costs Index 5 weeks), vendor contract (costs $480K), and scope",
+          "correct": false,
+          "how": "adjudicate:lexical 0.60 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "status_update-07",
+      "n": 5,
+      "correct": 3,
+      "adjudicated": 1,
+      "items": [
+        {
+          "id": "status_update-07-q1",
+          "reply": "5.",
+          "correct": false,
+          "how": "no match:lexical 0.00"
+        },
+        {
+          "id": "status_update-07-q2",
+          "reply": "Right-sizing over-provisioned pods ($9.1M); cutting the median CPU request from 4.0 cores to",
+          "correct": true,
+          "how": "lexical:$9.1M from right-sizing 6,800 over-provi"
+        },
+        {
+          "id": "status_update-07-q3",
+          "reply": "Five incidents (four SEV-3, one SEV-2); CPU throttling via cgroup quota when p99 CPU exceeded",
+          "correct": true,
+          "how": "numeric:['2', '3', '99']"
+        },
+        {
+          "id": "status_update-07-q4",
+          "reply": "Blocks cuts where measured p99 CPU exceeds 70% of the proposed request; 410 candidate cuts.",
+          "correct": true,
+          "how": "lexical:It blocks any cut where measured p99 CPU"
+        },
+        {
+          "id": "status_update-07-q5",
+          "reply": "$7.0M; a scheduler change owned by another org that has no committed date.",
+          "correct": false,
+          "how": "adjudicate:lexical 0.73 -> NO"
+        }
+      ]
+    },
+    {
+      "condition": "D",
+      "brief_id": "status_update-08",
+      "n": 5,
+      "correct": 5,
+      "adjudicated": 3,
+      "items": [
+        {
+          "id": "status_update-08-q1",
+          "reply": "1,432 endpoints in scope across 318 services, with 1,189 remediated.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.50 -> YES"
+        },
+        {
+          "id": "status_update-08-q2",
+          "reply": "61 in services with no registered owner, and 12 in systems declared end-of-life.",
+          "correct": true,
+          "how": "numeric:['12', '61']"
+        },
+        {
+          "id": "status_update-08-q3",
+          "reply": "96 endpoints; being reachable from outside the service mesh made them P1; yes, remediated by the",
+          "correct": true,
+          "how": "lexical:96, reachable from outside the mesh, all"
+        },
+        {
+          "id": "status_update-08-q4",
+          "reply": "November 23, which is three weeks past the October 31 P2 deadline.",
+          "correct": true,
+          "how": "adjudicate:lexical 0.67 -> YES"
+        },
+        {
+          "id": "status_update-08-q5",
+          "reply": "Switching mesh ingress to deny-by-default for those services; it is known to break four",
+          "correct": true,
+          "how": "adjudicate:lexical 0.44 -> YES"
+        }
+      ]
+    }
+  ]
+}
