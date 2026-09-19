@@ -1,0 +1,33 @@
+Invest in Feedback, Not in Agents
+
+Proposal
+
+We should spend our agent-tooling budget on machinery that tells an agent it is wrong — compilers, verifiers, model checkers, benchmarks, simulators, property tests — rather than on scaffolding that helps an agent write more code faster.
+
+The hypothesis
+
+An agent's ceiling on a task is set by the quality of the feedback available on that task. Where a mistake is signalled explicitly and immediately, agents iterate to correct answers. Where mistakes are silent, or where correctness is a matter of taste, agents stall, and no amount of model capability rescues them, because the model has nothing to steer against.
+
+The evidence we already have is one-sided. Good error messages keep agents unstuck; bad ones produce flailing. Rust's type and borrow rules convert a category of errors into compile-time refusals, and agents write better Rust than the raw difficulty of the language predicts. Agents do well on performance work precisely where a benchmark exists to rank attempts. Property-based testing pays off far beyond what its adoption rate suggests, because it manufactures counterexamples on demand. On the other side: agents do poorly on architecture, where the feedback is know-it-when-I-see-it and lives in a reviewer's head, and poorly on concurrency, where the feedback is silent data corruption that surfaces at runtime, on a different machine, hours later.
+
+The comparison that should change how we plan
+
+Consider two projects. One is a delightful, ergonomic photo-editing website. The other is a correct, high-performance storage engine in the class of RocksDB or InnoDB — not a distributed database like Aurora DSQL or PostgreSQL, just the engine.
+
+Today's single-shot, open-loop models get much closer on the website. That is the wrong basis for a five-year plan. "Delightful" has no oracle. Every iteration on the website must route through a person who looks at it and reacts, and people are slow, inconsistent, and expensive graders. The storage engine, by contrast, has a specification that fits on a few pages: the API contract, the safety properties, the liveness properties. Nothing in that loop needs a human. An agent can run it all night.
+
+Our intuition about which work is hard was formed under open-loop conditions. Under closed-loop conditions the ordering inverts. Plan for the inversion.
+
+Where to invest
+
+Compile-time feedback. Rust as a default for new systems work. Hydro for distributed dataflow. Verus for proofs that run in the same build as the code. The goal is to move errors from runtime to build time, where the agent sees them in seconds.
+
+Modelling-time feedback. TLA+ and P for protocol and concurrency design, so that interleaving bugs are found by a checker rather than by a customer. This is the single largest gap: concurrency is where agents are weakest and where the tooling to fix that already exists and is underused.
+
+Specification tooling. Kiro's spec analyzer and its successors. If a spec is the oracle, spec quality becomes a first-class engineering artifact and needs its own lint.
+
+Execution feedback. Deterministic simulators, high-fidelity mocks, and benchmark harnesses that are cheap enough to run per-iteration, not per-release.
+
+What this costs us
+
+These tools have real adoption cost and steep learning curves, and each one asks engineers to write specifications they currently carry in their heads. That is the bill. We are paying it to buy an oracle, and the oracle is the thing that scales.

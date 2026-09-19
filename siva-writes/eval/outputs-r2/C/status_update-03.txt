@@ -1,0 +1,18 @@
+Graph-store capacity status and hardware request
+September 2026 capacity review. Owner: Mei-Lin Chao.
+
+The ask: approve 400 hosts, $2.9M annualised, with the purchase order signed by Nov 3 2026.
+
+The fleet runs 2,100 hosts across three regions and carries a peak of 1.8M QPS, or 857 QPS per host. Load testing puts the redline at 1,050 QPS per host, which sets the fleet ceiling at 2.205M QPS. Peak traffic today sits at 82% of that ceiling, leaving 18% headroom.
+
+Growth has been 4.2% per month compounded over the trailing nine months, and every month since January has landed within 0.4 points of that rate. Nine consecutive months inside a 0.8-point band is the reason this forecast extrapolates a single rate instead of a range. Hold 4.2% and peak reaches the 2.205M ceiling in 4.9 months, which is late February 2027, and reaches 2.6M QPS by June 2027.
+
+Serving 2.6M QPS at redline needs 2,476 hosts. Rounding up to a fleet of 2,500 means buying 400, at $7,250 per host per year for $2.9M annualised. Hardware lead time is 14 weeks. Sign on Nov 3 2026 and the hosts rack on Feb 9 2027, roughly two weeks ahead of the crossing. Slip the signature by a month and the hosts arrive after the fleet is already past redline, with no way to recover the schedule -- the lead time does not compress.
+
+The board should know what 400 hosts does not buy. A 2,500-host fleet redlines at 2.625M QPS, and the same 4.2% curve reaches 2.625M in late June 2027. These hosts rack in February and are consumed by the end of June: about four and a half months of headroom. This request is a bridge, not a solution to 2027. If growth holds, a second request of comparable size comes to this board in Q1 2027 for hardware landing mid-year, and the two together are the real shape of the 2027 spend.
+
+One alternative exists on paper. Moving the read path to the new columnar serialization is estimated to cut CPU per query by 18%, which raises the per-host redline to about 1,280 QPS and the fleet ceiling to 2.69M QPS on the existing 2,100 hosts. That pushes the crossing out by roughly five months. The forecast circulated before this review put that date in August 2027; recomputing from the same 1.8M September base and the same 4.2% rate gives mid-July 2027, and July is the number to use.
+
+Two conditions make the columnar path unusable as an offset today. The 18% is an estimate from profiling, not a measured result from a migrated read path. No engineer is assigned, and the work has been unstaffed for two quarters, which is six months of evidence about its real priority. Staffing it now would not change this request either way, because the hardware decision is due Nov 3 and no migration completes and proves out its 18% in ten weeks. Staffing it now would change the size of the Q1 2027 request, and that is the argument for doing it.
+
+The request in front of the board is 400 hosts and $2.9M annualised, signed by Nov 3 2026. If the board declines, the fleet crosses redline in late February 2027 with no mitigation staffed, and graph-store serves peak traffic above the load-tested limit. Mei-Lin Chao will bring the sizing for the Q1 2027 request to the December review.

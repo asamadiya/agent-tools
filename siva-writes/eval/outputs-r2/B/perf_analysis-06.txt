@@ -1,0 +1,19 @@
+## Diagnosis: the file outgrew the page cache
+
+The first useful number came from `free -m` on the problem instance: total 64,414 MB, used 15,421, free 349, buff/cache 48,643, available 48,409, swap 0. A 64-Gbyte machine was holding roughly 48 Gbytes of file pages and had 349 MB genuinely free. Nothing here is a fault by itself. A Linux box that has been reading files is supposed to look like this, and the available column says 48 Gbytes of that cache is reclaimable on demand.
+
+The file sizes are what make the number interesting. A 40-Gbyte upload fits inside a 48-Gbyte page cache; a 100-Gbyte upload does not. If the service makes more than one pass over the file, the fast case re-reads every pass out of memory and the slow case re-reads it off S3-backed disk. That is a theory, not a finding, and `free` cannot settle it -- it reports cache size, not cache behaviour.
+
+`cachestat` settled it. The tool reports per-second page cache hits, misses and hit ratio; it began as a Ftrace experiment and has since been ported to bcc/eBPF. During a 100-Gbyte upload it printed hit ratios of 74.1%, 9.7%, 6.5%, 12.0%, 34.5%, 7.0% and 11.1% across seven consecutive seconds, with misses climbing from 632 to 23,341, BUFFERS_MB 17 and CACHE_MB near 48,000. Healthy workloads on this service sit in the upper 90s. Seven seconds in single digits and low teens is cache busting: the working set exceeds the cache, every pass evicts the pages the next pass wants, and each miss becomes a disk read.
+
+Run the control to be sure the tool is not simply reporting a busy machine. On a 32-Gbyte upload, `cachestat` showed a 100.0% hit ratio and 0 misses in every second sampled, with hits between 33,424 and 65,158, BUFFERS_MB 41 and CACHE_MB about 33,680. `free -m` on that run showed used 18,421, free 11,218, buff/cache 34,773 -- the whole file resident, with headroom left over. `iostat` showed almost no disk I/O. The 32-Gbyte file is processed entirely from memory, however many passes the code takes, because no pass ever has to go back to disk.
+
+Two files, two ratios, 100.0% against single digits, and the only variable that changed is whether the file fits in 48 Gbytes. The hours-versus-minutes gap is disk I/O that the small case never pays.
+
+## Recommendations
+
+**Move the workload to a larger-memory instance.** This is the fastest fix and needs no code change. Size it so the largest expected file plus the process working set fits in page cache: at 100 Gbytes of file against 15,421 MB of non-cache use, a 128-Gbyte instance is the first size that clears. Re-run `cachestat` after the move and hold the service to hit ratios in the upper 90s. That check is also the regression test -- when file sizes grow again, the ratio falls before the latency complaint arrives.
+
+**Rework the file handling to respect the memory constraint.** Bigger instances buy a ceiling, not an invariant, and the next 200-Gbyte customer erases it. Process the file in parts sized to fit cache instead of making multiple passes over the whole thing, so each part is read once and completed while its pages are still resident.
+
+A caveat on the instrument. `cachestat` was the tool that cracked this, and it remains experimental: it was built under tight constraints, low overhead and the Ftrace function profiler only, and it can break when the kernel functions it traces change. At the LSFMMBPF 2019 keynote in Puerto Rico we argued in front of Linux mm engineers that statistics this commonly needed belong in /proc. They pushed back with real objections -- page cache counters sit on a hot path, and maintaining them is not free.

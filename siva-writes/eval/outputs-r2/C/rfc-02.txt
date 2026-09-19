@@ -1,0 +1,61 @@
+## Actuating a resize
+
+The resources the kubelet asks for are not the resources the container ends up
+running with. The Linux kernel clamps CPU shares and CPU quota to its own
+minimums, the systemd cgroup driver rounds CPU quota up to the nearest 10ms, and
+an NRI plugin can rewrite the container configuration on its way to the runtime.
+A container whose desired quota is 5ms per period therefore reads back as 10ms,
+and it will read back that way on every sync for as long as it runs. A
+level-triggered comparison of desired against actual cannot decide whether a
+resize is needed, because a container that has already been resized correctly is
+indistinguishable from one that has not.
+
+The kubelet keeps a set of *actuated* resources per container: the resource
+configuration it handed to the runtime through `CreateContainer` or
+`UpdateContainerResources` and got a success back for. The resize decision
+compares desired against actuated. Actual resources are still read, but they feed
+status, not the decision.
+
+Actuated resources are checkpointed next to allocated resources so that they
+survive a kubelet restart. The checkpoint write and the CRI call cannot be made
+atomic, so a restart landing between them leaves the kubelet believing a resize
+did not happen when the runtime has already applied it. The kubelet will repeat
+the call on the next sync. `UpdateContainerResources` must therefore be
+idempotent: applying the same resource configuration twice must leave the
+container in the state one application would have left it in, and must return
+success the second time.
+
+After a successful CRI resize the kubelet marks the pod for resync so the next
+pass recomputes status against the new actuated values. If actual still does not
+match desired at that point, the difference appears in pod status and nothing
+further acts on it. That gap is normally the kernel or the cgroup driver doing
+what is described above, and no configuration the kubelet could send would close
+it; retrying would only produce the same rounded value again. A resize that
+*fails* is retried on every subsequent pod sync until it succeeds or the
+container terminates.
+
+## Lowering a memory limit
+
+A memory limit cannot be lowered below current usage without a cost, and the cost
+depends on the cgroup version. With cgroups v1 the kernel rejects the write and
+the resize fails. With cgroups v2 the write succeeds and the kernel reclaims or
+oom-kills to bring usage under the new limit. The v2 behaviour is the dangerous
+one: the resize reports success and the container dies.
+
+For a container whose resize restart policy for memory is `NotRequired`, the
+kubelet reads container memory usage from the StatsProvider before issuing the
+CRI call and skips the resize for that container when usage exceeds the desired
+limit. The pod keeps the `PodResizeInProgress` condition with reason `Error`, and
+the message carries both the observed usage and the desired limit so an operator
+can see how far over the container is. The skipped container is retried on the
+next sync, and it will succeed once the workload's usage drops below the target.
+
+This check is best-effort. Usage is sampled from the stats cache and the limit is
+applied some time later, so a container can allocate in between and be killed
+anyway. The race is narrow but it is real, and the check does not close it; it
+turns a reliable kill into an unlikely one.
+
+The same comparison runs at pod level before the kubelet lowers the pod cgroup
+memory limit, using pod-level usage against the pod-level desired limit. Nodes at
+v1.33 and earlier check only pod-level usage, so a downgrade from a node running
+this code re-exposes the per-container case.

@@ -1,0 +1,23 @@
+The filesystem that was not there
+
+A Netflix microservice team doing metrics ingestion updated their base OS image and then watched CPU headroom disappear. Their conclusion, filed and escalated, was that ZFS was eating over 30% of the box. The engineer they pulled in had worked on ZFS internals at Sun, and he did not believe it. ZFS is not a cheap filesystem, but short of a badly broken configuration it does not burn a third of a machine. He checked anyway, which is the only defensible response to a number you dislike.
+
+Atlas, the cloud-wide monitoring tool, agreed with the team on the symptom. 38% of CPU time was sitting in sys. For Netflix cloud workloads that figure is strange on its own: these are user-space services, and a system-time share that large means the kernel is doing something nobody asked it to do. The team's number was real. Their attribution was the open question.
+
+The next step was not an SSH session. Logging in to run mpstat(1) and perf(1) is a fine reflex and a slow one, and it only reaches the instance you happen to pick. Netflix's flame graph fetch tooling -- Vector then, FlameCommander later -- pulls a CPU profile from the fleet without a human touching a shell, so the profile arrived before a login would have finished.
+
+The flame graph showed two orange kernel towers, one on the left and one on the right. The left tower was arc_reclaim_thread. The right entered spl_kmem_cache_reap_now(), a second ZFS memory-freeing path, almost certainly contending with the first on the same locks. Two towers of the same subsystem fighting each other is a recognizable shape, and it is what the team's 30% claim looked like from the inside.
+
+Some background on what that thread does. The Adaptive Replacement Cache is ZFS's main in-memory cache, and arc_reclaim_thread calls arc_adjust() to evict buffers and hold a free-memory threshold, running periodically or when woken by memory pressure. The known historical way to make that thread expensive is a tiny record size: set 512 bytes, get millions of buffers, and eviction has millions of things to walk. That explanation dies fast here. The default record size is 128 Kbytes and nobody tunes below 8 Kbytes.
+
+First theory: a new infrastructure project was using ZFS to back containers, and container churn meant filesystem churn meant constant ARC reclaim. The team said they were not running containers. Then the team said they were not running ZFS at all.
+
+That claim is cheap to test, and it held. df -h, mount and zfs list on two instances reported no ZFS filesystems mounted. Better still, /proc/spl/kstat/zfs/arcstats had every counter pinned at zero -- hits 0, misses 0, the whole file. An unused cache is not a theory about workload. It is an ARC that has never held a byte, spending measurable CPU on a fleet.
+
+Reading the source and the change history explained it. A multilist performance feature had split the ARC's lists one per CPU to cut lock contention on eviction, which is a good change for a busy cache. Eviction then picked which list to drain at random, and the random source was the kernel's cryptographically-secure generator. The flame graph had already drawn this: the paths ran down into get_random_bytes() and extract_entropy(). ARC was detecting low system memory across the box, paying for cryptographic randomness to choose one of its per-CPU lists, finding that list empty, and repeating. Every list was empty. The work was total, and its yield was zero.
+
+Read the two towers again with that in mind. The left tower is the reclaim loop asking entropy for a list index. The right is a second reap path doing the same and colliding on the locks the multilist split was supposed to relieve. The optimization was not broken. It had no early exit for the case where the cache holds nothing, and a general-memory-pressure signal was enough to start it.
+
+The finding went upstream as ZFS issue #6531, and the first fix made arc_reclaim_thread bail out earlier when ZFS is unused.
+
+Two things are worth taking from this. The team's measurement was correct and their attribution was wrong, and only the profile could separate those. And the load came from a subsystem that had zero users on the machine, which is why "we do not use that" is a starting point for investigation rather than the end of one.

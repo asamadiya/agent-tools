@@ -1,0 +1,24 @@
+Measuring availability and recovery from the customer's clock
+
+Proposal
+
+Two of our dashboards disagree with our users, and both sides are right. A service reports mean request time of 100 ms while a user reports a mean wait of 1 s. A service reports MTTR under 1 minute while a user reports a mean outage length of 1 hour. The operator counts events: one request, one outage. The customer samples elapsed time, and the number of customers who hit a given outage is proportional to that outage's length. A one-hour outage collects roughly sixty times the victims of a one-minute outage, so it should carry sixty times the weight in any number we publish.
+
+The arithmetic
+
+Customers do not sample f(t). They sample a t-weighted version of it. If the operator's mean is E[X], the mean a customer experiences is
+
+  E_a[X] = E[X^2] / (2 E[X]) = 0.5 * (E[X] + Var(X)/E[X])
+
+The gap is Var(X)/E[X], and recovery-time variance is large. Fit a log-normal to two points we already report -- median TTR 30 minutes and p99 TTR 600 minutes -- and you get sigma = ln(20)/2.326 = 1.288, mu = ln(30) = 3.401. That distribution has a mean of 68.7 minutes, which is the MTTR just over an hour that we publish today. Its customer-experienced mean is e^(sigma^2)/2 = 2.63 times larger: 181 minutes, or about 3 hours. The customer number is a multiple of MTTR, not a correction to it, and the multiplier depends only on sigma.
+
+Run the simulator to see the tail's reach. With lognormal failure_mu=1.0, failure_sigma=3.0, Poisson client arrivals at rate 100 per unit time, and 1000 samples, the same formula gives e^9/2 = 4051x. Sigma = 3.0 is a stress case rather than a forecast, and it bounds how wrong an event-counted SLO can be.
+
+What we should change
+
+1. Publish customer-weighted recovery time (CWRT) beside MTTR on every service scorecard, computed as E[X^2]/(2 E[X]) over the trailing 90 days of incident durations. Keep MTTR -- it is the right number for on-call load.
+2. Alert on sigma of the TTR distribution, not on its mean. A team that cuts median TTR while leaving one 10-hour failure mode intact moves MTTR down and CWRT up.
+3. Report request latency at the arrival-weighted mean for user-facing tiers, since timeout-and-retry hides some service-time tail.
+4. Do not extend retry logic to recovery. Retries mask service-time tail; nothing masks recovery-time tail, because the customer is inside the outage for its whole length.
+
+Owner: platform reliability. First scorecard with CWRT lands next quarter.

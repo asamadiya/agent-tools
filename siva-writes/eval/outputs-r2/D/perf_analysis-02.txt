@@ -1,0 +1,62 @@
+Fixing os::javaTimeMillis(): the Xen clocksource, not the JVM
+
+The Xen paravirtualized clocksource, and not the JVM or Cassandra, was holding the third of CPU
+time that the flame graph attributed to os::javaTimeMillis(); echoing tsc into
+current_clocksource took a 100,000,000-call timing loop from 68.3 seconds to 3.37 seconds and
+dropped production write latencies by 43%.
+
+No microbenchmark for that call existed. TimeBench.java loops 100,000,000 times
+calling System.currentTimeMillis(), compares the result against the constant 87362, and does a
+println inside the loop on match, which keeps the compiler from deciding the loop has no effect
+and deleting it. The comparison and the branch cost something, and that cost is inside every
+number below. Run it under shell time(1) on both distributions on the same EC2-Xen instance type.
+
+The two distributions differ by 5x per call. CentOS gave real 0m12.989s, user 0m3.368s, sys
+0m18.561s, about 0.13 us per call. Ubuntu gave real 1m8.300s, user 0m38.337s, sys 0m29.875s,
+about 0.68 us per call. Per-call cost here is wall time divided by 1e8; the user and sys figures
+are summed over every thread in the process, which is why sys alone exceeds real on the CentOS
+run, and they are worth reading for their shape and not as a partition of the elapsed second.
+
+The shape says kernel. 29.875 seconds of system time for a call that is supposed to read a
+counter is not a JIT problem and it is not a garbage collection problem, and the same 1e8-call
+loop written in C against gettimeofday(2) and compiled at -O0 to keep the loop intact reproduced
+the Ubuntu result closely. That rules out the JVM. Disassemble a benchmark this short before arguing about whether -O0 was
+enough; it takes a few minutes and it confirms the compiler emitted what you thought it did.
+
+/sys/devices/system/clocksource/clocksource0/available_clocksource listed xen, tsc, hpet,
+acpi_pm, and current_clocksource read xen. That matches the flame graph directly: the frame under
+os::javaTimeMillis() was pvclock_clocksource_read(), which is the Xen paravirtual clock path.
+Echo tsc into current_clocksource. It takes effect immediately, with no reboot and no restart of
+the JVM, and it is reversible by echoing xen back.
+
+TimeBench after the switch ran real 0m3.370s, user 0m3.353s, sys 0m0.026s. That is over 20x
+faster than the Ubuntu number and nearly 4x faster than CentOS, and the interesting column is
+sys: 29.875 seconds became 0.026 seconds, so essentially all of the work left the kernel. At
+roughly 33 ns per call the loop's own compare-and-branch is now a visible fraction of the
+measurement, and partially unrolling the loop would tighten the estimate downward; treat 33 ns as
+an upper bound on the call itself.
+
+The mechanism is that TSC reads time with a single RDTSC instruction served through the vDSO,
+with no syscall and no hypervisor round trip. The Xen pvclock path has to reach shared
+hypervisor state, which is where the system time went. This also explains why the tsc number
+beats CentOS instead of merely matching it -- CentOS was faster only because it had selected a
+cheaper clocksource, and nothing about CentOS makes a vDSO RDTSC cheaper than it is on Ubuntu.
+
+TSC has been avoided for years over clock drift, and that caution is the reason a 5x penalty sat
+unnoticed in a default. A processor engineer met at a conference said tsc had been stable for
+years, but knew of no public reference to point at. That is one expert opinion and no citation.
+Combined with a fault-tolerant cloud that tolerates individual nodes behaving badly, that was
+enough evidence to try tsc in production, which is a different bar than the bar for recommending
+it generally. If your architecture cannot survive a node with a skewed clock, the calculation is
+not the same.
+
+Production confirmed the microbenchmark. Write latencies dropped 43%, slightly better than the
+CentOS baseline, and os::javaTimeMillis() fell from about a third of CPU to 1.6% of it, with only
+a vdso frame above it in the flame graph. The remaining 1.6% is the RDTSC path doing its job.
+
+Read current_clocksource on every Xen guest before you profile anything above the kernel. It is
+one cat, the set of available sources is in the adjacent file, and a wrong value there charges
+every call that asks the time -- not only System.currentTimeMillis(), but every log timestamp,
+every latency measurement, and every timeout check in the process. A service that asks for the
+time often enough will pay 0.68 us each time and see it distributed across its own code, where it
+looks like the application is slow.

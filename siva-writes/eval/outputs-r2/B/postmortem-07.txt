@@ -1,0 +1,26 @@
+1.1.1.1 Resolver outage, 14 July 2025
+
+All times UTC.
+
+The 1.1.1.1 public DNS Resolver was unavailable worldwide for 62 minutes, from 21:52 to 22:54 on 14 July 2025. We withdrew every Resolver prefix from the internet, including 1.1.1.0/24, 1.0.0.0/24 and 2606:4700:4700::/48. Query volume over UDP, TCP and DoT collapsed to near zero. DoH held mostly steady, because most DoH clients query cloudflare-dns.com, which answers on different addresses. Gateway DNS degraded intermittently across the same window. The outage was ours: a configuration error, not an attack and not a hardware or capacity event.
+
+The error was 38 days old when it fired. On 6 June at 17:38 we shipped a release that prepared a service topology for a future Data Localization Suite service, and that release attached the 1.1.1.1 Resolver prefixes to the non-production service. Nothing moved on the production network. No traffic shifted, no alert fired, and the resolver kept serving from its real topology, because the bad binding only takes effect when something forces the topology to be recomputed.
+
+On 14 July at 21:48 an engineer attached an offline test location to that same non-production service for internal testing. The attachment triggered a global refresh of network configuration. The refresh rebuilt the 1.1.1.1 topology from the service's location list, which now held one offline location instead of the full production set, and it withdrew the Resolver prefixes from every location on earth. Prefixes began leaving the global routing table at 21:52.
+
+| Time | Event |
+|---|---|
+| 21:48 | Test location attached; global config refresh begins |
+| 21:52 | Resolver prefixes withdrawn worldwide; queries start failing |
+| 22:01 | Internal health alerts fire; incident declared |
+| 22:20 | Revert initiated; prefixes re-advertised; traffic recovers to about 77% of pre-incident volume |
+| 22:54 | Traffic normal |
+| 22:55 | Incident resolved |
+
+Re-advertising the prefixes recovered most of the service but not all of it. Roughly 23% of edge servers had lost their IP bindings during the withdrawal and could not answer queries until those bindings were rebuilt, and that rebuild runs through change management, which normally stages over hours. We validated the change in test locations first and then accelerated the rollout across the remaining edge servers, which closed the last 23% between 22:20 and 22:54. Users in the affected metros saw a partial service for those 34 minutes.
+
+One event during the window was not ours. At 21:54, two minutes after the withdrawal, Tata Communications India (AS4755) began advertising 1.1.1.0/24. The withdrawal exposed that advertisement by removing the legitimate route that had been outcompeting it; it did not cause or extend the outage. If you received DNS answers on 1.1.1.1 from that path during the window, treat them as untrusted.
+
+The deeper fault is the legacy topology system. It hard-codes location lists in the service definition, and applies a topology change to every location in one step with no canary stage and no health gate between stages. Peer review did not catch the 6 June change, because a reviewer reads the topology the author intended and has no easy way to see which prefixes a service definition claims. Two properties turned a typo into a global outage: a change with no progressive rollout, and a latent binding whose blast radius stayed invisible until an unrelated action forced a refresh.
+
+We are making four changes. We are deprecating the legacy topology system and moving 1.1.1.1 and the other anycast services onto the gradual rollout mechanism the rest of our network already uses, which stages by location and halts on health signal. We are adding a preflight check that refuses any topology refresh that would withdraw a production prefix from more than a configured fraction of locations. We are removing hard-coded location lists in favour of named, queryable location sets. We are adding external reachability probes for the Resolver prefixes, so a withdrawal alerts in under a minute instead of the nine minutes it took here.

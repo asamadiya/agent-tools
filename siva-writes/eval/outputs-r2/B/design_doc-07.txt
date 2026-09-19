@@ -1,0 +1,31 @@
+How to reason about coding-agent capability
+
+Design doc -- Developer Tools
+
+The question
+
+Coding agents now produce meaningful, correct software quickly and at very low cost, and on some coding tasks they beat every human we can hire. We keep answering the wrong question about that: is the model smart enough. We propose the team reason about the loop instead, because the loop is the thing we build and the thing we can change.
+
+Computers have been super-human for at least 85 years
+
+Marian Rejewski's team broke Enigma keys in the 1930s with machines that outperformed any human cryptanalyst at the search they were built for. A MacBook today adds two 64-bit integers roughly 100,000,000,000 times faster than a person with pencil and paper -- the comparison is arithmetic throughput only, and it assumes a few seconds per human addition. Nine decades of that history show one stable pattern: a computer is vastly super-human in some areas and well short of human in others, and the boundary moves without ever disappearing. An agent that writes a correct parser in 90 seconds and then misreads a build failure sits inside that pattern, not outside it.
+
+A square-root circuit is the useful mental model
+
+Take an opamp and an analog multiplier IC -- the MC1495 is the classic part, long obsolete. Wire the multiplier so it squares the opamp's output and feeds that back to one input. Apply a voltage on the left; the voltage on the right is its square root. The mechanism is the whole point. The opamp drives its two inputs to equality, so forcing output-times-output to equal the input forces the output to the square root. Build the circuit and sweep the input from 0 V to 10 V: the output tracks the square root even though no component in the box computes one.
+
+Generalise it. A component inside a feedback loop can behave very differently from its open-loop behaviour, and you can extract an excellent output from a poor component. The MC1495 has meaningful gain error and offset; the loop suppresses both by the loop gain.
+
+An LLM is that component. Its open-loop behaviour is useful and flawed: it writes plausible code, invents APIs, and misremembers versions. An agent is the feedback loop wrapped around it, and the error signal is a test run, a compiler, a type checker, or a reviewer.
+
+Two years of tooling already moved this way
+
+IDE autocomplete was open-loop: the model emitted a suggestion and a human closed the loop by running the build. Agents relocated the build-test-iterate loop inside the agent, so the model's per-token error rate stopped setting the quality of the artifact.
+
+What this means for our roadmap
+
+Judge a change by what it does to loop gain and to the error signal, instead of by the model's benchmark score. Three consequences follow:
+
+1. Cheap, fast, precise feedback is our leverage. A test suite that runs in 8 seconds is worth more than one that runs in 8 minutes at the same coverage.
+2. Silent failure modes are the real risk, because a loop cannot correct an error nobody measures. Anything the tests cannot see, the agent will drift on.
+3. A weaker model inside a tighter loop can beat a stronger model inside a loose one. Measure that pairing before we buy either.

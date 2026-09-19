@@ -1,0 +1,445 @@
+{
+  "seed": 20260918,
+  "n": 60,
+  "conditions": [
+    "A",
+    "B",
+    "C",
+    "D",
+    "H"
+  ],
+  "contrasts": {
+    "A|B": 6,
+    "A|C": 6,
+    "A|D": 6,
+    "A|H": 6,
+    "B|C": 6,
+    "B|D": 6,
+    "B|H": 6,
+    "C|D": 6,
+    "C|H": 6,
+    "D|H": 6
+  },
+  "pairs": [
+    {
+      "pair_id": "p001",
+      "brief_id": "perf_analysis-04",
+      "A_condition": "A",
+      "B_condition": "C",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p002",
+      "brief_id": "postmortem-08",
+      "A_condition": "D",
+      "B_condition": "H",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p003",
+      "brief_id": "design_doc-05",
+      "A_condition": "A",
+      "B_condition": "C",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p004",
+      "brief_id": "postmortem-08",
+      "A_condition": "A",
+      "B_condition": "D",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p005",
+      "brief_id": "postmortem-06",
+      "A_condition": "H",
+      "B_condition": "D",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p006",
+      "brief_id": "rfc-07",
+      "A_condition": "H",
+      "B_condition": "D",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p007",
+      "brief_id": "design_doc-03",
+      "A_condition": "C",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p008",
+      "brief_id": "postmortem-03",
+      "A_condition": "C",
+      "B_condition": "H",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p009",
+      "brief_id": "postmortem-06",
+      "A_condition": "A",
+      "B_condition": "B",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p010",
+      "brief_id": "postmortem-01",
+      "A_condition": "H",
+      "B_condition": "C",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p011",
+      "brief_id": "rfc-01",
+      "A_condition": "D",
+      "B_condition": "C",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p012",
+      "brief_id": "postmortem-03",
+      "A_condition": "D",
+      "B_condition": "C",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p013",
+      "brief_id": "postmortem-06",
+      "A_condition": "B",
+      "B_condition": "D",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p014",
+      "brief_id": "design_doc-05",
+      "A_condition": "B",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p015",
+      "brief_id": "rfc-05",
+      "A_condition": "C",
+      "B_condition": "H",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p016",
+      "brief_id": "rfc-08",
+      "A_condition": "H",
+      "B_condition": "B",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p017",
+      "brief_id": "perf_analysis-05",
+      "A_condition": "B",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p018",
+      "brief_id": "design_doc-08",
+      "A_condition": "B",
+      "B_condition": "D",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p019",
+      "brief_id": "status_update-04",
+      "A_condition": "D",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p020",
+      "brief_id": "postmortem-02",
+      "A_condition": "D",
+      "B_condition": "B",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p021",
+      "brief_id": "design_doc-03",
+      "A_condition": "H",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p022",
+      "brief_id": "postmortem-08",
+      "A_condition": "C",
+      "B_condition": "D",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p023",
+      "brief_id": "status_update-07",
+      "A_condition": "A",
+      "B_condition": "D",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p024",
+      "brief_id": "design_doc-01",
+      "A_condition": "A",
+      "B_condition": "B",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p025",
+      "brief_id": "perf_analysis-07",
+      "A_condition": "A",
+      "B_condition": "H",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p026",
+      "brief_id": "perf_analysis-07",
+      "A_condition": "B",
+      "B_condition": "C",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p027",
+      "brief_id": "status_update-03",
+      "A_condition": "B",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p028",
+      "brief_id": "postmortem-04",
+      "A_condition": "H",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p029",
+      "brief_id": "rfc-03",
+      "A_condition": "D",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p030",
+      "brief_id": "rfc-07",
+      "A_condition": "D",
+      "B_condition": "B",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p031",
+      "brief_id": "design_doc-08",
+      "A_condition": "D",
+      "B_condition": "H",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p032",
+      "brief_id": "rfc-01",
+      "A_condition": "B",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p033",
+      "brief_id": "rfc-08",
+      "A_condition": "H",
+      "B_condition": "D",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p034",
+      "brief_id": "perf_analysis-07",
+      "A_condition": "H",
+      "B_condition": "D",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p035",
+      "brief_id": "rfc-06",
+      "A_condition": "B",
+      "B_condition": "H",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p036",
+      "brief_id": "perf_analysis-06",
+      "A_condition": "B",
+      "B_condition": "H",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p037",
+      "brief_id": "postmortem-05",
+      "A_condition": "H",
+      "B_condition": "B",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p038",
+      "brief_id": "design_doc-04",
+      "A_condition": "D",
+      "B_condition": "B",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p039",
+      "brief_id": "postmortem-08",
+      "A_condition": "H",
+      "B_condition": "C",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p040",
+      "brief_id": "rfc-04",
+      "A_condition": "C",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p041",
+      "brief_id": "perf_analysis-04",
+      "A_condition": "B",
+      "B_condition": "C",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p042",
+      "brief_id": "perf_analysis-06",
+      "A_condition": "C",
+      "B_condition": "B",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p043",
+      "brief_id": "status_update-07",
+      "A_condition": "B",
+      "B_condition": "C",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p044",
+      "brief_id": "design_doc-02",
+      "A_condition": "D",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p045",
+      "brief_id": "status_update-08",
+      "A_condition": "C",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p046",
+      "brief_id": "perf_analysis-01",
+      "A_condition": "C",
+      "B_condition": "D",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p047",
+      "brief_id": "perf_analysis-06",
+      "A_condition": "H",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p048",
+      "brief_id": "design_doc-01",
+      "A_condition": "B",
+      "B_condition": "D",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p049",
+      "brief_id": "perf_analysis-05",
+      "A_condition": "H",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p050",
+      "brief_id": "perf_analysis-02",
+      "A_condition": "H",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p051",
+      "brief_id": "design_doc-01",
+      "A_condition": "H",
+      "B_condition": "C",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p052",
+      "brief_id": "design_doc-06",
+      "A_condition": "C",
+      "B_condition": "D",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p053",
+      "brief_id": "postmortem-02",
+      "A_condition": "A",
+      "B_condition": "D",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p054",
+      "brief_id": "status_update-03",
+      "A_condition": "C",
+      "B_condition": "D",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p055",
+      "brief_id": "design_doc-05",
+      "A_condition": "H",
+      "B_condition": "B",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p056",
+      "brief_id": "postmortem-08",
+      "A_condition": "C",
+      "B_condition": "A",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p057",
+      "brief_id": "postmortem-02",
+      "A_condition": "H",
+      "B_condition": "C",
+      "position_flipped": true
+    },
+    {
+      "pair_id": "p058",
+      "brief_id": "rfc-03",
+      "A_condition": "B",
+      "B_condition": "H",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p059",
+      "brief_id": "perf_analysis-05",
+      "A_condition": "B",
+      "B_condition": "C",
+      "position_flipped": false
+    },
+    {
+      "pair_id": "p060",
+      "brief_id": "design_doc-06",
+      "A_condition": "C",
+      "B_condition": "B",
+      "position_flipped": true
+    }
+  ]
+}

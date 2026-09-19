@@ -1,0 +1,25 @@
+Disaggregating a data service: what to split, and why
+
+Goal
+
+We want a data service that a builder can adopt without first learning how it scales. Scale, reliability, durability, and multi-region fault tolerance should be properties of the service, not decisions the application makes. That is a high bar, and it is the only bar worth setting, because the alternative is a service that is simple at low scale and demands a migration at high scale. A database of first resort has to grow with the application without asking the application to grow with it.
+
+This matters more now that agents write much of the code that calls us. Agents produce good code in a single sitting. They are weak at long-horizon tasks, and database operations -- capacity planning, shard splits, failover drills, version upgrades -- are long-horizon tasks stretched over months. Every knob we expose is a knob an agent will eventually set wrong at three in the morning with no human watching. Operational simplicity is a human benefit and an agent requirement.
+
+Architecture
+
+Build the service as several independent services, each owning a small number of well-defined concerns. Aurora and DynamoDB both took this shape before DSQL did, so disaggregation is not the novel part; how far to carry it is. DSQL's contribution is to separate replication from transaction isolation and from storage, so that each can scale and fail on its own schedule. Isolation is a property of the transaction protocol. Durability is a property of the log. Neither needs to know the other's failure domain.
+
+Three lessons carry over from running the earlier systems at scale, and we should design for all three on day one rather than retrofit them.
+
+Avoid large caches. A large cache is a large amount of state that has to be rebuilt after a failover and duplicated to add a read replica. Both operations get slower exactly as the fleet gets bigger, which is the wrong direction.
+
+Offer strongly consistent scalable reads. Consistent reads that scale horizontally remove whole classes of hot-key and partition problems, because the application no longer routes around a stale replica or pins a key to a leader to get a read it can trust.
+
+Push expensive operations into storage. A scan that runs next to local SSD moves rows, not bytes over the network. This is the same reason the split exists at all: put the work where the data already is.
+
+Multi-tenancy
+
+Pack tenants aggressively. Cost scales with peak load and revenue scales with average load, so the gap between them is the margin. Independent loads smooth each other at roughly the rate of the square root of the number of loads: a tenant whose peak is 5x its average carries 4x of excess, and packing 100 such tenants cuts that excess by about 10, leaving a fleet peak near 1.4x its average. The Firecracker paper makes the same argument for microVMs, which suggests the effect is a property of independent arrivals rather than of any one workload.
+
+Independence is the assumption to check. Correlated tenants -- same time zone, same cron schedule, same upstream event -- do not smooth, and the square root does not apply to them.

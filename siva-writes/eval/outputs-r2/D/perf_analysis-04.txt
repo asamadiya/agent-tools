@@ -1,0 +1,15 @@
+Ten percent of a box's CPU spent faulting pages its allocator had just thrown away
+
+A TensorFlow workload was burning 10% of all CPU time on the box handling page faults because jemalloc kept telling the kernel it no longer needed pages the workload was still using, and a rebuild against glibc's allocator brought the first round of testing back at 3%.
+
+Vadim found it by reading a CPU flame graph and picking out an orange kernel tower that did not belong: page-fault work, a tenth of the machine. That number is worth a morning on its own arithmetic. Multiply a tenth of the CPU by a fleet of thousands of instances and you are paying for hundreds of machines that do nothing but rebuild mappings; this team will open a flame graph over a single percentage point, and ten is not a close call.
+
+The faulting stacks led to __memcpy_avx_unaligned(), which means memcpy was touching data segment mappings that were not resident. Early in a process's life that is ordinary and uninteresting, because the segments and the heap have no mappings yet and every first touch is a fault. This process had been running for hours. By that point the growth of RSS from faults should have flattened off, and a process that is still faulting at a steady 10% after hours is either handing memory back to the kernel or being handed it back.
+
+The obvious candidate, a process cycling memory through mmap() and munmap(), did not survive tracing: eBPF with mmapsnoop.py recorded no such calls at all. A flame-graph search on madvise found the real path at 0.8% of CPU, with madvise() descending into zap_page_range(), and that is where the faults were coming from. Reading the kernel's mm/advise.c settled which flag mattered -- MADV_DONTNEED is what sends madvise() down into zap_page_range() -- and tracing sys_madvise() flags with kprobes or tracepoints would have answered the same question without reading any source.
+
+That is an optimization that backfired. The allocator was declaring pages unneeded that the workload still had live, and each dontneed throws away the virtual-to-physical mapping for that range, so the next touch has to trap into the kernel and put a mapping back. The exchange rate is what makes it expensive: the 0.8% of CPU spent issuing the advice bought roughly ten times that much fault handling on the other side, because tearing down a mapping is one cheap call and reconstructing it is a trap, a page walk, and a copy.
+
+The allocator was jemalloc, pulled in by a configure option rather than by anyone deciding this workload wanted jemalloc's purging behavior. Vadim rebuilt against glibc and the problem cleared; testing came back at 3% against the 10% the team had in mind, and the fixed flame graph shows the tower gone.
+
+Check which allocator your build actually links before you trust a page-fault number. A high sustained fault rate on a long-lived process is not a memory-pressure signal by default; it can be your own allocator returning pages it will ask for again, and the flag that does it is visible in one madvise trace.

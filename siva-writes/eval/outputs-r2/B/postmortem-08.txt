@@ -1,0 +1,35 @@
+Congestion between Cloudflare and AWS us-east-1, 21 August 2025
+
+Between 16:27 and 20:18 UTC on 21 August 2025, customers with origins in AWS us-east-1 saw elevated latency, connection timeouts and reduced throughput on requests crossing our Ashburn (IAD) network. The disruption was regional. Global Cloudflare services were unaffected, and traffic to origins outside AWS us-east-1 was not involved. This was not an attack and not a BGP hijack. We are sorry for the impact.
+
+What happened
+
+A single customer began requesting large volumes of cached objects from AWS us-east-1 at about 16:27. The response traffic doubled total Cloudflare-to-AWS traffic and saturated every direct peering link between the two networks. At 16:37 AWS began withdrawing BGP advertisements on the congested private network interconnects to shed load. Those withdrawals steered traffic onto peering links reached through an offsite interconnection switch, and that path saturated in turn. Queues on our edge routers grew until the routers dropped packets, including packets marked high priority, so requests to affected origins timed out or completed slowly.
+
+Two pre-existing conditions reduced the headroom available before any of this began. One direct peering link was running at half capacity after an earlier failure. The Data Center Interconnect carrying traffic to the offsite switch was already due for a capacity upgrade it had not yet received. Neither condition started the incident. Both shrank the surge we could absorb before queues built.
+
+Timeline, all times UTC
+
+16:27 -- customer request volume begins to rise; Cloudflare-to-AWS traffic doubles
+16:37 -- AWS begins withdrawing advertisements on congested PNIs
+16:44 -- our network team is alerted to congestion in IAD
+16:45 -- responders find that uncongested paths no longer carry AWS prefixes
+17:22 -- dropped traffic increases
+17:45 -- a customer-impact incident is raised
+19:05 -- rate-limiting the customer reduces congestion
+19:27 -- traffic engineering fully resolves congestion
+19:45 -- AWS begins reverting the withdrawals
+20:07 -- AWS finishes normalizing announcements over IAD PNIs
+20:18 -- impact ends
+
+What customers saw
+
+Impact tracked the packet drops closely. The share of synthetic origin requests missing our latency SLO rose with the drop rate and fell with it. Latency stayed elevated for a period after drops stopped, because both networks were still renormalizing prefix advertisements and traffic kept moving between paths while announcements converged. Customers whose origins sat elsewhere, and customers served entirely from cache, saw nothing.
+
+Why recovery took three and a half hours
+
+The load-shedding mechanism removed the obvious remedy. Withdrawing advertisements on a congested interconnect is the correct response to a saturated link in isolation, but the withdrawals also pulled AWS prefixes off the paths that still had capacity. When responders reached the congestion at 16:45, they could not simply steer traffic around it, because the uncongested paths no longer carried the destinations. Resolution needed both sides: we rate-limited the originating customer at 19:05 and completed traffic engineering at 19:27, and AWS reverted its withdrawals between 19:45 and 20:07.
+
+What we are changing
+
+We are restoring the degraded peering link to full capacity and pulling the Data Center Interconnect upgrade forward. We are adding detection that identifies a single-account request surge against one origin network well before peering links saturate, and a documented rate-limiting path that we can apply in minutes instead of the 158 minutes it took here. We are working with AWS on interconnect withdrawal behaviour, specifically on keeping prefixes reachable over uncongested paths while load is shed from congested ones. We will report progress on these items.

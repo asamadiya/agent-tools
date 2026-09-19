@@ -1,0 +1,29 @@
+Request queuing for a multi-tenant RPC service
+
+Proposal
+
+We should queue incoming RPCs in a fixed set of queues, map each authorized customer id to a small subset of those queues by hash, enqueue each request into the shortest queue in that customer's subset, and perturb the hash periodically. This gives us per-customer isolation without per-customer state: O(1) queues, O(1) work on enqueue, O(1) work on dequeue.
+
+The problem we are solving
+
+A single customer sending far more than its share of traffic currently degrades every other customer on the host. Our service has one arrival path and one worker pool, so a customer that issues expensive or high-rate calls takes worker time from everyone else. The failure is not an outage. It is elevated latency and elevated error rates for tenants who did nothing, which is harder to explain to them than an outage.
+
+Why not plain fairness queuing
+
+Fairness queuing solves the isolation problem exactly, and its cost is the reason we are not proposing it. Keep a separate FCFS queue per conversation and service those queues bit-by-bit round-robin, and a conversation that exceeds its fair share gets longer delays and higher loss than a well-behaved one -- the excess stays with the sender. The construction ports to RPC by keying on authorized customer id instead of a source-destination address pair. What does not port well is the bookkeeping. We authorize tens of thousands of customer ids, so a faithful implementation means tens of thousands of queues on every host and a round-robin sweep across all of them to find the next packet to serve. That cost is O(customers) in both memory and dequeue time, and it grows with the business.
+
+Stochastic fairness queuing
+
+Paul E. McKenney's Stochastic Fairness Queuing, published in 1990, replaces the per-conversation queue with a hash. Fix the number of queues, hash the customer id into that set, and service the queues round-robin. Memory and dequeue time no longer depend on how many customers we have authorized. The approximation is where the cost went: two customers that hash to the same queue share a service slot, so each receives roughly half of what it should. McKenney's remedy is to perturb the hash function periodically, so a pair that collides in one period is unlikely to collide in the next. Unfairness becomes transient instead of structural.
+
+The variant we want
+
+Combining SFQ with shuffle sharding and best-of-two gets us stronger isolation for the same asymptotic cost. Map each customer to a subset of queues -- two is enough -- and on enqueue, compare the two queues in that customer's subset and take the shorter one. A noisy customer fills both of its queues. A quiet customer that happens to share one of them still has its other queue, and best-of-two steers it there within one comparison.
+
+The combinatorics are worth doing before we commit to a queue count. With 64 queues and subsets of size 2, there are C(64,2) = 2016 distinct subsets, so two specific customers share both queues with probability 1/2016 under a uniform hash. Sharing one queue is common and mostly harmless; sharing both is what hurts, and it is rare. Perturbing the subsets on a timer means even that pairing does not persist.
+
+The property holds only while noisy customers are a small fraction of the population. If a third of our tenants go noisy at once, every subset contains a hot queue and the scheme degrades toward no isolation at all. That is the condition to state plainly in the design and to watch in production.
+
+Scope
+
+Start on a single host, inside the RPC server's accept path. The same mapping works across hosts as a load-balancing key if the single-host results hold, but we should not build both at once.

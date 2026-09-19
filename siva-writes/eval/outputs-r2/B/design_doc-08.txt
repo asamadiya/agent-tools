@@ -1,0 +1,33 @@
+Where to invest in agent tooling
+
+The claim
+
+The availability of accurate feedback sets the ceiling on what a coding agent can do. Tasks with a fast, precise signal -- a compiler, a benchmark, a model checker -- will keep getting easier. Tasks whose only judge is a human reading the output will stay hard, and they will stay hard for reasons that a more capable model does not fix. We should fund the loop rather than the agent.
+
+What we already see
+
+Four observations point the same way. Good error messages keep agents unstuck, and an agent handed a vague error thrashes. Rust steers agents toward correct code because the compiler signals whole classes of incorrectness explicitly and at build time. Agents do well on performance work wherever a trustworthy benchmark exists. Property-based testing pays off more for an agent than for a person, since the agent can afford to run the generator ten thousand times and read every counterexample.
+
+The failures match. Architecture goes badly, because the feedback is of the know-it-when-I-see-it kind and nobody can write it down in advance. Concurrency goes worse: the feedback for a data race arrives as silent corruption at runtime, hours later, on a machine nobody is watching.
+
+The comparison that decides the roadmap
+
+Compare two projects. Build a delightful, ergonomic photo-editing website. Build a correct, high-performance storage engine at the scale of RocksDB or InnoDB -- not Aurora DSQL, not all of PostgreSQL. Ask which one an agent finishes.
+
+Today the website wins. An open-loop model produces something plausible in a single shot, and the storage engine's first shot is worthless.
+
+The hypothesis inverts that answer over a longer horizon. The website's loop closes only through a person: "delightful" has no oracle, and humans are slow, squishy, and inconsistent feedback providers. The storage engine has a specification covering the API, the safety properties, and the liveness properties, and that specification fits on a few pages, so every iteration can be judged without waking anyone. The bottleneck on the website is human attention. The bottleneck on the storage engine is compute, and compute is the input we can buy.
+
+Where to put money
+
+Three layers, ranked by how much signal each buys per dollar.
+
+Compile-time checking. Rust for memory and data-race errors, Hydro for distributed dataflow, Verus for functional proofs over Rust. Each one converts a runtime mystery into a build failure the agent can read and act on.
+
+Model-time checking. TLA+ and P catch protocol and concurrency defects before the code exists. This layer has the worst tooling and the largest gap between what an agent could do and what it does today, and spec-writing assistance is where I would spend first.
+
+Specification tooling. Kiro's spec analyzer, plus anything that turns an informal ask into checkable properties. Then the ordinary machinery: test harnesses, deterministic simulators, fault injectors, and mocks good enough to fail honestly. Our own error messages belong on this list too, and they are the cheapest item on it.
+
+What would change my mind
+
+Two results break the model. An agent that reliably produces good architecture with no human in the loop would break it. So would an agent that plateaus on well-specified systems work despite a clean signal. Measure it: pick one internal service, add property tests and a deterministic simulator, and compare agent completion rates before and after.

@@ -1,0 +1,43 @@
+Measuring the call in isolation
+
+No microbenchmark for System.currentTimeMillis() existed, so I wrote one. TimeBench.java calls it 100,000,000 times in a loop, compares each result against the constant 87362, and prints from inside the loop when the comparison succeeds. The comparison and the println are there to stop the JIT from deleting a loop whose result nothing consumes. They do cost time per iteration, which inflates the absolute numbers a little, and they cost the same on every host, which is all the comparison needs.
+
+Run under shell time(1), the two hosts disagree by a factor of five:
+
+  CentOS   real 0m12.989s   user 0m3.368s    sys 0m18.561s
+  Ubuntu   real 1m8.300s    user 0m38.337s   sys 0m29.875s
+
+Divide the wall clock by 1e8 and the per-call cost is about 0.13 us on CentOS and about 0.68 us on Ubuntu, so the Ubuntu/EC2-Xen instance pays roughly 5x for the same call. Sys time dominates on both, and on CentOS it exceeds real time, which means more than one thread was accruing kernel time during the run. A call that should be a few tens of nanoseconds is instead spending most of its cost in the kernel.
+
+The JVM is not the variable here. I rewrote the same loop in C, calling gettimeofday(2) directly and compiling at -O0 to keep the loop from being optimized away, and the results tracked the Java numbers. A benchmark this small can be checked rather than trusted: disassemble it, and confirm the compiler emitted the loop and the call you thought you wrote. That step is cheap at 20 lines and impossible at 20,000.
+
+Finding the clock source
+
+The kernel exposes which timer it is using, so read it directly. On the Ubuntu instance:
+
+  # cat /sys/devices/system/clocksource/clocksource0/available_clocksource
+  xen tsc hpet acpi_pm
+  # cat /sys/devices/system/clocksource/clocksource0/current_clocksource
+  xen
+
+That matches the flame graph, which showed pvclock_clocksource_read() sitting under os::javaTimeMillis(). The xen clocksource is a paravirtualized clock read, and reading it costs a hypervisor round trip on every call. Cassandra calls javaTimeMillis() often enough that this one read was burning about a third of the instance's CPU.
+
+The setting is writable and takes effect immediately, with no reboot and no instance replacement:
+
+  # echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource
+
+TimeBench on the same instance, seconds later:
+
+  real 0m3.370s   user 0m3.353s   sys 0m0.026s
+
+Wall clock fell from 68.300s to 3.370s, about 20x, and the tsc run beat CentOS by nearly 4x. The interesting column is sys: 29.875s down to 0.026s, a factor of about 1,100. That is the syscall disappearing. TSC reads the time with a single RDTSC instruction, and the kernel exports it through the vDSO, so the process never enters the kernel at all. Everything that remains is user time doing the loop.
+
+At 3.370s the per-call figure is about 33 ns, and that number is an upper bound on the read itself. The loop's own instructions, the comparison and the branch are all inside it. Partially unroll the loop and the per-call cost will come down further. I did not need the tighter number to make the decision.
+
+Deciding to ship it
+
+TSC has a bad reputation, and the reputation is the reason it was not already the default. Across sockets and across live migrations the counters can drift, and a clock that jumps backwards breaks more than it speeds up. The evidence that this is no longer true on current hardware is thin in public: a processor engineer I met at a conference told me tsc had been stable for years, and he knew of no published reference I could cite.
+
+One expert's word is weak evidence for a datacenter-wide change and adequate evidence for a reversible one-line experiment on a fault-tolerant service. Netflix's cloud is built to lose instances, the setting flips back with a second echo, and the blast radius of a bad clock on one Cassandra node is a node the cluster already knows how to route around. We switched a production instance to tsc and watched the graphs.
+
+Write latencies dropped 43%, landing slightly better than the CentOS hosts that had never had the problem. In the flame graph, os::javaTimeMillis() fell from about a third of CPU to 1.6%, with a single vdso frame above it and nothing below.

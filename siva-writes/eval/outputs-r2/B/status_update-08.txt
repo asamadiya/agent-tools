@@ -1,0 +1,23 @@
+Security remediation burndown: unauthenticated internal gRPC endpoints
+Monthly status for the security review board, period ending September 18, 2026
+Owner: Hiroshi Tanabe. Security partner: Dana Ruiz.
+
+We have closed 1,189 of the 1,432 endpoints the internal red team found in June, which is 83 percent, and 243 remain open across the 318 services in scope. Every P1 endpoint is closed. All 96 endpoints reachable from outside the service mesh were remediated by the August 15 deadline, so nothing in this finding class is currently exposed to an unauthenticated caller outside the mesh. The 243 that remain are all P2, and their deadline is October 31.
+
+The remediation itself is not the bottleneck. Each endpoint gets mTLS plus a per-endpoint ACL, and the median time from assignment to close is 11 days. The p90 is 74 days. That tail is not engineering difficulty; it is the time spent finding a team that will accept the ticket.
+
+At the current run rate we miss October 31 by three weeks. The team has sustained 26 endpoints per week. From September 18, 243 endpoints at 26 per week is 9.3 weeks, which lands on November 23. October 31 is 43 days out, or 6.1 weeks, which buys about 160 closures and leaves roughly 83 endpoints open on the deadline date. Finishing on time with the scope unchanged requires 40 endpoints per week, a 52 percent increase over anything we have held since June. I do not believe we can staff that.
+
+Seventy-three of the 243 have no team to assign them to. Sixty-one sit in services with no registered owner, and 12 are in systems already declared end-of-life. Those 73 are 30 percent of the remaining work and they are the reason the p90 is 74 days. The other 170 endpoints have an owner and are moving at roughly the median.
+
+Dana Ruiz and I propose switching mesh ingress to deny-by-default for the 61 orphaned services on October 6. This closes the exposure with no code change in any of those services and no owner hunt. It also removes 61 endpoints from the burndown in a single step. Recomputing from October 6: about 67 endpoints close between now and then, leaving 176, minus the 61 the ingress change covers, leaves 115. At 26 per week that finishes on November 5, and about 22 endpoints are still open on October 31 instead of 83.
+
+The proposal has a known cost. Deny-by-default breaks four cross-team callers that currently reach these orphaned services. Three of those four have not answered outreach, which began August 27. We are not going to reach them by continuing to send mail. I am asking the board to set a policy response window: if a caller has not responded within 10 business days of a written notice, the ingress change proceeds and the break is theirs to fix. Please rule on this at the September session, because the notice has to go out by September 22 for the October 6 date to hold.
+
+Three decisions requested:
+
+1. Approve the October 6 deny-by-default ingress change for the 61 orphaned services.
+2. Set the non-response window at 10 business days, or name a different number.
+3. Rule on the 12 end-of-life endpoints. Either accept the risk with a documented decommission date, or fund the mTLS work. We will not carry them as open findings past October 31 without one or the other.
+
+Absent decisions 1 and 2, I will report a November 23 completion date at the October review.

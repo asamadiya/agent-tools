@@ -1,0 +1,31 @@
+Request queuing for a multi-tenant RPC service
+
+Problem
+
+Today every request lands in one FIFO queue per host. That queue is a shared fate pool: when one customer sends a burst, or sends requests that are individually expensive, its work sits ahead of everyone else's, and every other customer's latency rises with the depth of the burst. We have no mechanism that makes the cost of misbehaviour fall on the misbehaving customer. Admission control by global rate limit does not fix this, because a customer inside its limit can still be the only thing in the queue for a hundred milliseconds.
+
+What we want is the property fair queuing gives packet networks: a customer that exceeds its share sees longer delays and more shed load than one that stays within it, and the well-behaved customers do not notice.
+
+Why not classic fair queuing
+
+The textbook construction (per-conversation FCFS queues, serviced round-robin) transfers cleanly to RPC if we key on authorized customer id instead of a source-destination address pair. It also transfers its cost. We hold O(customers) queues and spend O(customers) work walking them per dispatch. With tens of thousands of authorized customers per fleet, and a dispatch budget measured in microseconds, that is not a structure we can afford in the request path.
+
+Proposal
+
+Adopt Stochastic Fairness Queuing (McKenney, 1990), extended with shuffle sharding and best-of-two choices.
+
+Keep a fixed set of Q queues per host, sized independently of the customer count. Hash the customer id to select queues; dispatch round-robin over the Q queues. Queue count and dispatch cost are now constants: O(1) queues, O(1) enqueue, O(1) dequeue.
+
+Plain SFQ has one failure mode worth naming. Two customers whose ids hash to the same queue keep hashing to the same queue, so a customer unlucky enough to share with a noisy neighbour is persistently below its share -- not for one burst, but forever. The remedy is to perturb the hash function periodically: a collision in one period does not predict a collision in the next, so the penalty is spread thin across customers and across time rather than concentrated on one victim.
+
+We go a step further. Instead of mapping each customer to one queue, map it to a small subset -- two is enough to get most of the benefit -- and enqueue each request into the shorter of the two. Subsets are perturbed on the same period as the hash. This is shuffle sharding with best-of-two choices, and it buys two things. First, isolation is now combinatorial: a customer is harmed only if every queue in its subset is shared with a noisy neighbour, which is rare so long as only a small fraction of customers are noisy. Second, best-of-two smooths transient imbalance without any coordination, because the enqueue already knows both depths.
+
+Scope
+
+The same construction works at two levels and we propose both, in order. On a single host it governs which request the worker pool picks up next. Across hosts it can drive load balancing: the subset is a set of hosts, and the choice is the shorter of two host queues. Ship the single-host version first; it is self-contained, and it tells us whether the shed behaviour under burst is what we expect before we let the scheme influence routing.
+
+Tradeoffs and open questions
+
+The guarantee is statistical, not absolute. If a large fraction of customers are simultaneously noisy, subsets overlap and isolation degrades toward the shared-FIFO behaviour we have now. We accept that: the design targets the noisy-neighbour case, not overload.
+
+Three parameters need measurement rather than assertion: Q, subset size, and perturbation period. Q trades memory against collision probability. The period trades isolation against churn -- perturbing too often reorders work for customers that were doing nothing wrong. We propose picking initial values from replay against production traces, and reporting per-customer p99 delay under a synthetic single-noisy-tenant load as the acceptance test.

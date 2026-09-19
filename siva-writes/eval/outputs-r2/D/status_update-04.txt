@@ -1,0 +1,19 @@
+li-httpclient v3: 612 multiproducts still to migrate before builds break on Dec 1 2026
+
+612 of the 1,000 multiproducts that consume li-httpclient are still on v3, and their builds start failing on Dec 1 2026. 388 have moved to v4, which is 38.8% of consumers. v3 reaches end of life on Jan 31 2027; Tomasz Hejna owns the deprecation.
+
+v3 cannot be patched in place. It pins Netty 4.1.79, and CVE-2026-31819 -- CVSS 7.5, HTTP request smuggling -- is a flaw in that Netty release. Lifting v3 onto a fixed Netty breaks the ABI its consumers compile against, which is why the remedy is a major version and not a point release. Every team on v3 is running a 7.5 today, and the only route off it is v4.
+
+An automated codemod does 84% of the mechanical work: 7,910 of 9,417 call sites across the fleet. The other 1,507 call sites need hand edits and they are not spread thinly across 612 teams. They concentrate in 63 multiproducts. If you own one of those, your migration is a project with named engineers on it; if you do not, it is closer to a dependency bump plus a config review.
+
+The config review is not optional, because v4 renames every connection-pool configuration key. A rename that silently falls back to a default will not fail the build, and it will not fail a unit test either. Check each pool key against the load the old value was tuned for, and confirm the new key is being read.
+
+17 upstreams still speak HTTP/1.0 and v4 drops support for them. Each of those 17 needs an owner-side fix or a proxy shim, and that work sits with the upstream owner, not with the team making the call. Start the conversation with your upstreams now; a shim negotiated in late November will not land before the build enforcement date.
+
+Budget 6 engineer-days. That is the median for teams that have already finished, and it is a median over teams that mostly were not in the 63. Office hours run Tuesdays and 41 teams have attended, which is 6.7% of the teams still on v3.
+
+Exemptions are not a plan. The process grants 30 days at a time; 22 have been granted, and 9 of those went to the same three teams. Thirty days moves your build failure, and it does not move Jan 31 2027 or reduce your exposure to CVE-2026-31819 by one day.
+
+Three things this week. Check whether your multiproduct is in the list of 63 that need hand edits, because that number determines whether you are scheduling days or weeks. Run the codemod on a branch and read what it left behind; the 1,507 residual sites are the real estimate, and the count for your repo takes an afternoon to get. If you call one of the 17 HTTP/1.0 upstreams, open a ticket against that upstream's owner now and copy Tomasz.
+
+Ten weeks separate today from Dec 1. At a median of 6 engineer-days, a team that starts in October finishes with room; a team that starts in November is betting that it is not one of the 63 and that none of its upstreams is one of the 17. We will publish the per-multiproduct list of the 63 and the 17 alongside this update.

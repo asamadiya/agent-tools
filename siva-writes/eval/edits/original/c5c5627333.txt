@@ -1,0 +1,29 @@
+1.1.1.1 Resolver outage on 14 July 2025
+
+All times UTC.
+
+Summary
+
+The 1.1.1.1 public DNS Resolver was unavailable worldwide from 21:52 to 22:54 on 14 July 2025, 62 minutes, and Gateway DNS was intermittently degraded over the same window. A configuration error made on 6 June withdrew every Resolver anycast prefix from every Cloudflare location when an unrelated internal change refreshed the network configuration 38 days later. This was our failure, not an attack and not a BGP hijack, and we are sorry for the disruption.
+
+What happened
+
+On 6 June at 17:38 a release prepared the service topology for a future Data Localization Suite service and attached the 1.1.1.1 Resolver prefixes to it by mistake. The DLS service was not in production, so nothing moved: no location list changed on the production network, no traffic shifted, and no alert fired. The Resolver kept serving from every location it had always served from. The bad topology was inert because no location was yet bound to the non-production service, and a topology with no locations attached does not get pushed.
+
+On 14 July at 21:48 an engineer attached an offline test location to that same non-production service for internal testing. Adding a location is what triggers a global refresh of network configuration. The refresh recomputed the Resolver topology from the association made on 6 June, found exactly one location -- the offline test location -- and treated every other location as no longer serving those prefixes. Between 21:48 and 21:52 the change propagated, and 1.1.1.0/24, 1.0.0.0/24, 2606:4700:4700::/48 and the other Resolver prefixes were withdrawn globally. Queries over UDP, TCP and DoT collapsed to near zero. DoH held up: most DoH clients resolve cloudflare-dns.com, which is announced on different addresses that were never touched.
+
+Timeline and recovery
+
+Internal health checks alerted at 22:01, nine minutes after the withdrawal, and we declared an incident. We started the revert at 22:20, and prefixes were re-advertised within minutes. Traffic came back to roughly 77% of pre-incident levels and stopped there. The missing 23% was not a routing problem. Reverting the topology restored the advertisements, but about 23% of edge servers had already had their Resolver IP bindings removed, and restoring a binding runs through change management, which normally stages over hours. We validated the accelerated path in test locations first and then pushed it fleet-wide. Traffic reached normal at 22:54 and we marked the incident resolved at 22:55.
+
+The Tata advertisement
+
+At 21:54, two minutes after the withdrawal, Tata Communications India (AS4755) began advertising 1.1.1.0/24. That announcement did not cause the outage and it did not extend it. A prefix we stop announcing leaves room for anyone else announcing it to be selected, so the withdrawal exposed the Tata route rather than the other way round. Users in networks that accepted it saw their queries land somewhere other than our Resolver for the duration. We have raised this with the operator separately.
+
+Why the system allowed this
+
+The topology system that made the change is a legacy service that hard-codes lists of locations into each service definition rather than deriving them, and it has no staged or canary deployment. A topology change is computed centrally and applied everywhere at once. The 6 June change was peer reviewed and the review did not catch it, because the reviewer was reading a change to a service that had no production traffic and the coupling to Resolver prefixes was not visible in the diff. Two properties combined here: an error can be introduced with no observable effect at the time, and the correction of that error is global and instantaneous.
+
+What we are changing
+
+We are deprecating the legacy topology system and moving all prefix-to-location bindings onto the same abstractions our newer services use, where location membership is derived rather than hard-coded. Topology and routing changes will roll out progressively with health monitoring between stages, and a change that withdraws a production prefix will stop at the first stage. We are also adding validation that refuses to bind a production anycast prefix to a non-production service at authoring time, which would have rejected the 6 June release on the day it was written.

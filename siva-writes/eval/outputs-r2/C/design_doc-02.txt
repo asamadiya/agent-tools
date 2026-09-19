@@ -1,0 +1,23 @@
+Measuring availability and recovery on the customer's clock
+
+Problem
+
+Two numbers can disagree by a factor of ten and both be correct. Our dashboards report a mean request time of 100 ms; a customer reports her mean wait is 1 s. We report MTTR under one minute; a customer reports a mean outage of one hour. The operator counts events -- one request, one outage, each contributing equally to an average. The customer samples elapsed time, and the number of customers who land inside a given outage is proportional to that outage's length. A ten-hour outage catches roughly ten times as many customers as a one-hour outage, and it enters their average ten times.
+
+Customers therefore do not sample the duration distribution f(t). They sample a t-weighted version of it. This is the inspection paradox, and it has a closed form: if the operator's mean is E[X], the customer-experienced mean is
+
+  E_a[X] = E[X^2] / (2 E[X]) = 0.5 * (E[X] + Var(X)/E[X])
+
+The gap between the two is carried entirely by Var(X)/E[X]. For a near-constant recovery time the two numbers agree. For the heavy-tailed recovery times we actually have, Var(X) is large relative to E[X] and the customer number is a multiple of ours.
+
+Worked example
+
+Fit a lognormal to two points we can read off any incident history: median TTR 30 minutes and p99 600 minutes, meaning one event in a hundred runs ten hours. That gives mu = 3.40, sigma = 1.29. The resulting MTTR is 69 minutes -- just over the hour, which is a plausible-looking number to put on a slide. The customer-experienced mean is 180 minutes, 2.6 times larger. It is not a correction to the MTTR; it is a different quantity.
+
+Check this without trusting the algebra. Draw 1000 recovery times from lognormal(mu=1.0, sigma=3.0), scatter Poisson client arrivals at rate 100 across the same timeline, and average the wait each arrival actually observes. The event-weighted and arrival-weighted means will separate in the direction the formula predicts.
+
+Proposal
+
+Report both means, labeled by whose clock they run on. Alongside every MTTR we publish the duration-weighted mean, the p99 of TTR, and the ratio Var(X)/E[X], because a team can drive the mean down while the tail grows and make the customer's experience worse.
+
+Set recovery SLOs on the tail instead of the mean. The asymmetry matters here: timeouts and retries truncate some of the service-time tail, since a client can abandon a slow request and try again. Nothing truncates the recovery-time tail. A client cannot retry its way out of a region that is down, which is why the 600-minute event dominates the number she reports.

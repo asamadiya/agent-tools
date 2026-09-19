@@ -1,0 +1,38 @@
+Cloudflare incident report: HTTP 500 errors, 5 December 2025
+
+All times UTC.
+
+Summary
+
+Between 08:47 and 09:12 on 5 December 2025, roughly 28% of the HTTP traffic Cloudflare serves returned HTTP 500 errors. The cause was a configuration change we made ourselves, not an attack and not a traffic surge. We are sorry. Customers route traffic through us so that their sites stay up, and for 25 minutes we were the reason they were down.
+
+What happened
+
+The WAF inspects request bodies, and to do that it buffers them in memory. That buffer had been 128KB for years. CVE-2025-55182, a critical React Server Components vulnerability, requires inspecting bodies up to the Next.js default limit of 1MB, so we began raising the buffer to 1MB to cover customers against it. That first change went out through our gradual deployment system, which is the correct path for a change of this kind.
+
+During the rollout we found that an internal WAF testing tool did not support the larger buffer. The tool touches no customer traffic, so disabling it looked like a low-risk cleanup, and we pushed the disable through our global configuration system. That system performs no staged rollout. It reached every machine in the fleet within seconds.
+
+The disable was expressed as a killswitch on a rule in our rulesets system. A rule's action can be block, log, skip, or execute, where execute means the rule triggers evaluation of a sub-ruleset. A killswitch converts the rule to a skip. Until 5 December, no killswitch had ever been applied to a rule whose action was execute.
+
+The skip itself was honoured. The result-processing code that runs afterwards, however, still read rule_result.execute, and on a skipped rule that field does not exist. Lua raised a nil index error at init.lua line 314 inside the FL1 proxy, the request died there, and the client received a 500. The defect had been in that code path for years, latent because nothing had ever constructed the input that reaches it. FL2, our Rust reimplementation of the proxy, does not have the bug; the type system rejects the equivalent access at compile time.
+
+Who was affected
+
+Customers served by FL1 with the Cloudflare Managed Ruleset deployed saw every request fail with a 500, with the exception of a handful of endpoints such as /cdn-cgi/trace that bypass the ruleset path. Customers already migrated to FL2 were unaffected. Traffic on our China network was unaffected.
+
+Timeline
+
+08:47 -- the killswitch propagates; 500s begin.
+08:50 -- automated alerts declare an incident, three minutes after impact.
+09:11 -- we revert the killswitch.
+09:12 -- the revert finishes propagating and error rates return to baseline.
+
+What we are changing
+
+The global configuration system needs staged rollout. A change that reaches 100% of the fleet in seconds has no observation window, and the argument that a given change is safe enough to skip staging is exactly the argument that failed here: the tool being disabled genuinely had no customer traffic, and the blast radius came from the mechanism, not the target. We are putting health-gated progressive deployment in front of it.
+
+We are auditing FL1's rule-result handling for every combination of action and killswitch state, rather than fixing line 314 alone. One unreachable combination existing for years suggests others.
+
+We are accelerating FL1 to FL2 migration. FL2 is where this class of defect stops being possible, and we would rather retire the old proxy than keep proving its edge cases empirically.
+
+We are adding killswitch coverage to the WAF test suite for execute-action rules specifically, so that the configuration path gets the same test discipline as the code path.

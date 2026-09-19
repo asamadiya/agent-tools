@@ -1,0 +1,25 @@
+Twenty Years of Missing Frames
+
+On x86-64, %rbp is the frame pointer: the register that holds the base of the current stack frame. Keeping it means every function's prologue and epilogue carry two extra instructions and one general-purpose register is spoken for. Giving it up buys those back. What it costs is the ability of anything outside the process - Linux perf, eBPF, a debugger attached after the fact - to walk the stack by chasing %rbp from frame to frame. That walk is what a flame graph is made of. The ABI says the frame pointer is optional; you can index off %rsp instead. Compilers took the option, and the profiling story has been paying for it ever since.
+
+2004: the patch
+
+In 2004, gcc developer Roger Sayle changed the i386 backend so that 32-bit targets compiled as though -fomit-frame-pointer -ffixed-ebp had been passed. On i386 the argument was easy to make. Four general-purpose registers became five, or six to seven if you count %si and %di - a register file that small makes every additional register worth real performance. Sayle had two other reasons. He wanted gcc to beat Intel's icc on benchmarks, and he believed debuggers of the day would be unharmed, because they already supported other ways of walking a stack.
+
+Whether or not that was the right call for i386, the default did not stay there. It was carried across to x86-64, a target that already had more than a dozen general-purpose registers and therefore gained very little from one more. That is where the trade stopped paying for itself and nobody stopped to redo the arithmetic.
+
+Eric Schrock, then at Sun, did the arithmetic. In November 2004 he objected, and his reasoning has held up better than the patch it was aimed at. On amd64, a 17th general-purpose register opens up no new class of compiler optimization - there is no transformation the compiler can suddenly perform that it could not perform with sixteen. What you avoid is a pushl/movl sequence the hardware has long since optimized into near-nothing. Leaf routines, which are where the hot code usually is, never establish a frame at all, so they were never paying the cost. Set against the debuggability you lose, Schrock argued, the trade hardly seemed worth making.
+
+His closing line was a prediction: the practice goes off the rails once people begin compiling /usr/bin without frame pointers. Linux then did exactly that. Not only /usr/bin - /usr/lib and application code went the same way. The failure mode he described as a hypothetical became the default state of the platform.
+
+What it actually costs
+
+The damage is not evenly distributed, and it is not subtle once you know to look for it. A stack walk proceeds normally until it reaches libc, and there it stops. The trace comes back without its application frames - you learn that time was spent in a read, and nothing at all about which part of your program asked for it. Those truncated stacks are not discarded; they pile up together on the left edge of a flame graph, since they all share the same short prefix. In one example that pile was 15% of the samples: a solid block of column that answers no question you would ever ask.
+
+Off-CPU flame graphs come off worse. Their whole content is blocking calls - libc read and write, mutex operations - which is precisely the set of frames past which the walk cannot proceed. The profile you most want when a service is slow and idle is the one the missing frame pointer damages most thoroughly.
+
+2014: paying it back, one runtime at a time
+
+I ran into this at Netflix in 2014. Java had no frame pointer support at all, which meant every application stack was broken, not just the ones that passed through libc. I wrote a fix in the c2 compiler; Oracle reworked it and shipped it as -XX:+PreserveFramePointer in JDK8u60. That restored Java stacks, and immediately exposed the next layer: libc was still compiled without frame pointers, so stacks that left the JVM still died at the boundary. I built a libc with frame pointers for our production systems, then worked with Canonical on a prebuilt libc6-prof so that the rest of the world did not have to.
+
+That is the shape of the whole twenty years. A defensible decision for a register-starved 32-bit target got copied to a target where its justification did not apply, nobody re-examined it, and the cost landed on everyone who would later need to see where their software spends its time - paid back piecemeal, one runtime and one library at a time, by people who had to rebuild their toolchain to get a profile that was never supposed to be hard.

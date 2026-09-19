@@ -1,0 +1,252 @@
+[
+  {
+    "opaque": "edd45039b4",
+    "condition": "A",
+    "brief_id": "perf_analysis-07"
+  },
+  {
+    "opaque": "302b6b4d8a",
+    "condition": "B",
+    "brief_id": "perf_analysis-07"
+  },
+  {
+    "opaque": "98cc6b49c7",
+    "condition": "C",
+    "brief_id": "perf_analysis-07"
+  },
+  {
+    "opaque": "1d066f27c4",
+    "condition": "D",
+    "brief_id": "perf_analysis-07"
+  },
+  {
+    "opaque": "53e26a0d42",
+    "condition": "H",
+    "brief_id": "perf_analysis-07"
+  },
+  {
+    "opaque": "615f130423",
+    "condition": "A",
+    "brief_id": "postmortem-01"
+  },
+  {
+    "opaque": "6369206620",
+    "condition": "B",
+    "brief_id": "postmortem-01"
+  },
+  {
+    "opaque": "ad8fb1fd18",
+    "condition": "C",
+    "brief_id": "postmortem-01"
+  },
+  {
+    "opaque": "36c291b228",
+    "condition": "D",
+    "brief_id": "postmortem-01"
+  },
+  {
+    "opaque": "7017ce75ac",
+    "condition": "H",
+    "brief_id": "postmortem-01"
+  },
+  {
+    "opaque": "5b93d818c8",
+    "condition": "A",
+    "brief_id": "design_doc-07"
+  },
+  {
+    "opaque": "c324423aa1",
+    "condition": "B",
+    "brief_id": "design_doc-07"
+  },
+  {
+    "opaque": "92a41a7115",
+    "condition": "C",
+    "brief_id": "design_doc-07"
+  },
+  {
+    "opaque": "4b4c25e93f",
+    "condition": "D",
+    "brief_id": "design_doc-07"
+  },
+  {
+    "opaque": "39f87519c1",
+    "condition": "H",
+    "brief_id": "design_doc-07"
+  },
+  {
+    "opaque": "af93d6e6bc",
+    "condition": "A",
+    "brief_id": "perf_analysis-02"
+  },
+  {
+    "opaque": "9b379331c8",
+    "condition": "B",
+    "brief_id": "perf_analysis-02"
+  },
+  {
+    "opaque": "c74326944c",
+    "condition": "C",
+    "brief_id": "perf_analysis-02"
+  },
+  {
+    "opaque": "6ac7788fbc",
+    "condition": "D",
+    "brief_id": "perf_analysis-02"
+  },
+  {
+    "opaque": "5e04548d10",
+    "condition": "H",
+    "brief_id": "perf_analysis-02"
+  },
+  {
+    "opaque": "c685cca5f4",
+    "condition": "A",
+    "brief_id": "design_doc-08"
+  },
+  {
+    "opaque": "ea03e5eedc",
+    "condition": "B",
+    "brief_id": "design_doc-08"
+  },
+  {
+    "opaque": "c946ca1d8e",
+    "condition": "C",
+    "brief_id": "design_doc-08"
+  },
+  {
+    "opaque": "401f5db848",
+    "condition": "D",
+    "brief_id": "design_doc-08"
+  },
+  {
+    "opaque": "5c1acd4028",
+    "condition": "H",
+    "brief_id": "design_doc-08"
+  },
+  {
+    "opaque": "40b0f6e0e0",
+    "condition": "A",
+    "brief_id": "postmortem-07"
+  },
+  {
+    "opaque": "4f2cfdd642",
+    "condition": "B",
+    "brief_id": "postmortem-07"
+  },
+  {
+    "opaque": "c5c5627333",
+    "condition": "C",
+    "brief_id": "postmortem-07"
+  },
+  {
+    "opaque": "bf70c53285",
+    "condition": "D",
+    "brief_id": "postmortem-07"
+  },
+  {
+    "opaque": "9525d10b7c",
+    "condition": "H",
+    "brief_id": "postmortem-07"
+  },
+  {
+    "opaque": "2985abc773",
+    "condition": "A",
+    "brief_id": "perf_analysis-01"
+  },
+  {
+    "opaque": "fa79f56efe",
+    "condition": "B",
+    "brief_id": "perf_analysis-01"
+  },
+  {
+    "opaque": "5c104fee09",
+    "condition": "C",
+    "brief_id": "perf_analysis-01"
+  },
+  {
+    "opaque": "f03741a5e9",
+    "condition": "D",
+    "brief_id": "perf_analysis-01"
+  },
+  {
+    "opaque": "e6c60e7d0b",
+    "condition": "H",
+    "brief_id": "perf_analysis-01"
+  },
+  {
+    "opaque": "ef0607d54a",
+    "condition": "A",
+    "brief_id": "perf_analysis-05"
+  },
+  {
+    "opaque": "d346bdf188",
+    "condition": "B",
+    "brief_id": "perf_analysis-05"
+  },
+  {
+    "opaque": "1e5497bea4",
+    "condition": "C",
+    "brief_id": "perf_analysis-05"
+  },
+  {
+    "opaque": "c147518a0d",
+    "condition": "D",
+    "brief_id": "perf_analysis-05"
+  },
+  {
+    "opaque": "9654eedad5",
+    "condition": "H",
+    "brief_id": "perf_analysis-05"
+  },
+  {
+    "opaque": "d65b59d88a",
+    "condition": "A",
+    "brief_id": "rfc-06"
+  },
+  {
+    "opaque": "a78fea40b7",
+    "condition": "B",
+    "brief_id": "rfc-06"
+  },
+  {
+    "opaque": "5aa931fe2e",
+    "condition": "C",
+    "brief_id": "rfc-06"
+  },
+  {
+    "opaque": "694180e271",
+    "condition": "D",
+    "brief_id": "rfc-06"
+  },
+  {
+    "opaque": "e36cb426a7",
+    "condition": "H",
+    "brief_id": "rfc-06"
+  },
+  {
+    "opaque": "f833f5a313",
+    "condition": "A",
+    "brief_id": "design_doc-03"
+  },
+  {
+    "opaque": "992bbe3598",
+    "condition": "B",
+    "brief_id": "design_doc-03"
+  },
+  {
+    "opaque": "e3e36ccdbd",
+    "condition": "C",
+    "brief_id": "design_doc-03"
+  },
+  {
+    "opaque": "e4d6e6a830",
+    "condition": "D",
+    "brief_id": "design_doc-03"
+  },
+  {
+    "opaque": "3bc4b88d9a",
+    "condition": "H",
+    "brief_id": "design_doc-03"
+  }
+]

@@ -1,0 +1,31 @@
+How to reason about coding-agent capability
+
+Purpose
+
+Coding agents now produce meaningful, correct software quickly and cheaply, and on some tasks they are plainly super-human. This doc proposes how our team should think about that capability so that our roadmap arguments stop turning on whether the model is "good enough."
+
+Machines have been lopsided for 85 years
+
+Super-human computing is not new. Rejewski's work on Enigma in the 1930s already beat every human who tried the same problem by hand. A MacBook today adds two 64-bit numbers roughly 100,000,000,000 times faster than a person can. Across nine decades the shape has never changed: vastly super-human in some areas, well short of human in others, with no smooth interpolation between the two. Arguments about whether a computer is "as capable as a person" have always been the wrong shape, and they are the wrong shape for agents.
+
+A circuit that extracts a good answer from a bad part
+
+Take an opamp and an analog multiplier IC — the MC1495, long obsolete, is the canonical example. Wire the multiplier so it squares the opamp's output and feeds that back into one input. Put a voltage in on the left; the square root of it comes out on the right.
+
+Nothing in the circuit computes a square root. The opamp drives its two inputs to equality, and the only output that satisfies that constraint is the one whose square equals the input. The multiplier is a mediocre part — nonlinear, drifty, poorly characterised — and the loop does not care, because the loop only needs the error signal to have the right sign.
+
+The generalisation is the point: a component inside a feedback loop behaves very differently from the same component open-loop, and excellent outputs can be extracted from poor components.
+
+Agents are that loop
+
+An LLM open-loop is a useful but flawed component. Autocomplete in an IDE is exactly open-loop use: the model emits, and a human closes the loop by reading, running, and correcting. Over roughly two years, tooling moved that build-test-iterate loop out of the human and into the agent. That relocation, not a step change in the component, is what most of the recent capability gain is.
+
+What this implies for us
+
+1. Evaluate the loop, not the model. A benchmark score for a bare model predicts open-loop behaviour and tells us little about what the same model does with a compiler, a test suite, and twenty iterations.
+
+2. Invest in the error signal. The circuit works because the feedback path is accurate and fast. Our equivalents are tests, types, linters, build errors, and runtime traces. Improving the signal an agent gets back is usually cheaper and more durable than waiting for a better model.
+
+3. Expect the lopsidedness to persist. Plan for agents that outrun us on some tasks and fall over on others, and design the product so the boundary is visible rather than assumed away.
+
+4. Ask what constraint the loop is solving for. The square-root circuit only works because squaring is checkable. Tasks whose correctness we cannot cheaply check are the ones where agents will keep disappointing us.

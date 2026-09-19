@@ -1,0 +1,52 @@
+## Computing a container's swap limit
+
+The kubelet computes every swap limit itself; no user sets one. Swap access is granted only to
+containers in Burstable pods, and for each such container the kubelet derives a byte value from two
+inputs it already has: the container's memory request and the node's swap capacity. Guaranteed and
+BestEffort pods receive no swap at all.
+
+The first step converts the memory request into a proportion of the node. Divide the container's
+memory request by the node's total physical memory and call the result ContainerMemoryProportion. A
+container that sets memory requests equal to memory limits is Guaranteed-like in its memory
+behaviour and its proportion is defined as zero, which drives its swap limit to zero through the
+second step. Implementers should treat that as an explicit case in the code rather than a value that
+falls out of the arithmetic, because a container can carry request == limit inside a pod that is
+Burstable overall.
+
+The second step rescales the proportion against the swap the system is actually willing to hand to
+pods. That quantity is TotalPodsSwapAvailable: the node's total swap minus the configured
+system-reserved memory. The subtraction leaves a residue that system-critical daemons can page into
+when the node comes under pressure. We reserve it by subtraction because the kernel exposes no
+memory.swap.min, so there is no cgroup-level guarantee to request; withholding the bytes from the
+pod pool is the only lever available. A container's swap limit is then
+
+    ContainerMemoryProportion * TotalPodsSwapAvailable
+
+### Worked example
+
+Take a node with 40 GB of physical memory, 40 GB of swap, and system-reserved memory configured at
+2 GB. Schedule one Burstable pod with two containers: A requests 20 GB and B requests 10 GB.
+
+| quantity | container A | container B |
+|---|---|---|
+| memory request | 20 GB | 10 GB |
+| ContainerMemoryProportion | 20/40 = 0.5 | 10/40 = 0.25 |
+| TotalPodsSwapAvailable | 38 GB | 38 GB |
+| swap limit | 19 GB | 9.5 GB |
+
+The two containers together receive 28.5 GB of the 38 GB pod pool, leaving 9.5 GB unclaimed. Nothing
+in the formula sums the proportions to 1.0, and the design does not require it: swap limits are
+per-container ceilings, not shares of a partition, and the node may be undersubscribed or
+oversubscribed in memory requests independently of its swap capacity.
+
+### What reviewers should test
+
+Vary each input and check the limit moves as the formula predicts. Halve the memory request and the
+swap limit halves. Raise system-reserved memory from 2 GB to 10 GB and both limits drop by the same
+factor, 30/38, to 15 GB and 7.5 GB. Set the container's memory limit equal to its request and the
+limit must be exactly zero, not a rounded-down small value. Configure a node with zero swap and
+confirm TotalPodsSwapAvailable clamps at zero instead of going negative when system-reserved memory
+exceeds total swap.
+
+The scheme ties each container's swap ceiling to the memory request it already declared, and rescales
+that ceiling against whatever swap the node has after the system takes its cut.

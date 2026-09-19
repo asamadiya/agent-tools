@@ -1,0 +1,19 @@
+Disaggregation and multi-tenant packing for a new data service
+
+Split the service into independent components that each own a small number of well-defined concerns, and pack tenants onto shared machines from the first release, because uncorrelated loads sum in a way that cuts the peak-to-average ratio at roughly the rate of the square root of the number of loads.
+
+The packing argument is arithmetic, and it decides the economics. You buy hardware for peak and you bill for average. A tenant that peaks at 10x its own average therefore costs you ten machines' worth of headroom against one machine's worth of revenue. Put 100 such tenants on one fleet. The means add linearly, to 100x one tenant, while the peaks do not line up: the standard deviation of the sum grows only as sqrt(100), a factor of 10. The excess above average falls from 9x to 0.9x, so the aggregate peaks at about 1.9x its average and the headroom you buy drops by more than five times. The Firecracker paper makes the same calculation for microVMs. It holds only while the loads are independent: a shared cron minute, a regional business day, or a common retry storm re-correlates them and the square root goes away.
+
+Disaggregate replication from transaction isolation and from storage, which is further than Aurora or DynamoDB went. Both of those separated compute from storage and kept isolation bound to the log. Cutting the third seam lets the transaction layer scale on conflict rate, the replication layer on durability requirements, and the storage layer on bytes and IOPS, each with its own failure domain and its own deploy.
+
+Three lessons from operating the earlier systems constrain where the seams go.
+
+Avoid large caches. A cache large enough to matter makes a failover slow, because the replacement node serves at cold-miss latency until it warms, and it makes read scaling awkward for the same reason -- every added replica pays the warm-up again.
+
+Offer strongly consistent scalable reads. Consistent reads that scale horizontally delete whole classes of hot-key and partition problems from the caller's code, because the caller no longer routes reads by freshness or pins a key to a primary.
+
+Push expensive operations into storage. Run scans next to the local SSD that holds the rows and return the filtered result, instead of shipping every page across the network to a compute tier that discards most of it.
+
+What this architecture buys is a database an application builder adopts without a scaling plan: no sharding decision at launch, no re-platform at 100x, no separate multi-region story. That argument grows stronger for agent-built systems. Agents write code competently and are weak at long-horizon tasks, and database operations -- capacity planning, resharding, failover drills, version upgrades -- are exactly long-horizon. Every operational concern the architecture absorbs is one the agent never has to sustain across months.
+
+Decision: build three services split on the replication, isolation, and storage seams; pack multiple tenants per machine from the first release; and hold the cache, consistent-read, and scan-pushdown constraints as invariants on each component rather than as later optimizations.

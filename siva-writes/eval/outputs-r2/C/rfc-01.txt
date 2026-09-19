@@ -1,0 +1,64 @@
+KEP: In-place update of pod resources
+
+## Motivation
+
+`Pod.Spec.Containers[i].Resources` is immutable, so any change to a CPU or
+memory request or limit requires deleting the pod and creating a new one. The
+underlying capability is already there: the container runtime can change the
+cgroup limits of a running container, and `UpdateContainerResources` is already
+in the CRI. What is missing is an API path from a user's intent down to that
+call.
+
+Three situations drive a resize. Load rose and the allocation is short, so the
+container throttles on CPU or the kernel OOM-kills it on memory. Load fell and
+the allocation sits idle, which holds scheduler capacity that nothing is using.
+Or the values were simply wrong when the pod was authored -- the most common
+case, since the first number a user writes is usually a guess.
+
+The cost of recreation is not evenly distributed. A Deployment with many
+stateless replicas absorbs a rolling restart without a user-visible effect,
+which is why this has stayed tolerable for so long. A service running two or
+three replicas loses a meaningful fraction of its serving capacity for the
+duration of the restart. A stateful workload pays more: a pod that rebuilds a
+local cache or rejoins a quorum on startup may be unavailable for minutes, and
+the resize is being done precisely because it is under pressure. A batch job
+restarts from zero and discards whatever it had computed. For these workloads
+a vertical autoscaler cannot act on its own recommendations without causing the
+disruption it was meant to avoid.
+
+The core change is to reinterpret the existing field rather than add a new one.
+`Spec.Containers[i].Resources` becomes the desired state, and `PodStatus` is
+extended to report the resources a container actually has. These two can
+disagree -- a node may not have room for the new request -- and the gap between
+them is what a controller or a user reads to decide what to do next.
+
+Three CRI gaps block this and are in scope to fix:
+
+- `UpdateContainerResources` takes a `LinuxContainerResources` parameter. The
+  shape is Linux-specific, so Windows runtimes and any future runtime cannot
+  implement the call as specified.
+- No CRI call lets kubelet read back the CPU and memory limits a runtime has
+  applied. Without a read-back, kubelet can issue an update and cannot confirm
+  that the runtime honored it, and `PodStatus` would be reporting kubelet's
+  intent rather than a measurement.
+- The behavior expected of a runtime handling a resource update is not
+  documented. Runtimes may differ today on whether an update is atomic, whether
+  a partial application is possible, and what an error means.
+
+### Goals
+
+- Resize container CPU and memory without necessarily restarting the container.
+- Let the actor that initiated the resize -- a user, VPA, a StatefulSet
+  controller, a JobController -- choose what happens when an in-place resize is
+  not possible on the current node.
+- Let users mark which containers in a pod are safe to resize in place.
+
+### Non-goals
+
+- Changing a pod's QoS class.
+- Resizing init containers that are not restartable.
+- Evicting lower-priority pods to make room for a resize.
+- Resource types other than CPU and memory.
+- CPU manager or memory manager policies other than `None`.
+- Resolving races with the scheduler, which may place a pod against capacity
+  that a concurrent resize has already claimed.

@@ -1,0 +1,60 @@
+Trim -- monthly programme status, September 2026
+Owner: Renee Alvarez. Finance partner: Sanjay Kothari.
+
+Booked savings stand at $16.4M annualised against the $28M FY27 target, 59% of
+the commitment. Three workstreams produced all of it. Right-sizing 6,800
+over-provisioned pods booked $9.1M and moved the median CPU request from 4.0
+cores to 1.5. Deleting 41 PB of object storage untouched for more than three
+years booked $4.2M. Converting 62% of the steady-state fleet to reserved
+instances booked $3.1M. None of the three needs further engineering investment
+to hold its run rate.
+
+The remaining $11.6M sits in two plans that carry very different risk.
+Decommissioning three legacy datacenter halls accounts for $4.6M, has a June
+2027 completion date, and is tracking. GPU bin-packing accounts for the other
+$7.0M and has no date at all. Cluster utilization is 38% today against the 65%
+target the $7.0M was priced at, and closing that gap requires a scheduler
+change owned by another org that has not committed a delivery date. One
+external dependency therefore gates 25% of the full programme target and 60% of
+everything still unbooked.
+
+Right-sizing caused five incidents, four SEV-3 and one SEV-2. All five were CPU
+throttling on services whose p99 CPU already sat close to the new request, so
+the cut removed the headroom those services used at peak. A guardrail shipped
+August 20 now blocks any cut where measured p99 CPU exceeds 70% of the proposed
+request. It has rejected 410 of the 1,100 candidate cuts evaluated since, 37%.
+No right-sizing incident has occurred after August 20.
+
+Read that 37% rejection rate carefully before treating right-sizing as a
+finished workstream. Roughly one candidate cut in three was unsafe under the
+current threshold, which means the $9.1M booked is the safe fraction of the
+original pod population and not the full opportunity we scoped. We are holding
+the 70% threshold through Q4 and will not relax it to recover rejected
+candidates. Re-examine the 410 rejections after the services behind them have
+had their own headroom work, which is a separate programme and is not counted
+in Trim.
+
+Forecast. If the scheduler change lands with enough runway to convert
+utilization from 38% to 65% before the fiscal year closes, Trim reaches $28M.
+If it does not, the programme books $21.0M, 75% of target, since $16.4M plus
+the $4.6M hall decommission is the total we can deliver without it. That is the
+number to plan against today, because no committed date exists to plan against
+instead. The $7.0M is unforecastable at present, and calling it late would
+imply a schedule we have never been given.
+
+Ask for this review. We need the scheduler org to commit to a date, or to state
+that the change will not land in FY27. Either answer is usable; silence is not.
+Renee will take the escalation if this review gives it a named executive sponsor
+on the other side. A decision by the October review keeps a full-year booking
+plausible.
+
+Two things to watch between now and October. The reserved-instance conversion
+covers 62% of the steady-state fleet, and the marginal savings on the next
+tranche drop as the fleet shrinks under right-sizing, so we will requote that
+$3.1M against the post-right-sizing footprint before extending coverage. The
+storage deletion booked $4.2M against a one-time sweep of 41 PB; recurrence
+depends on retention policy changes that are not yet written, and no further
+storage savings are in the $11.6M plan.
+
+Net position: 59% booked, one workstream fully blocked on an external
+dependency, and a guardrail that has held for 30 days across 410 rejected cuts.

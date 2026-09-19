@@ -1,0 +1,17 @@
+Unauthenticated gRPC endpoints: 83% closed, P2 tail lands Nov 23 without a board decision on Oct 6
+
+We have closed 1,189 of the 1,432 unauthenticated internal gRPC endpoints the red team found in June, and the remaining 243 finish on Nov 23 at the current rate, three weeks past the Oct 31 P2 deadline. Owner is Hiroshi Tanabe; Dana Ruiz is the security partner. The fix per endpoint is mTLS plus a per-endpoint ACL across 318 services.
+
+The P1 class is closed and needs no further board attention. All 96 endpoints reachable from outside the service mesh were remediated by the Aug 15 deadline. Median time to fix across the whole population is 11 days, p90 is 74 days, and that spread is the reason the remaining work does not behave like the work already done.
+
+The arithmetic on the tail is 243 endpoints divided by 26 per week, which is 9.3 weeks from Sep 18 and lands on Nov 23. Twenty-six per week is the measured run rate over the current reporting period, not a plan number. Hitting Oct 31 requires finishing in six weeks, which means a queue of 156 endpoints or a rate of 40 per week.
+
+Seventy-three of the 243 have nobody to do the work, so the run rate will decay from here. Sixty-one sit in services with no registered owner, and 12 are in systems already declared end-of-life. Every endpoint remediated to date had an owning team to write the ACL. The 26 per week we are measuring comes entirely from the 170 endpoints that still have one.
+
+The Oct 6 proposal closes the 61 orphaned endpoints with no code change by switching mesh ingress to deny-by-default for those services. That removes 61 from the queue and leaves 182, which at 26 per week finishes Nov 6 -- six days late, against 23 days late today. Deny-by-default is known to break four cross-team callers. Three of those four have not responded to outreach since the first notice.
+
+The board needs to decide two things this month, and the Oct 6 date is the binding one. Approve or reject deny-by-default for the 61 orphaned services, knowing it breaks four callers and that three of them will learn about it when their calls start failing. Then rule on the 12 end-of-life endpoints: either accept them as residual risk until decommission, or fund the ACL work on systems nobody plans to keep.
+
+Approving both still leaves us short of Oct 31 by a measurable amount. Deny-by-default plus an end-of-life exception cuts the queue to 170, which at 26 per week finishes Nov 3. Closing the last three days needs 28.3 per week, a 9% increase on the current rate, held for six weeks. We can commit to that on the 170 owned endpoints. We cannot commit to it on any queue that still contains ownerless services.
+
+Next month's report will carry the measured run rate for the four weeks ending Oct 16, the disposition of the four broken callers if Oct 6 is approved, and a revised finish date computed from both. Dana Ruiz and I will bring the caller-impact detail to the Oct 6 session. If the board rejects deny-by-default, the finish date returns to Nov 23 and we will ask for a P2 deadline extension on Oct 6, not in November.

@@ -1,0 +1,46 @@
+Node Memory Swap Support: Motivation, Scenarios, Goals and Non-Goals
+
+This KEP proposes that the kubelet be able to start on a Linux node with swap provisioned, and that a node-level configuration knob make some quantity of that swap available to the workloads scheduled there, defaulting to zero.
+
+Motivation
+==========
+
+Two constituencies want swap on Kubernetes nodes, and their requests overlap. Node administrators want it for node-level performance and stability: a node with swap absorbs transient memory pressure that would otherwise become an eviction, and it reduces the noisy-neighbour effect one workload's peak has on its neighbours. Application developers want it because their programs benefit directly from swap memory -- a process whose cold pages can leave resident memory fits on a node it otherwise would not.
+
+Neither group can have it today, because the kubelet refuses to start when swap is enabled on the host. A node administrator who wants swap for the node's own daemons must therefore choose between swap and running Kubernetes on that machine at all. That refusal is the thing this proposal removes, and removing it is a prerequisite for every richer use of swap that follows.
+
+Scenarios
+=========
+
+Three scenarios describe how swap can be used on a node. They are ordered by how much the kubelet knows about it.
+
+1. Swap is enabled on the host, and the kubelet does not permit Kubernetes workloads to touch it. The node's own system daemons benefit; pods see the node as they see it now.
+
+2. Swap is enabled at node level, and the kubelet permits workloads scheduled to that node to use some configured quantity of it.
+
+3. Swap is set per workload, and the kubelet sets a limit for each one.
+
+Scenario 1 is a prerequisite for scenarios 2 and 3: nothing can use swap on a node where the kubelet will not run. This proposal covers scenarios 1 and 2. Scenario 3 goes to a follow-up KEP, and the enablement work described here is what that follow-up builds on.
+
+Goals
+=====
+
+- On Linux, the kubelet can start when swap is provisioned and available on the node.
+- A configuration knob sets how much swap is available to workloads. The default is zero: a cluster that upgrades into this feature and sets nothing behaves exactly as it did before, and no existing workload's memory behaviour changes until an administrator raises the knob on a specific node.
+- Cluster administrators configure this knob per node, since swap provisioning is already a per-node property of the machine.
+- Swap works with cgroups v2.
+
+Non-Goals
+=========
+
+- Operating systems other than Linux.
+- Provisioning the swap itself. An administrator or an image builder does that before the kubelet sees the node.
+- Setting swappiness. It is already settable system-wide.
+- Per-workload swap allocation, accounting, or APIs for customizing how limits are computed. Swap is an overcommitted resource in this proposal: the node-level quantity is shared, and no pod is charged for what it consumes.
+- zram, zswap, and SGX EPC.
+- cgroups v1.
+- A pod-level swap API.
+- Scheduling that targets swap-enabled nodes. A pod that benefits from swap has no way here to say so, and the scheduler has no way to prefer a node that has it.
+- Making the eviction manager swap-aware. The existing QoS-tier eviction hierarchy is kept as is, and the interaction between swap usage and eviction thresholds is left to the follow-up KEP that introduces per-workload accounting.
+
+SIG Node reviewers should read the non-goals as scope, not as rejections. Per-workload limits, swap-aware eviction and swap-aware scheduling all need per-pod accounting, and per-pod accounting needs a kubelet that runs on a node with swap. That is what this proposal delivers.

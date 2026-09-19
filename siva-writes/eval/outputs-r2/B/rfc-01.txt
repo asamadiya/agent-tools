@@ -1,0 +1,24 @@
+KEP: In-place update of pod resources
+Motivation and scope
+
+Motivation
+
+Pod.Spec.Containers[i].Resources is immutable. The API server rejects any edit to a container's CPU or memory requests or limits on an existing pod, so the only way to change an allocation today is to delete the pod and create a replacement with the values you wanted. The container loses its process state, its page cache, its local scratch and its place in whatever the service was doing.
+
+Three situations produce that edit. Load rose and the current allocation is short, which shows up as throttling on CPU or an OOM kill on memory. Load fell and the allocation sits idle, charged to the owner's quota and held out of the scheduler's free pool. Or the values were wrong when they were written, which is the common case for a workload nobody has profiled.
+
+Who pays depends on the shape of the workload. A stateless Deployment with a dozen replicas absorbs a rolling recreation: the surge replica starts, the endpoint controller shifts traffic, and nothing observable happens. A service running two replicas gives up half its capacity for the duration of a restart. A StatefulSet member rejoins a quorum and re-replicates. A batch job that has run for six hours starts again at zero. For these three classes, the cost of correcting an allocation is high enough that operators either overprovision permanently or leave a known-wrong value in place.
+
+Proposal shape
+
+Treat the resources in the pod spec as desired state and report applied state separately. PodStatus gains a field describing the CPU and memory the runtime has actually applied to each container. The kubelet reconciles the two: it admits or defers the requested change against the node's allocatable capacity, calls the runtime, and writes back what took effect. A resize that the node cannot satisfy stays visible as a gap between spec and status rather than disappearing into a rejected API write.
+
+Three CRI gaps block this and are in scope for the KEP. First, UpdateContainerResources takes a Linux-shaped resources parameter, which does not fit Windows containers and will not fit runtimes added later; the call needs a per-platform payload. Second, no CRI call lets the kubelet read back the CPU and memory limits a runtime currently has applied, and the kubelet cannot populate the new status field from values it cannot query. Third, the behavior a runtime is expected to exhibit when it handles a resource update -- what it applies synchronously, what it may refuse, what it reports on partial success -- is undocumented, so two conforming runtimes can respond differently to the same request.
+
+Goals
+
+Resize a running container's CPU and memory without necessarily restarting it. Let the initiator of a resize -- a user, VPA, a StatefulSet controller, a JobController -- declare what should happen when in-place application is impossible, so the policy lives with the actor that understands the workload. Let users mark which containers in a pod are safe to resize, and which must be restarted instead.
+
+Non-goals
+
+The following are explicitly out of scope for this KEP: changing a pod's QoS class; resizing init containers that are not restartable; evicting lower-priority pods to make room for a resize; resource types other than CPU and memory; CPU manager and memory manager policies other than 'None'; and resolving races between a resize and a concurrent scheduling decision.

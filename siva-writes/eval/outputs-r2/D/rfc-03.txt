@@ -1,0 +1,63 @@
+Version skew
+============
+
+The API server must reject an in-place resize when the kubelet that owns the pod
+does not implement the feature, and because no kubelet version is available at
+admission time, it reads the proxy ``.status.containerStatuses[*].resources`` on
+the first running container.
+
+Skew is expected here, not exceptional. The CRI changes merged in v1.25 to let
+runtimes begin implementing support; containerd shipped it in 1.6.9. A
+cluster therefore can and does run a current API server over nodes whose kubelet
+or runtime predates either point. Old clients supply the other half of the skew:
+a client that does not know the ``ResizePolicy`` fields sends them as nil, and
+the API server copies the non-nil values from the old pod forward. An old
+client cannot clear a resize policy by omitting it.
+
+Both skew outcomes damage the cluster, and they damage it in opposite
+directions. Before v1.31, with ``InPlacePodVerticalScaling`` disabled, the
+kubelet reads a resource mutation as a change to the container definition and
+restarts the container with the new values. Nothing at the node level reserved
+those values, and the scheduler never saw them, so the node can be
+over-subscribed by the full delta of the resize.
+
+From v1.31 the kubelet no longer treats a resource change as a definition change
+and does not restart the container. The new values then take effect only if the
+container restarts for some unrelated reason -- an OOM kill, a failed liveness
+probe, a runtime upgrade -- and the effective values are never written back to
+``.status``. The resize is nondeterministic in timing and invisible in the API:
+an operator who reads the pod back sees the requested values applied and has no
+field that reports what the container is actually running under.
+
+The proxy holds because the kubelet writes ``.status.containerStatuses[*]
+.resources`` on running containers if and only if the feature is enabled. A
+kubelet that does not know the field leaves it nil; one that does sets it, and
+sets it to an empty ``{}`` even when the container declares no requests or
+limits. Test for non-nil, not for non-empty. Reading ``{}`` as absent rejects
+every BestEffort container on a node that fully supports resize.
+
+Admission logic
+---------------
+
+The API server applies three tests in order:
+
+1. If the ``InPlacePodVerticalScaling`` feature gate is disabled on the API
+   server, reject the resize.
+2. Otherwise find the first container in ``.status.containerStatuses`` whose
+   state is running, and allow the resize only if its ``.resources`` is non-nil.
+3. If the pod has no running containers, allow the resize.
+
+Three cases fall outside the proxy's reach, and only one of them is safe. A pod
+that has not been scheduled has no running containers and no kubelet; the resize
+is allowed, and the new values are the ones used at scheduling and at start,
+which is the correct outcome. A pod that has been scheduled but has no running
+container yet gives the API server no signal at all, and the resize is admitted
+and an old kubelet may bring the node to an over-provisioned state. The same
+window carries a race: a resize admitted against a non-running container while
+the kubelet is starting it resolves differently on each side of v1.31 -- before,
+the container restarts and picks up the new values; after, it keeps the old
+ones.
+
+We accept the second and third cases for this KEP. Closing them requires a
+direct signal of kubelet capability at admission, which the node status does not
+carry today.

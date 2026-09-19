@@ -1,0 +1,62 @@
+## Notes/Constraints/Caveats
+
+### State transitions of `.spec.schedulingGates`
+
+The field is initialize-once and drain-only. A client may set `schedulingGates`
+when it creates the pod, either directly or through a mutating admission
+webhook; after creation, a client may remove gates in any order, but may not
+add one. Nothing in the scheduler or the API server re-gates a pod that has
+already been ungated.
+
+This restriction is not ergonomic tidiness. Allowing an update to append a gate
+would let a controller pause a pod that the scheduler has already picked up, or
+one that is already bound, and both of those states have no defined unwind. The
+narrower rule -- gates only shrink -- means a pod's gate list is a monotone
+countdown from a value fixed at admission, and the scheduler can treat an empty
+list as terminal.
+
+A scheduled pod always carries empty scheduling gates. That invariant is
+enforced at admission, not merely expected: a client, whether an administrator
+or a custom controller, cannot create a pod that populates `schedulingGates`
+and also sets `spec.nodeName`. The API server returns a validation error.
+Stated as a matrix, where "non-nil gates" means at least one gate is present:
+
+| pod state | create, non-nil gates | update, non-nil gates | nil gates |
+|---|---|---|---|
+| unscheduled (`nodeName` nil) | allowed | rejected | create and update both allowed |
+| scheduled (`nodeName` non-nil) | rejected | rejected | create and update both allowed |
+
+The only cell that admits a gate is the create of an unscheduled pod. Every
+other path either rejects the write or leaves the field nil.
+
+### Feature-gating is not uniform across the three parts
+
+The feature ships as three separable pieces:
+
+- (a) the `.spec.schedulingGates` pod spec field, its feature gate, and the
+  associated API machinery,
+- (b) the `SchedulingGates` scheduler plugin,
+- (c) the scheduler framework change underneath both -- the new `PreEnqueue`
+  extension point.
+
+Disabling the feature turns off (a) and (b) and leaves (c) on. We do not gate
+the extension point, because a plugin developer who wants a different pausing
+policy can build their own equivalents of (a) and (b) on top of (c) alone. The
+cost of that choice is that the `PreEnqueue` call is present in the scheduling
+cycle whether or not any plugin implements it; the benefit is that out-of-tree
+plugins do not inherit the lifetime of an in-tree feature gate.
+
+Reviewers should read the asymmetry as deliberate. (c) is framework surface and
+is subject to the framework's own compatibility guarantees once it graduates;
+(a) and (b) are the reference policy built on that surface, and only they
+disappear when the gate is off.
+
+### kubectl
+
+`kubectl get pod` gains a new phase literal, `SchedulingPaused`, in the phase
+column. It is a display value computed by kubectl from the pod's gate list, not
+a new value of `.status.phase`, and no API object carries it. A pod whose
+`schedulingGates` is non-empty prints `SchedulingPaused`; otherwise the column
+is unchanged. Clients that parse the phase column -- scripts, dashboards
+scraping `kubectl` output -- will see a string they have not seen before, and
+should be checked before the gate defaults on.

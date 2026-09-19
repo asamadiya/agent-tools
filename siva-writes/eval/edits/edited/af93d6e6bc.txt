@@ -1,0 +1,50 @@
+Experimentation
+
+The flame graph said a third of our CPU was going into os::javaTimeMillis(), but a flame graph is a profile of a running Cassandra cluster, not an experiment. Before changing anything in production we wanted a number we could move: how long does one call to System.currentTimeMillis() actually take on this instance, and how does that compare to a machine that is not showing the problem?
+
+There was no microbenchmark for that. Plenty exist for allocation, for locks, for I/O; nobody had bothered to write one for reading the clock, presumably because reading the clock is supposed to be free. So we wrote one. TimeBench.java is about as dumb as a benchmark can be: a loop of 100,000,000 iterations, each calling System.currentTimeMillis(). The only subtlety is keeping the compiler from noticing that the result is unused and deleting the whole thing. We compare the returned value against 87362 and println inside the loop on a match. That costs a little — the comparison and the branch are real instructions — but it guarantees the loop survives.
+
+Run under time(1), on CentOS:
+
+    real 0m12.989s
+    user 0m3.368s
+    sys  0m18.561s
+
+On the Ubuntu instance:
+
+    real 1m8.300s
+    user 0m38.337s
+    sys  0m29.875s
+
+That is about 0.13 us per call on CentOS and 0.68 us on Ubuntu: 5x slower, and now reproducible on demand in about a minute, on a box we could break without anyone paging us. Note the sys time exceeding real time on CentOS — this is a multi-threaded JVM, and the syscall cost is spread across threads.
+
+A microbenchmark this small invites the suspicion that you are measuring the JVM, not the system. So we wrote the same loop in C calling gettimeofday(2) directly, compiled at -O0 so the loop would not be optimized away, and got similar results. That rules out the JVM as the source of the difference. It is also worth saying that a benchmark this short can simply be disassembled: a few dozen instructions, and you can read them and confirm the compiler emitted what you thought you asked for. We did. This is a habit worth keeping — most "surprising" benchmark results are the compiler being cleverer than the person writing the benchmark.
+
+So the cost is real, it is in the kernel, and the flame graph told us which frame: pvclock_clocksource_read(). That is the Xen paravirtualized clock. Linux exposes its clock sources:
+
+    # cat /sys/devices/system/clocksource/clocksource0/available_clocksource
+    xen tsc hpet acpi_pm
+    # cat /sys/devices/system/clocksource/clocksource0/current_clocksource
+    xen
+
+xen, matching the profile exactly. And tsc is sitting right there in the available list. You can switch by echoing into current_clocksource, and it takes effect immediately — no reboot, no instance replacement:
+
+    # echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource
+
+TimeBench, rerun on the same instance seconds later:
+
+    real 0m3.370s
+    user 0m3.353s
+    sys  0m0.026s
+
+Over 20x faster than the same box a moment earlier, and nearly 4x faster than CentOS. The sys time is the tell: it went from 30 seconds to 26 milliseconds. There are essentially no syscalls left.
+
+That is the whole mechanism. TSC reads the time with a single RDTSC instruction, and Linux exposes it through the vDSO, so the call never leaves user space. The Xen clock source goes through the hypervisor. At roughly 33 ns per call we are now measuring our own loop as much as the clock read — the comparison and branch are a meaningful fraction of that — and partially unrolling the loop would tighten the number further. We did not bother; we had what we needed.
+
+The fix
+
+The reason nobody had already done this is that TSC has a reputation. It historically drifted between cores and across sockets, and the folklore is to avoid it. That folklore is old. We could not find a current public reference saying it was safe; what we had was a processor engineer, met at a conference, who said tsc had been stable for years and knew of no citable source saying so.
+
+That is thin evidence for a kernel-level clock change. It is not thin evidence in a cloud built to tolerate faults. If TSC misbehaved on a node, that node would fail in ways we already handle — Cassandra replicas, region-level redundancy, instance replacement. The downside was bounded and the upside was a third of our CPU. We shipped it.
+
+Production confirmed the microbenchmark. Cassandra write latencies dropped 43%, slightly better than the CentOS fleet. os::javaTimeMillis() fell from roughly a third of CPU to 1.6%, with a single vdso frame above it in the flame graph and nothing below it. The syscall is gone.

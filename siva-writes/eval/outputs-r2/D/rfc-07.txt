@@ -1,0 +1,62 @@
+KEP: Pod Scheduling Readiness
+Motivation, Goals and Non-Goals
+
+
+Motivation
+==========
+
+kube-scheduler treats a pod as ready for scheduling the moment it is created, and for a pod that
+is missing an essential resource that assumption spends scheduling cycles on work that cannot
+succeed. This KEP proposes an API that marks a pod scheduling-paused or scheduling-ready, plus an
+Enqueue extension point that decides which pods enter the scheduling queue at all.
+
+The cost is a retry loop with no terminating condition. A pending pod that fails to schedule goes
+back to the queue and is tried again on the backoff cadence. The scheduler has no way to distinguish
+a pod waiting on cluster capacity from a pod waiting on a quota object, a permit, or a peer workload
+that nobody has created yet. The second pod is retried as often as the first for as long as it stays
+pending, and every attempt occupies a scheduling cycle that some other pending pod could have used.
+We publish no measurement of the lost throughput and claim no number here. The argument is
+structural, and the size of the effect grows with how long such pods sit.
+
+Every retry is also visible downstream. The scheduler publishes the condition
+{type: PodScheduled, reason: Unschedulable} as the canonical signal that a pod cannot be placed,
+and integrators such as Cluster Autoscaler read exactly that condition to decide whether to add
+nodes to the cluster. A pod blocked on an ungranted quota is not blocked on capacity, so marking it
+Unschedulable asks the autoscaler to buy nodes that will not place it. Any solution here must leave
+the condition's meaning intact for every pod that is genuinely unplaceable, because integrators
+outside this repository are built on that contract.
+
+The same gap constrains vendors building on the scheduler. Hierarchical quota is the concrete case:
+the feature needs to hold a pod until its quota is granted, and today the only options are an
+admission webhook that rejects the pod or a controller that creates the pod late, both of which move
+scheduling policy outside the scheduler.
+
+
+Goals
+=====
+
+- An API on the pod that marks it scheduling-paused or scheduling-ready, and that an authorized
+  actor can flip from paused to ready.
+- A new Enqueue extension point in the scheduling framework, which lets a plugin customize queueing
+  behavior.
+- A guarantee that a paused pod is never marked with {type: PodScheduled, reason: Unschedulable}.
+  A paused pod is not unschedulable; it has not been offered to the scheduler.
+- A default enqueue plugin that implements the semantics of the new API. A cluster gets the
+  behavior without anyone writing a plugin.
+
+
+Non-Goals
+=========
+
+- Extending pod conditions to expose more context about why a pod is paused. The existing condition
+  vocabulary stays as it is.
+- Cataloguing in-tree uses of the Enqueue extension point. This KEP defines the extension point and
+  its default plugin, and leaves the in-house applications to their own proposals.
+
+
+Future work
+===========
+
+Permission control on individual scheduling gates is out of scope and depends on a fine-grained
+permissions design that does not exist yet. Until it lands, an actor that can update the pod's
+readiness field can clear any gate on that pod.

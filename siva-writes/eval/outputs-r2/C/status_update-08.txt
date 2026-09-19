@@ -1,0 +1,18 @@
+Monthly burndown: unauthenticated internal gRPC endpoints
+Owner: Hiroshi Tanabe. Security partner: Dana Ruiz. Reporting date: Sep 18, 2026.
+
+We have closed 1,189 of the 1,432 unauthenticated gRPC endpoints the internal red team found in June, which is 83%, and 243 remain open across the 318 services in scope. Every fix is the same pair of changes: mTLS on the listener plus a per-endpoint ACL. Median time from assignment to close is 11 days. The p90 is 74 days, and that tail drives most of what follows.
+
+All 96 P1 endpoints -- the ones a caller can reach from outside the service mesh -- were closed by the Aug 15 deadline. None has regressed or reopened since.
+
+P2 will miss Oct 31. Teams are closing 26 endpoints per week, and at that rate the remaining 243 close on Nov 23, three weeks past the deadline. Hitting Oct 31 from Sep 18 requires about 40 endpoints per week across the six weeks left, a 1.5x increase in throughput with no reduction in scope. The p90 makes the gap worse: an endpoint assigned today that runs to the 74-day tail closes on Dec 2, a month after the deadline.
+
+The remaining 243 are three different populations. 61 sit in services with no registered owner, 12 are in systems already declared end-of-life, and 170 have a named owner and a live service behind them. Only those 170 are described by the 26-per-week rate, because they are the only ones an engineer is currently assigned to. The 61 orphans have no team to route to, and no amount of throughput moves them.
+
+Dana has proposed switching mesh ingress to deny-by-default for the 61 orphaned services on Oct 6. That closes the exposure with no code change in any of them and removes 61 endpoints from the engineering queue. It also breaks four known cross-team callers. We contacted all four; one has confirmed a migration path, three have not answered. Cutting over on Oct 6 converts those three into outages that morning unless they respond first.
+
+Here is the arithmetic with the proposal in place. Teams close roughly 67 more endpoints between now and Oct 6, leaving 176. Remove the 61 orphans and 115 remain. At 26 per week, 93 of those close by Oct 31 and about 22 are still open, of which 12 are the end-of-life systems. The slip shrinks from three weeks to one, and the residual is small enough to except by name.
+
+Two decisions we need from the board. First, rule on the Oct 6 cutover, including whether we proceed against three silent callers or hold the date until they answer. We will keep escalating through their management chains either way, and we will report who has responded at the Oct 6 checkpoint. Second, decide the disposition of the 12 end-of-life endpoints: grant a documented exception tied to each decommission date, or fund the work and we will queue them behind the 170.
+
+We are not asking for a deadline extension this month. If the board holds Oct 31 and rejects the cutover, the honest projection is Nov 23, and the 61 orphaned endpoints stay exposed the whole time. If the board approves the cutover, the next checkpoint is Oct 6; otherwise we report again at the October monthly review.

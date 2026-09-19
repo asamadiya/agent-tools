@@ -1,0 +1,53 @@
+Trim monthly programme status
+Owner: Renee Alvarez. Finance partner: Sanjay Kothari.
+
+Trim has booked $16.4M of the $28M annualised infrastructure savings target, 59%, against a
+close date at the end of FY27. The programme is on plan by dollars booked and off plan by
+risk concentration: 60% of what remains sits behind a dependency we do not control.
+
+Three workstreams produced the $16.4M. Right-sizing 6,800 over-provisioned pods returned
+$9.1M and moved the median CPU request from 4.0 cores to 1.5. Deleting 41 PB of object
+storage untouched for more than three years returned $4.2M. Converting 62% of the
+steady-state fleet to reserved instances returned $3.1M. These are annualised run-rate
+figures validated with finance, not cash already recognised in FY26.
+
+Right-sizing cost five incidents: four SEV-3 and one SEV-2. Every one was CPU throttling on a
+service whose p99 CPU sat close to its new request, so the failure mode is a single sizing
+error repeated, not five separate causes. A guardrail shipped Aug 20 now blocks any cut where
+measured p99 CPU exceeds 70% of the proposed request. It has rejected 410 of 1,100 candidate
+cuts since, 37%.
+
+That 37% is the number I would look at hardest this month. It is the sizing model's error rate
+measured against real telemetry, and it says better than a third of the remaining pod
+population was scoped by a method that would have throttled it. The $9.1M already booked was
+produced by the same method, so a portion of it is likely sitting on headroom that services
+will reclaim. We are re-running the booked cohort against the guardrail threshold and will
+report the exposure in the October review.
+
+The remaining $11.6M breaks into $7.0M from GPU bin-packing and $4.6M from decommissioning
+three legacy datacenter halls by June 2027. GPU cluster utilization is 38% today against a 65%
+target, and the gap is real capacity rather than an accounting artifact. Capturing it requires
+a scheduler change owned by another org that carries no committed date.
+
+If that scheduler change does not land in time to bin-pack and hold utilization for a full
+annualised period, Trim closes FY27 at $21.0M, 75% of target, with a $7.0M miss. I am
+reporting that as the planning case, not the downside case, because a dependency with no date
+is not a plan. We have no substitute workstream sized anywhere near $7.0M.
+
+The $4.6M hall decommission is the healthier half of the remainder, and its June 2027
+completion date leaves roughly one quarter of slack before FY27 close. Slip beyond September
+2027 removes the annualised booking entirely, so the schedule matters more than the dollar
+figure suggests. Migration planning for the workloads still resident in those halls is the
+gating item, and it is on track.
+
+What I need from this review is an escalation path to a committed scheduler date. Renee and I
+have working-level agreement with the owning org and no roadmap commitment, which is the
+normal outcome when the requesting team holds the savings target and the delivering team holds
+none of it. The specific ask is that the scheduler change be given a dated commitment for a
+quarter no later than Q2 FY27, or that we agree now to re-baseline Trim to $21.0M and redirect
+the effort currently sized against GPU bin-packing.
+
+Next month I will bring three things: the guardrail-adjusted exposure on the booked $9.1M, a
+dated response on the scheduler dependency, and the hall migration plan with workload counts.
+If the scheduler answer is still open in October, I will propose the re-baseline rather than
+carry an undated $7.0M forward into a third consecutive report.

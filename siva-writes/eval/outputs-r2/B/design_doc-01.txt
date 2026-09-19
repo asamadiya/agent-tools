@@ -1,0 +1,27 @@
+Prioritising latency work against cost with the latency Lorenz curve
+
+Problem
+
+We argue about tail latency without a shared unit of value. One engineer wants to fix a p99.9 stall that affects a few thousand requests a day; another wants to shave 3 ms off the median. Both proposals are described in milliseconds, and milliseconds do not convert to servers. This document proposes a single measure that converts a latency population into the share of the fleet it occupies, which is the quantity our budget is denominated in.
+
+The measure
+
+The empirical Lorenz curve L(P) gives the share of total mean latency contributed by requests faster than percentile P, so its complement 1-L(P) gives the share contributed by requests at or above P. Compute it from sorted raw samples: with n samples and k = P*n, L = sum(sorted(x)[:k]) / sum(x). That is an exact statement about the sample, not a model of it, and it needs no distributional assumption.
+
+Most of our dashboards hand us a quantile vector instead of raw samples. From quantiles you must interpolate between the measured points and extrapolate past the last one; a power-law fit on the tail is one defensible choice, and it is a fit, not a measurement. Go back to sorted raw samples whenever the decision is worth a sampled export. We should plan for that export on the three services where capacity is the binding constraint.
+
+Worked example
+
+Take quantiles [1, 10, 200, 10000, 20000] ms measured at percentiles [0, 0.5, 0.9, 0.99, 0.999]. These give 1-L = [1, 0.9938, 0.9308, 0.5171, 0.1034]. Read the two entries that matter: requests at or above p50 contribute about 99% of mean latency, and requests at or above p99 -- one request in a hundred -- contribute 52% of it. Values of 1-L(0.99) above 0.5, and sometimes above 0.75, are common in services we run.
+
+From latency share to fleet share
+
+Little's law turns that fraction into occupancy. In a threaded service, if 1-L(P) = k, then 100k% of busy threads are held by requests that will finish at or above the Pth percentile. In the example above, 52% of busy threads are working on the slowest 1% of requests at any instant. Halve the service time of that population and, at fixed arrival rate, you release 26% of the concurrency -- roughly a quarter of the thread pool, and therefore roughly a quarter of the instances provisioned to supply it. Compare that against the median proposal: cutting the median in half moves 1-L(0.5) from 0.9938, and the arithmetic leaves almost nothing on the table.
+
+When the number is not trustworthy
+
+Two conditions bound the method and we should state both on every chart. First, the tail index alpha must exceed 1, or the mean is not estimable and the ratio has no finite denominator to divide by. Second, measured percentiles are estimates, and their uncertainty grows with the percentile: p99.9 from a one-minute window of a few thousand requests is a handful of samples wearing a precise-looking label. Widen the window, or report a confidence interval, before spending a quarter of an engineer on what it says.
+
+Proposal
+
+Add 1-L(P) at P in {0.5, 0.9, 0.99, 0.999} to the standard capacity review for every tier-1 service, sourced from a daily raw-sample export where one exists and from the quantile vector with the fit labelled where one does not. Rank latency proposals by the occupancy they release, in threads and in instances, and put that figure next to the engineering cost in the same table. Run this on three services first and report whether the ranking it produces disagrees with the ranking we would have chosen by argument.

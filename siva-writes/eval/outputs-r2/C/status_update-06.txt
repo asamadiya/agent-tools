@@ -1,0 +1,38 @@
+Storage Platform: H2 2026 roadmap status and recommendation
+Owner: Kwame Boateng. For VP staff planning review.
+
+Summary
+
+The team is chartered for three workstreams and can staff one and a half of them. Approved headcount is 11 and filled headcount is 7. Four requisitions have been open since February at an average age of 214 days, and two offers were declined on compensation, one in July and one in August. Two engineers left in Q2, including the DRI for the compaction rewrite. Every date below follows from those seven people.
+
+Where the three workstreams stand
+
+Tiered storage GA moves from Nov 17 2026 to Feb 23 2027, a slip of fourteen weeks. The work itself is not blocked; the remaining migration tooling and the cross-region path are being done by fewer engineers than the plan assumed, and the schedule absorbs the difference.
+
+Cross-region async replication is paused with zero engineers assigned and no restart date. I am not carrying a placeholder date for it. It restarts when two of the four open requisitions close, and not before.
+
+The compaction rewrite continues with one engineer where the plan called for three. That engineer inherited the work from the departed DRI. The rewrite will land, and it will land late; I will bring a date to the November review once the single owner has finished the on-disk format work.
+
+Hiring will not fix Q4
+
+The internal transfer pipeline has three candidates in loop, and the earliest possible start is Nov 30. Ramp on this codebase has historically taken eight weeks, which puts first useful output near Jan 25 even if all three accept. No capacity lands in Q4 from hiring. The external requisitions are worse: at 214 days average age and two compensation declines, I do not forecast an accept before the end of the calendar year without a band adjustment.
+
+The three options
+
+Borrow two engineers from the Index team for one quarter. Index pays five weeks on its own query-planner goal. The eight-week ramp applies to borrowed engineers as well, so a thirteen-week loan returns roughly five productive weeks per engineer, and the borrowed pair leaves just as they become useful. The transfer of cost to Index is larger than the capacity returned to us.
+
+Contract the migration tooling to a vendor at $480K for two quarters. This buys the one piece of scope that is genuinely separable. It does not staff compaction or replication, and it consumes review and integration time from the seven engineers we have, which is the constrained resource.
+
+Cut scope to single-region tiered storage and hold Nov 17. This ships the feature customers asked for first, on the date already communicated, using the staffing we actually have.
+
+Recommendation
+
+Cut scope to single-region tiered storage and hold Nov 17. Cross-region replication stays paused and is announced as paused, with restart conditioned on two requisitions closing. The compaction rewrite keeps its single engineer and gets a date in November. We do not borrow from Index, and we do not spend $480K to accelerate a dependency that is not the binding constraint.
+
+Two asks for this review:
+
+Approve a compensation band adjustment for the four open requisitions. Two declines in two months on the same reason is a pricing signal, and 214 days of open requisition is more expensive than the delta on two offers.
+
+Approve the external communication of a single-region GA for Nov 17 and a cross-region date of "not scheduled." I would rather say not scheduled now than move Feb 23 a second time in January.
+
+If the staff prefers cross-region in the H2 commitment, the Index loan is the only option that could reach it, and I will bring a revised plan with Index's owner co-signing the five-week cost.

@@ -1,0 +1,31 @@
+Agent tooling investment: fund the feedback loop
+
+The claim
+
+Coding agents will find tasks with fast, accurate, machine-checkable feedback easy, and tasks without it hard. If that holds, the availability of feedback -- not model capability -- sets the ceiling on what agents can do for us, and our tooling budget should buy feedback channels instead of agent harnesses and prompt libraries. This document argues the case and names the three tiers I would fund.
+
+What the current evidence shows
+
+Four observations point the same way. Agents recover from a failure when the error message says what broke and where; they thrash when it says that something went wrong. The Rust compiler rejects a large class of incorrect programs explicitly and immediately, which steers an agent toward correct code before any test runs. Agents do well on performance work wherever a benchmark already exists, because the benchmark answers "did that change help" in seconds. Property-based testing pays back more than the cost of writing the property, since one property generates thousands of adversarial inputs and returns a shrunk counterexample the agent can read.
+
+The failures share a shape. Architecture quality is know-it-when-I-see-it feedback, it lives in a senior engineer's head, and it arrives days after the work. Concurrency bugs surface as silent data corruption at runtime, on some schedules, sometimes in production. Neither loop closes at machine speed, and both are where agents are weakest today.
+
+The comparison that decides the investment
+
+Compare two projects. Build a delightful, ergonomic photo-editing website. Build a correct, high-performance storage engine in the class of RocksDB or InnoDB -- not Aurora DSQL or PostgreSQL, which are far larger systems. Ask which one an agent finishes.
+
+An open-loop model, judged on a single shot, gets much closer on the website. The hypothesis inverts that ranking over any horizon longer than one shot. The website's loop needs a human to look at the result and say whether it feels right, and humans are slow, squishy, and inconsistent graders. The storage engine has a written specification covering the API, the safety properties, and the liveness properties, all three of which a machine can check, so the agent iterates without us in the loop at all.
+
+Where to spend
+
+Fund three tiers, ordered by how tight a loop each one closes.
+
+Compile time is the cheapest feedback we can buy, because it costs one build. Invest in Rust adoption on new services, and evaluate Verus for the components where we already write proofs by hand and Hydro for distributed dataflow.
+
+Modelling time catches what the compiler cannot. Fund TLA+ and P for the concurrent and distributed designs, and fund a spec analyzer in the shape of Kiro's, which turns a written specification into checkable obligations rather than a document nobody rereads.
+
+Run time is where we have the most existing surface and the least discipline. Deterministic simulators, fault injection, mocks that fail the way the real dependency fails, and property-based suites on the data structures all convert a silent runtime corruption into a reproducible failing case.
+
+How we would know this is wrong
+
+Track one number per quarter: the fraction of agent-authored changes merged without a human correction, split by whether the task had a machine-checkable acceptance test. If that fraction converges across the two groups as models improve, feedback is not the binding constraint and we should move the money to harnesses. I expect the gap to widen for at least the next four quarters.

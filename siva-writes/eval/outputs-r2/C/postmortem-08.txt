@@ -1,0 +1,33 @@
+Cloudflare to AWS us-east-1: congestion on 21 August 2025
+
+Summary
+
+Customers whose origins sit in AWS us-east-1 saw elevated latency, request timeouts and reduced throughput between 16:27 and 20:18 UTC on 21 August 2025. All times in this report are UTC. Every direct peering link between Cloudflare and AWS in the us-east-1 footprint ran saturated for most of that window, and our edge routers dropped packets, including packets we classify as high priority. This was a capacity event in one region. Global Cloudflare services were not affected, no other origin network was affected, and this was neither an attack nor a BGP hijack. We are sorry for the impact, and the ownership of the shortfall is ours: our network should absorb a single customer's traffic shift without degrading every other customer sharing those links.
+
+What happened
+
+At approximately 16:27 a single customer began requesting large volumes of cached objects from origins in AWS us-east-1. The response traffic from those requests doubled total Cloudflare-to-AWS traffic and saturated the direct peering links between the two networks. Two pre-existing conditions removed the headroom that would otherwise have absorbed the step: one direct peering link was running at half its normal capacity following an earlier failure, and the Data Center Interconnect carrying traffic to an offsite interconnection switch was already scheduled for a capacity upgrade it had not yet received.
+
+At 16:37 AWS began withdrawing BGP advertisements on the congested private network interconnects in order to shed load from them. The withdrawals worked as designed on the links they targeted and moved the problem: traffic that had been using the PNIs re-converged onto peering links reached through the offsite interconnection switch, which was fed by the under-provisioned DCI. Those links saturated in turn. Router queues grew on both paths, and the drops that followed were not selective by traffic class.
+
+Detection and response
+
+Our network team was alerted to congestion in Ashburn (IAD) at 16:44, 17 minutes after onset. At 16:45 responders established the key fact of the incident: the paths with available capacity were no longer carrying AWS prefixes, because those prefixes had been withdrawn. Traffic engineering cannot steer traffic onto a path that does not advertise the destination, which is why mitigation took the shape it did.
+
+Dropped traffic increased at 17:22. We raised a customer-impact incident at 17:45, 61 minutes after the first congestion alert, and that gap is the largest single gap in this timeline. At 19:05 we rate-limited the originating customer and congestion fell. Traffic engineering fully cleared the remaining congestion at 19:27, three hours after onset. AWS began reverting the withdrawals at 19:45 and finished normalizing announcements over the IAD PNIs at 20:07. Impact ended at 20:18.
+
+Impact
+
+Requests to origins in AWS us-east-1 experienced added latency, timeouts and low throughput for the duration. The share of synthetic origin requests missing our latency service level objective tracked the packet drop rate closely enough that we treat the two as one signal for this incident. Latency recovered after the drops stopped rather than with them, because both networks were still renormalizing prefix advertisements while the links had already drained.
+
+What we are doing
+
+We are completing the DCI capacity upgrade to the offsite interconnection switch and adding capacity to the direct peering links with AWS in this footprint.
+
+We are changing how a degraded link is treated: a peering link running at reduced capacity will be counted at its actual capacity in our headroom calculations, not its nameplate figure.
+
+We are building alerting that fires on a single customer's origin traffic doubling a peer-facing aggregate, so the traffic shift itself pages us rather than the congestion it causes.
+
+We are working with AWS on load-shedding behaviour that preserves reachability on uncongested paths, so that traffic engineering retains somewhere to steer.
+
+We are shortening the path from a network congestion alert to a declared customer-impact incident, which took 61 minutes here.

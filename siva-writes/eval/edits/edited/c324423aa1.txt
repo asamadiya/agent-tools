@@ -1,0 +1,25 @@
+Reasoning about coding-agent capability
+
+Purpose
+
+We need a way to predict where a coding agent will succeed before we build tooling around it. Agents now produce meaningful, correct software quickly and at very low cost, and on some coding tasks they beat every engineer on this team. On adjacent tasks they fail in ways that look arbitrary. This document proposes that we evaluate the loop around the model, not the model in isolation, and it gives three questions to ask of any agent feature we are asked to ship.
+
+The 85-year pattern
+
+Machines have been superhuman at narrow tasks since at least the 1930s, when Marian Rejewski and the Polish Cipher Bureau broke Enigma with machinery no person could match by hand. The laptop in front of you adds 64-bit integers roughly 100,000,000,000 times faster than you do with pencil and paper. That figure assumes one hand addition every two seconds, which puts the machine near 5e10 additions per second across its cores -- the right order for eight cores at 3.5 GHz retiring several adds per cycle. Nine decades have not changed the shape of the distribution: vastly superhuman in some areas, well short of a person in others. A single scalar for "how good are agents" throws that distribution away.
+
+A square root out of a bad multiplier
+
+Take an opamp and an analog multiplier IC, say the long-obsolete MC1495. Feed the opamp output through the multiplier's two inputs and back to the opamp's inverting input. Apply a voltage on the left and read its square root on the right. The opamp drives its two inputs to equality, so the output settles at the value whose square equals the input. The multiplier is a poor part: it drifts with temperature, carries offset, and goes nonlinear near zero. The circuit is accurate anyway, because the accuracy lives in the comparison and the feedback path.
+
+The generalisation is the point. A component inside a feedback loop behaves very differently from the same component open-loop, and a loop can extract excellent output from a mediocre part.
+
+What this says about agents
+
+An agent is a feedback loop built around an LLM, and the LLM is the MC1495: useful open-loop behaviour with known flaws. Developer tooling moved in about two years from IDE autocomplete, which is open-loop because a human reads each suggestion and closes the loop, to agents that hold the build-test-iterate cycle themselves. The compiler, the type checker, the linter and the test suite became the comparator. Relocating that loop is what changed the output quality, and it happened alongside, not because of, raw model gains.
+
+How to evaluate a proposed feature
+
+Ask three questions. What is the comparator -- which signal tells the agent it is wrong, and how many seconds until it arrives? What is the gain -- how much does one iteration cut the remaining error? What does settling cost in tokens and wall time? Where no comparator exists, expect open-loop quality: API design judgement, unstated requirements, data corruption no test names.
+
+Run this before you argue about models. Take a task the agent completes reliably. Delete its test suite. Run it fifty times and record the pass rate. The drop measures our loop.

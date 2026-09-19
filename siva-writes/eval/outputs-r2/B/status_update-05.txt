@@ -1,0 +1,28 @@
+Experiment wrap-up: two-tower-v7 session-aware retrieval head
+Owner: Aditi Sundaram. Status: shut down Sep 5, 2026.
+
+Decision
+
+The metrics council reviewed the 10% readout on Sep 5 and decided not to ramp two-tower-v7. We tore the LIX down the same day. The session embedding table stays in the feature store, because two other teams now read it and their pipelines do not depend on the retrieval head that produced the disappointing readout. This document records what the ramp measured, which members moved, and the hypothesis we would test before anyone rebuilds this head.
+
+What the ramp measured
+
+Notification CTR did not move. At 10% the point estimate is -0.11% with a 95% confidence interval of -0.41% to +0.19%, which spans zero, so we cannot distinguish the treatment from control on the headline metric. Downstream sessions per member fell 0.6% at p = 0.003. That is the one member-facing number that cleared significance, and it moved in the wrong direction.
+
+Cost moved clearly. Serving the treatment consumed 4,100 GPU-hours per day against 3,130 for control, an increase of 31%. The p99 scoring latency went from 38 ms to 57 ms, an added 19 ms in the ranking path. We ramped in three steps -- 2% on Jul 14, 4% on Aug 4, 10% on Aug 19 -- and the cost and latency deltas held their shape at every step, so neither is an artifact of the final ramp.
+
+Where the lift went
+
+Split the population by weekly session count and the aggregate resolves into two opposite effects. Members in the top decile gained +1.9% CTR. The 62% of members with fewer than three sessions a week lost 0.8%. The light-session group carries most of the traffic, so its loss dominates the aggregate and cancels the heavy-user gain down to the flat -0.11% we reported above. The experiment did work for the members it was designed around. It reached too few of them to pay for itself.
+
+Working hypothesis for the miss
+
+We believe the session head needs at least four prior sessions before it emits a useful embedding, and that below that threshold it falls back to something close to a constant vector. A near-constant vector contributes no ranking signal and compresses the score spread across candidates, which flattens the ordering for light users and lets weaker notifications surface. This is a hypothesis, not a finding: we did not instrument embedding norm or pairwise distance by session count during the ramp, and the shutdown removed the traffic that would let us check it now. Anyone picking this up should log embedding variance bucketed by prior session count on a 1% holdout and confirm the threshold before touching the architecture.
+
+What we keep
+
+The session embedding table remains live in the feature store. Two teams consume it today, and the shutdown affects only the retrieval head and the LIX, not the table or its refresh job. We have not audited what those consumers assume about coverage for light users. If the constant-vector hypothesis holds, their features inherit the same dead zone, and that is worth a note to both teams before the next model refresh.
+
+What we would need to see before a retry
+
+A retry needs two things this version lacked. First, a fallback path for members below the session threshold that does not degrade their ranking, verified on the light-user segment alone and not on the aggregate. Second, a cost envelope: 31% more GPU and 19 ms of p99 buys a +1.9% gain on one decile today, and the gain would need to reach a much larger share of members, or the serving cost would need to come down substantially, for the trade to clear. We are not scheduling that work this half.

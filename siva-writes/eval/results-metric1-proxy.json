@@ -1,0 +1,649 @@
+{
+  "STATUS": "PROXY, UNVALIDATED. Cohen's kappa against owner labels has not been computed. These win rates are descriptive and must not gate a Phase 5 change.",
+  "judge_model": "gemini-3.8-flash",
+  "judge_is_different_family_from_writer": true,
+  "judge_has_not_seen_the_skill": true,
+  "position_shuffled_seed": 20260918,
+  "unresolved_verdicts": 2,
+  "by_condition": {
+    "A": {
+      "appearances": 24,
+      "wins": 9.5,
+      "win_rate_pct": 39.58,
+      "wilson95_pct": [
+        22.8,
+        59.24
+      ]
+    },
+    "B": {
+      "appearances": 24,
+      "wins": 16.0,
+      "win_rate_pct": 66.67,
+      "wilson95_pct": [
+        46.71,
+        82.03
+      ]
+    },
+    "C": {
+      "appearances": 24,
+      "wins": 16.5,
+      "win_rate_pct": 68.75,
+      "wilson95_pct": [
+        48.75,
+        83.57
+      ]
+    },
+    "D": {
+      "appearances": 24,
+      "wins": 16.0,
+      "win_rate_pct": 66.67,
+      "wilson95_pct": [
+        46.71,
+        82.03
+      ]
+    },
+    "H": {
+      "appearances": 24,
+      "wins": 0.0,
+      "win_rate_pct": 0.0,
+      "wilson95_pct": [
+        0.0,
+        13.8
+      ]
+    }
+  },
+  "head_to_head": {
+    "A|C": {
+      "n": 6,
+      "A": 1.5,
+      "C": 4.5
+    },
+    "D|H": {
+      "n": 6,
+      "D": 6.0,
+      "H": 0.0
+    },
+    "A|D": {
+      "n": 6,
+      "A": 1.0,
+      "D": 5.0
+    },
+    "C|H": {
+      "n": 6,
+      "C": 6.0,
+      "H": 0.0
+    },
+    "A|B": {
+      "n": 6,
+      "A": 1.0,
+      "B": 5.0
+    },
+    "C|D": {
+      "n": 6,
+      "C": 4.0,
+      "D": 2.0
+    },
+    "B|D": {
+      "n": 6,
+      "B": 3.0,
+      "D": 3.0
+    },
+    "B|H": {
+      "n": 6,
+      "B": 4.0,
+      "H": 0.0
+    },
+    "A|H": {
+      "n": 6,
+      "A": 6.0,
+      "H": 0.0
+    },
+    "B|C": {
+      "n": 6,
+      "B": 4.0,
+      "C": 2.0
+    }
+  },
+  "rows": [
+    {
+      "pair_id": "p001",
+      "brief_id": "perf_analysis-04",
+      "A_condition": "A",
+      "B_condition": "C",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "ing that \"the CPU freed from the fault path is\nnot all recovered as throughput.\" Candidate B fumbles the brief's numbers, asserting that \"the\nremaining 3% has not been chased\" when 3% was the measured improvement against the 10% expected.\nCandidate A also provides superior mechanical clarity by explicitly connecting jemalloc's\n\"decay-based purging\" to the mismatched access pattern.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p002",
+      "brief_id": "postmortem-08",
+      "A_condition": "D",
+      "B_condition": "H",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "leans on evaluative\nfiller and references missing visual artifacts (\"as seen in the chart below, which shows the queue\ndrops\"). Finally, Candidate A provides concrete, actionable remediations directly addressing the\noperational gaps discovered during the incident, contrasting sharply with Candidate B's generic\ncommitments to \"enhanced safeguards\" and hypothetical long-term systems.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p003",
+      "brief_id": "design_doc-05",
+      "A_condition": "A",
+      "B_condition": "C",
+      "position_flipped": false,
+      "verdict": "B",
+      "raw_tail": "f Figure 6,\nwhile Candidate A introduces an unanchored chart (\"Figure 6 shows the result\") without ever\nmentioning the underlying system. Furthermore, Candidate B explains the mechanical engine of\nmetastable failure (\"each failed acquisition adds load, which lengthens the critical section, which\nfails more acquisitions\"), whereas Candidate A merely asserts that recovery takes long.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p004",
+      "brief_id": "postmortem-08",
+      "A_condition": "A",
+      "B_condition": "D",
+      "position_flipped": false,
+      "verdict": "B",
+      "raw_tail": "turated.\" Candidate B also delivers the core failure mechanism immediately in its\nopening sentence and ties remediation directly to concrete telemetry, such as alerting on\n\"utilization crossing a threshold instead of on the packet drops it eventually causes.\" In contrast,\nCandidate A relies on generic framing and vague corrective actions while misrepresenting the\nresponse timeline.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p005",
+      "brief_id": "postmortem-06",
+      "A_condition": "H",
+      "B_condition": "D",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "chanism of the React useEffect dependency loop and\nincludes the incident timeline, whereas Candidate A omits all timestamps and vaguely cites a \"bug in\nour dashboard logic\". Additionally, Candidate A defines textbook concepts for the senior reader\n(\"This pattern is a common one often referred to as a Thundering Herd\") and points to nonexistent\nartifacts (\"seen in the graph above\").\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p006",
+      "brief_id": "rfc-07",
+      "A_condition": "H",
+      "B_condition": "D",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "ary manner.\" Candidate B also\narticulates the architectural distinction behind the contract (\"A paused pod is not unschedulable\n-- no node has been rejected on its behalf\") where Candidate A simply cautions that \"Our solution\nshould not break this contract.\" Furthermore, Candidate B includes the brief's required future work\non per-gate permissions, which Candidate A omits entirely.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p007",
+      "brief_id": "design_doc-03",
+      "A_condition": "C",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "TIE",
+      "raw_tail": "eading hierarchy and historical throat-clearing, delivering\nthe proposal upfront alongside vital operational tradeoffs like perturbation churn (\"perturbing too\noften reorders work for customers that were doing nothing wrong\"). A busy senior engineer would\nfind Candidate A more mathematically rigorous but Candidate B more operationally grounded and better\nstructured for retrieval.\n\nVERDICT: TIE\n\n\n\n"
+    },
+    {
+      "pair_id": "p008",
+      "brief_id": "postmortem-03",
+      "A_condition": "C",
+      "B_condition": "H",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "e A\npreserves all concrete timing and traffic metrics from the brief, while Candidate B omits the 28%\ntraffic figure and incident duration entirely while asserting details absent from the brief (\"outage\nwe experienced on November 18\"). Candidate A's structured sections and timeline serve rapid\nretrieval for an affected engineering team far better than Candidate B's dense narrative.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p009",
+      "brief_id": "postmortem-06",
+      "A_condition": "A",
+      "B_condition": "B",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "Service meant every open Dashboard had to re-authenticate at the same moment\"),\nwhile Candidate B explains the restart after the 19:12 resolution and speculates that Argo Rollouts\nwould have caught \"probably the 17:50 one as well.\" Candidate A's clear section headings also\nprovide superior retrieval value for an engineer scanning for causes, systemic contributors, and\nremediations.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p010",
+      "brief_id": "postmortem-01",
+      "A_condition": "H",
+      "B_condition": "C",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": " Candidate B\nclearly explains the failure mechanisms\u2014how node rollout caused five-minute oscillations and why FL2\nthread panics differed from FL1 silent false positives\u2014while Candidate A ends on missing\nplaceholders (\"shown below:\"). Candidate B also incorporates the full incident timeline and\nrigorously separates the database trigger from the hot-path unvalidated input root cause.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p011",
+      "brief_id": "rfc-01",
+      "A_condition": "D",
+      "B_condition": "C",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "ndamental API design issue for SIG\nNode reviewers (\"it follows from the spec carrying two meanings at once\") rather than merely noting\nthat request and reality diverge as Candidate B does. Furthermore, Candidate A directly links the\nundocumented CRI behavior to the primary goal (\"whether a resize restarts the container\"), making\nits technical motivation tighter and more actionable.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p012",
+      "brief_id": "postmortem-03",
+      "A_condition": "D",
+      "B_condition": "C",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "g\nendpoints explained \"why some health checks stayed green while real traffic failed.\" In contrast,\nCandidate A scatters diagnostic and timeline details across dense body text (\"Automated alerts\ndeclared the incident at 08:50, three minutes after the first 500\"). With both explaining the\nfailure mechanism with equal precision, Candidate B\u2019s retrieval-oriented structure is decisive.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p013",
+      "brief_id": "postmortem-06",
+      "A_condition": "B",
+      "B_condition": "D",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "lied a global rate limit\" prior to 18:17 UTC\nbefore redundantly publishing one at 19:01 UTC, whereas Candidate A correctly orders the pod scaling\nand subsequent rate-limiting rule. Furthermore, Candidate A's action items remain strictly anchored\nin the brief's failure mechanism of object reference identity in dependency arrays rather than\ninventing extraneous dashboard build tests.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p014",
+      "brief_id": "design_doc-05",
+      "A_condition": "B",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "dence (\"Figure 6 of the DSQL work\"), whereas Candidate B abruptly introduces \"Figure 6 shows the\nresult\" without ever mentioning Aurora DSQL or identifying what system produced the graph.\nAdditionally, Candidate A equips the reader with actionable operational boundaries by defining\nconcrete reversal criteria (\"measure the abort rate per transaction class\"), which Candidate B\nomits.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p015",
+      "brief_id": "rfc-05",
+      "A_condition": "C",
+      "B_condition": "H",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "e \"helps maintain resource allocation efficiency.\"\nCandidate A also grounds the formula in actual system mechanics, explaining why system reservation\noperates as it does because \"the kernel offers no memory.swap.min.\" In contrast, Candidate B suffers\nfrom collapsed list formatting and uses TotalPodsSwapAvailable in its formula before defining what\nthat variable actually represents.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p016",
+      "brief_id": "rfc-08",
+      "A_condition": "H",
+      "B_condition": "B",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "e list as\nterminal... so the PreEnqueue check does not have to handle a pod moving backward out of the\nscheduling queue\"). Candidate B also supplies crucial implementation boundaries that Candidate A\nleaves vague, clarifying that SchedulingPaused \"is a display value computed by kubectl from the gate\nlist; it is not a new value of .status.phase, and no controller should key off it.\"\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p017",
+      "brief_id": "perf_analysis-05",
+      "A_condition": "B",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "long stretches.\" In contrast, Candidate B\nspends space explaining basic concepts a senior engineer already knows (\"Throughput problems scale\nlinearly\", \"applications block on reads\") while overlooking the parallel nature of EBS utilization.\nCandidate A also concludes with a concrete, falsifiable test to isolate the memory boundary rather\nthan trailing off into rhetorical questions.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p018",
+      "brief_id": "design_doc-08",
+      "A_condition": "B",
+      "B_condition": "D",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "n correction\").\nCandidate B explains the feedback mechanism well, but leaves its falsification criterion as a vague\nhypothetical (\"If agents start closing hard architecture tasks without anyone building new checkers\nfor them\") rather than something leadership can measure. Candidate A's structure and upfront\ndecision framing make it significantly more useful for resource allocation.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p019",
+      "brief_id": "status_update-04",
+      "A_condition": "D",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "ining teams\n(\"out of 612 remaining -- about 7%\"), Candidate A translates the deadline into a concrete\noperational cadence (\"takes 8.3 multiproducts landing per day\"). Candidate A also categorizes work\nmore accurately, avoiding Candidate B's confused claim that upstream HTTP/1.0 support is an issue\nthat \"defeats the codemod,\" while giving specific preparation steps for office hours.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p020",
+      "brief_id": "postmortem-02",
+      "A_condition": "D",
+      "B_condition": "B",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "ered more slowly.\" Candidate B also\ncreates an internal contradiction by asserting that Access changes \"have since been recovered, and\nyou do not need to reapply them,\" only to recommend reviewing those same changes two paragraphs\nlater. Finally, Candidate A ends with a concise, actionable checklist for the customer rather than\nclosing on Candidate B's redundant architecture recap.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p021",
+      "brief_id": "design_doc-03",
+      "A_condition": "H",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "al personal essay (\"one of my favorite little\nalgorithms\") plagued by duplicate text errors, repeating verbatim that \"This fairness-queuing\nalgorithm operates by maintaining a separate first-come-first-served (FCFS) queue\". Candidate B\nprovides the concrete mechanisms, operational tradeoffs, and retrieval-friendly structure a senior\nengineer needs to make an architectural decision.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p022",
+      "brief_id": "postmortem-08",
+      "A_condition": "C",
+      "B_condition": "D",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "hereas Candidate B requires hunting through dense prose for identical operational\ntimestamps (\"Our network team was alerted to congestion in Ashburn (IAD) at 16:44...\"). Furthermore,\nCandidate B wastes time explaining fundamental networking concepts the target audience already\nknows (\"A withdrawal does not reduce the number of bytes customers are asking for; it deletes a\npath...\").\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p023",
+      "brief_id": "status_update-07",
+      "A_condition": "A",
+      "B_condition": "D",
+      "position_flipped": false,
+      "verdict": "B",
+      "raw_tail": "conomics ($1,340/pod/year) and kernel throttling under peak loads\nwhere Candidate A relies on subjective framing (\"I want it read as such\"). Crucially, Candidate B\nconverts the status into an immediate decision checkpoint with concrete assignments for Renee and\nSanjay, plus an operational recommendation to retroactively evaluate the 6,800 already-cut pods\nagainst the new guardrail.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p024",
+      "brief_id": "design_doc-01",
+      "A_condition": "A",
+      "B_condition": "B",
+      "position_flipped": false,
+      "verdict": "B",
+      "raw_tail": "uantile limitation via \"reservoir-sampling 10,000 raw latencies per tier.\" In contrast,\nCandidate A remains conceptual, ending on a vague ask to \"state every proposed latency project as an\nexpected change in 1-L\" without defining how to execute the tradeoff. Candidate B's concrete\noperational thresholds make it far more usable for an engineering team deciding how to allocate\nspend.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p025",
+      "brief_id": "perf_analysis-07",
+      "A_condition": "A",
+      "B_condition": "H",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "d libc frames create a flame-graph column of \"15% of the samples\"\u2014while Candidate B\nhedges with \"breaking some portion of the samples.\" Candidate B also distracts the reader with\ndangling external artifacts like \"pictured in my 2014 Surge talk on the right\" and unformatted\nrun-together headings, whereas Candidate A delivers a clean, scannable narrative designed for quick\nretrieval.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p026",
+      "brief_id": "perf_analysis-07",
+      "A_condition": "B",
+      "B_condition": "C",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": " 2014 turned this from a known annoyance into a blocker...\nshipped by somebody\"). Furthermore, Candidate A details the exact instruction sequence hardware\noptimizes (\"push %rbp followed by mov %rsp, %rbp\") and quantifies the diminishing register return on\nx86-64 (\"a gain of 6.7%, against 25% on i386\"), while Candidate B settles for unquantified phrasing\n(\"gained close to nothing\").\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p027",
+      "brief_id": "status_update-03",
+      "A_condition": "B",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "nough\nrunway for a serialization change on the read path\" and recommending parallel execution to protect\nfuture cycles. Candidate B instead relies on rhetorical posturing and presents a dangerous\noperational tradeoff (\"approve 400 hosts... or name an owner for the columnar read path today and I\nwill bring back a revised forecast\") that ignores validation and procurement lead times.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p028",
+      "brief_id": "postmortem-04",
+      "A_condition": "H",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "essing API is an\nauthoritative dataset of the addresses present on the Cloudflare network\"). Furthermore, Candidate\nB structures the brief's technical specifics\u2014such as BGP path hunting, resolver impact, and the\ncomplete timeline\u2014into actionable, skimmable sections, while Candidate A omits the timeline and\nnumbers entirely in favor of repeated mentions of \"Code Orange: Fail Small\".\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p029",
+      "brief_id": "rfc-03",
+      "A_condition": "D",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "efore a resize is safe...\").\nCandidate A gets directly to the admission proxy and its two edge cases without forcing the reader\nthrough setup paragraphs. Furthermore, Candidate A confines itself to the mechanisms provided in the\nbrief, while Candidate B introduces unprompted speculation (\"We accept this rather than reject\nevery resize on a pod that happens to be between restarts\").\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p030",
+      "brief_id": "rfc-07",
+      "A_condition": "D",
+      "B_condition": "B",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "chanism more sharply, identifying that \"no node has been rejected on its behalf\" rather\nthan relying on Candidate B's looser claim that a paused pod is not unschedulable \"in that sense.\"\nFurthermore, Candidate A resolves how permissions operate in the interim (\"leaves gate removal\ngoverned by existing pod update permissions\"), while Candidate B leaves the current state\nunaddressed.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p031",
+      "brief_id": "design_doc-08",
+      "A_condition": "D",
+      "B_condition": "H",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "sm\u2014noting that without an informative signal,\n\"the loop degenerates into sampling\"\u2014and establishes concrete categories for what to fund and what\nto avoid. By contrast, Candidate B drops key technical distinctions from the brief (such as\nRocksDB/InnoDB vs. Aurora DSQL), contains unedited text artifacts (\"database storage engine 5\",\n\"Hydro ,\"), and trails off into an empty platitude.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p032",
+      "brief_id": "rfc-01",
+      "A_condition": "B",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "ed CPUs\u2014while Candidate B settles for bare assertions like \"A pod's class is\nwhat it was admitted as.\" Furthermore, Candidate A explains the direct implementation consequence of\nthe CRI read-back gap (\"so the kubelet cannot populate the new status field from ground truth\"),\nwhereas Candidate B stops at a less precise phrasing (\"Kubelet can ask for a change but cannot\nconfirm one\").\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p033",
+      "brief_id": "rfc-08",
+      "A_condition": "H",
+      "B_condition": "D",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "ay value and not a new member of v1.PodPhase,\" while\nCandidate A merely notes it as a UI addition indicating \"whether it's scheduling-paused or not.\"\nFurthermore, Candidate B explains why gates cannot exist on scheduled pods via the PreEnqueue\nscheduling lifecycle, whereas Candidate A simply asserts that \"to ensure consistency, scheduled Pod\nmust always have empty schedulingGates.\"\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p034",
+      "brief_id": "perf_analysis-07",
+      "A_condition": "H",
+      "B_condition": "D",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "f stack unwinding and\ncall-path failure, detailing how traces \"merge into one block against the left edge\" where\nattribution collapses into an uninformative column. In contrast, Candidate A relies on unintegrated\nblock quotes, speculative filler (\"I'm sure this delivered large performance improvements\"), and\nbroken external artifacts (\"pictured in my 2014 Surge talk on the right\").\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p035",
+      "brief_id": "rfc-06",
+      "A_condition": "B",
+      "B_condition": "H",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "m broken markdown formatting where headings run into body paragraphs, and it opens with\nrepetitive phrasing (\"This can cause problems where workloads can use up all swap. If all swap is\nused up on a node...\"). Candidate A also provides actionable reviewer guidance on testing the\ndummy-mount fallback, while Candidate B wanders into unrequested tangents about system-reserved\ncgroups.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p036",
+      "brief_id": "perf_analysis-06",
+      "A_condition": "B",
+      "B_condition": "H",
+      "position_flipped": false,
+      "verdict": null,
+      "raw_tail": ""
+    },
+    {
+      "pair_id": "p037",
+      "brief_id": "postmortem-05",
+      "A_condition": "H",
+      "B_condition": "B",
+      "position_flipped": true,
+      "verdict": null,
+      "raw_tail": ""
+    },
+    {
+      "pair_id": "p038",
+      "brief_id": "design_doc-04",
+      "A_condition": "D",
+      "B_condition": "B",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "ng 100 tenants \"shrinks [the ratio] about\n10x.\" Candidate A also gives push-down storage a concrete quantitative anchor (\"at 1% selectivity,\npush-down moves 1% of the bytes\"), whereas Candidate B rushes through caches, consistent reads, and\npush-downs inside a single crowded paragraph. Candidate A delivers the architectural mechanisms and\ntheir numbers with greater technical rigor.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p039",
+      "brief_id": "postmortem-08",
+      "A_condition": "H",
+      "B_condition": "C",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "m charts (\"we saw a\nsignificant amount of traffic... as seen in the chart below\"). Candidate B retains the brief's\ntimestamps, mechanisms, and specific metrics, while Candidate A omits all timeline data. Candidate B\nalso provides concrete engineering remediations (\"a link running degraded now counts against\navailable headroom\") rather than Candidate A's vague \"enhanced safeguards.\"\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p040",
+      "brief_id": "rfc-04",
+      "A_condition": "C",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "rb,\" Candidate A identifies the\nspecific technical constraint: \"eviction thresholds today are written against resident memory.\"\nCandidate A also formats its headings and scenario titles for fast retrieval, whereas Candidate B\nleaves sections unadorned and opens with conversational commentary (\"Swap is the one memory facility\na Linux node has that Kubernetes refuses to let it use\").\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p041",
+      "brief_id": "perf_analysis-04",
+      "A_condition": "B",
+      "B_condition": "C",
+      "position_flipped": false,
+      "verdict": "B",
+      "raw_tail": "articulates the diagnostic bifurcation that hours in, the process\nwas \"either mapping new memory or losing the mappings it already had.\" Furthermore, Candidate B\ndemonstrates superior engineering realism by explicitly qualifying the result as \"one round of\nmeasurement on one configuration, not a fleet rollout,\" avoiding Candidate A's overextension of the\npreliminary 3% measurement.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p042",
+      "brief_id": "perf_analysis-06",
+      "A_condition": "C",
+      "B_condition": "B",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "commendations, Candidate B carries the numbers into actionable engineering guidance by sizing the\ntarget instance (\"roughly 128 Gbytes for a 100-Gbyte file\") and advising verification via hit\nratios, whereas Candidate A hedges with \"moving well past 64 Gbytes.\" These concrete mechanisms and\nspecific sizing targets give the senior engineer immediately usable decisions without fluff.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p043",
+      "brief_id": "status_update-07",
+      "A_condition": "B",
+      "B_condition": "C",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "$1.2M... reserved instance conversion adds roughly $0.4M\"), directly\ncontradicting the brief where the remaining target is strictly divided between GPUs ($7.0M) and\ndatacenter halls ($4.6M). Candidate A also frames more concrete operational decisions for the\nreview\u2014evaluating whether to hold the 70% guardrail threshold versus readmitting risk\u2014rather than\ndebating reporting formats.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p044",
+      "brief_id": "design_doc-02",
+      "A_condition": "D",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "ing and throat-clearing (\"Two arguments keep recurring,\nand in both of them everyone is right\"), delaying its proposal until halfway through the text.\nFurthermore, Candidate A turns the simulation into a concrete, runnable experiment (\"Raise sigma and\nwatch the two diverge further while the median holds still\") rather than appending unrequested\npolicy proposals as Candidate B does.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p045",
+      "brief_id": "status_update-08",
+      "A_condition": "C",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": "ts. In contrast, Candidate B replaces concrete modeling with\nnarrative flourishes (\"that spread is the whole story of this report\", \"every one of them requires\narchaeology\") and fails to ask for a ruling on the end-of-life systems. Furthermore, Candidate B\nasserts details unsupported by the brief by claiming that one cross-team caller \"has acknowledged\nand is planning a migration.\"\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p046",
+      "brief_id": "perf_analysis-01",
+      "A_condition": "C",
+      "B_condition": "D",
+      "position_flipped": false,
+      "verdict": "B",
+      "raw_tail": "unfolds as a chronological investigation narrative (\"The first suspect is a rogue Ubuntu\nservice...\"), delaying the root cause until the fourth paragraph. Candidate B also does a sharper\njob linking the mechanism to the application workload, observing that Cassandra timestamps every\nwrite and turns \"a per-call cost of a few hundred nanoseconds into a fixed tax on write throughput.\"\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p047",
+      "brief_id": "perf_analysis-06",
+      "A_condition": "H",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "mechanism cleanly\u2014noting that when the working set exceeds cache, \"every pass after the\nfirst re-reads from disk\"\u2014while Candidate A resorts to vague phrasing like \"relatively poor\nperformance.\" Finally, Candidate B synthesizes the diagnostic evidence directly into the narrative\nrather than dumping repetitive, multi-interval terminal output like Candidate A's raw iostat -xz 1\ntrace.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p048",
+      "brief_id": "design_doc-01",
+      "A_condition": "B",
+      "B_condition": "D",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "es the\nreturn of moving the median (\"shaves 20% off the p50... moves 0.62% of mean latency and returns\nalmost nothing\"), Candidate A provides actionable fleet-level triage rules (\"Below 0.25, buy the\nmachines and move the engineers elsewhere\"). Candidate A's retrieval-oriented structure and\noperational scope make it far more valuable for a busy capacity team deciding what to build.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p049",
+      "brief_id": "perf_analysis-05",
+      "A_condition": "H",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "ers casual commentary (\"An\nr_wait of 33 ms is kinda high\"), Candidate B distills the metrics into clean ranges and explains the\nunderlying queueing mechanics (\"the wait each one experiences is dominated by the time spent behind\nthe other twenty-four\"). Candidate B respects the reader's time by delivering precise mechanisms\nand numbers rather than uncurated command-line transcripts.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p050",
+      "brief_id": "perf_analysis-02",
+      "A_condition": "H",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": " the word 'time' in one paragraph\"). Candidate B also provides clear section\nstructure and contextualizes the operational risk, while Candidate A leaves a dangling image\nartifact (\"showing a drop in write latencies: Once tested more broadly\"). Furthermore, Candidate B\nincludes all quantitative outcomes from the brief, whereas Candidate A completely omits the final\nCPU drop to 1.6%.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p051",
+      "brief_id": "design_doc-01",
+      "A_condition": "H",
+      "B_condition": "C",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": " the mean latency?\") and presents an informal\nblog post wrapped around raw Python code rather than a proposal for a capacity team. Furthermore,\nCandidate B directly answers the brief's prioritization requirement by pricing projects in returned\ncapacity (\"Halving latency for everything at or above p99 cuts mean residence time by 25.9 percent\")\nand specifying concrete adoption rules.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p052",
+      "brief_id": "design_doc-06",
+      "A_condition": "C",
+      "B_condition": "D",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "e \"by almost nothing.\" Candidate A further operationalizes the strategy\nwith concrete infrastructure commitments (\"telemetry, replay corpora, evaluation harnesses\") and an\nexplicit falsification metric (\"median wall-clock time from a green build to a fully ramped\nproduction change across our top twenty services\"), whereas Candidate B leaves its recommendations\nand validation vague.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p053",
+      "brief_id": "postmortem-02",
+      "A_condition": "A",
+      "B_condition": "D",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "lso exports the Dashboard's outage windows to other services, asserting that \"[m]ail\nthat arrived between 11:30 and 15:30 passed through a weaker filter\" and inventing an unprompted\naction to discount CDN baselines. In contrast, Candidate A uses explicit per-service headings that\nserve rapid retrieval and limits its \"Summary of customer action\" strictly to verified customer\nimpact.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p054",
+      "brief_id": "status_update-03",
+      "A_condition": "C",
+      "B_condition": "D",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "date\nB omits the document owner entirely. More critically, Candidate B introduces unsupported\ncommitments absent from the brief, asserting that \"We are running that load test in October and will\nreport the number before the PO date.\" Candidate A delivers the operational decision cleanly\nwithout Candidate B's unnecessary scratchpad arithmetic (\"ln(1.222) / ln(1.042) is 4.9 months\").\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p055",
+      "brief_id": "design_doc-05",
+      "A_condition": "H",
+      "B_condition": "B",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "es the\noperational mechanism\u2014noting that OCC \"relocates the cost from a waiting queue inside the engine to\na retry in the application\"\u2014and specifies concrete falsification criteria (\"What would change our\nmind\"). In contrast, Candidate A relies on conversational asides (\"have you tried Stability Sim ?\")\nand vague assertions without providing the requested design document structure.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p056",
+      "brief_id": "postmortem-08",
+      "A_condition": "C",
+      "B_condition": "A",
+      "position_flipped": true,
+      "verdict": "A",
+      "raw_tail": " and 17:45 were spent\ndiagnosing the network, not the customer path\" and reforming how degraded links count against metro\nheadroom. Conversely, Candidate B falls back on superficial maintenance promises (\"restoring the\ndegraded link to full capacity and accelerating the DCI upgrade\") rather than fixing the underlying\nplanning process that allowed dual capacity deficits to coincide.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p057",
+      "brief_id": "postmortem-02",
+      "A_condition": "H",
+      "B_condition": "C",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "d\nreferences a phantom artifact (\"as seen in the graph below\"). Furthermore, where Candidate A vaguely\nnotes that downstream services \"observed a reduced error rate,\" Candidate B articulates the exact\nsecurity mechanisms and customer implications, clarifying that failed authentications ended at error\npages so \"the failure mode was closed, not open\" and audit logs remained complete.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p058",
+      "brief_id": "rfc-03",
+      "A_condition": "B",
+      "B_condition": "H",
+      "position_flipped": false,
+      "verdict": "A",
+      "raw_tail": "bounds operational failure\nmodes\u2014noting the race window is \"one kubelet sync period wide, roughly 10 seconds by default\"\u2014while\nCandidate B dismissively notes that \"we choose to accept it as a known-issue.\" By framing admission\nlogic clearly and detailing the exact operational consequences for mixed-version clusters, Candidate\nA provides an immediately actionable technical document.\n\nVERDICT: A\n\n\n\n"
+    },
+    {
+      "pair_id": "p059",
+      "brief_id": "perf_analysis-05",
+      "A_condition": "B",
+      "B_condition": "C",
+      "position_flipped": false,
+      "verdict": "B",
+      "raw_tail": " Candidate B also handles CPU metrics more accurately,\nrecognizing that the machine is idle during iowait rather than claiming, as Candidate A does, that\n\"4.3 CPUs' worth of capacity sat blocked in disk wait.\" Furthermore, Candidate B immediately directs\nthe reader toward actionable next steps\u2014inspecting the application code paths and read\noffsets\u2014rather than re-testing file sizes.\n\nVERDICT: B\n\n\n\n"
+    },
+    {
+      "pair_id": "p060",
+      "brief_id": "design_doc-06",
+      "A_condition": "C",
+      "B_condition": "B",
+      "position_flipped": true,
+      "verdict": "B",
+      "raw_tail": "s\" and stop sizing teams against code volume\u2014rather than offering\nbroader advice like Candidate A's recommendation to hire for problem formulation. Furthermore,\nCandidate B integrates the analog circuit anecdote directly into its operational timeline (\"We plan\nfor reading two and we staff for the lag\"), avoiding the essayistic detour of Candidate A's\nstandalone historical vignette.\n\nVERDICT: B\n\n\n\n"
+    }
+  ]
+}

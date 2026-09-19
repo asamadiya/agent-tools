@@ -1,0 +1,19 @@
+Concurrency control and consistency defaults
+
+Optimistic concurrency control
+
+We are choosing optimistic concurrency control for the new datastore, and the deciding argument is not throughput. It is an isolation property: under OCC, no client is ever in a position to block another one. A transaction reads, computes, and offers its writes at commit time. If someone else got there first, this transaction fails and retries. Nothing it did along the way made any other client wait.
+
+That property matters because of what the alternative does at scale. A pessimistic engine lets one client's behavior show up in another client's latency. The stock illustration is a process that stops for garbage collection while holding a write lock: everything queued behind that lock stops too, and none of those clients did anything wrong. Amazon's operational record has the general shape of this repeatedly. Lock contention, and the retries that follow a failed lock acquisition, turn up as causes of outages and of metastable failure -- the class where load keeps the system in the bad state after the trigger is gone, and recovery runs long.
+
+Two objectives follow from that record, and they are different objectives. The first is to keep applications out of metastable failure, which is the expensive case. The second is to blunt the duller failures, the ones caused by a badly behaved client or by client code that holds a transaction open longer than its author realized. OCC addresses both through the same mechanism, because a misbehaving client under OCC pays for its own behavior in its own abort rate.
+
+The cost is real and we are not hiding it. Under contention, OCC converts what would have been waiting into aborts and application-visible retries, and a workload with a genuine hot key will feel that. We expect this to be the main source of complaints, and it is the right trade because the pain stays with the workload that caused it.
+
+Aurora DSQL, which made this choice, plots SELECT and UPDATE latency in figure 6 of its paper. Both stay fast with the database running across regions.
+
+Strong consistency as the default
+
+Strong consistency is the default, and applications opt out rather than in. The Dynamo paper in 2007 and Werner Vogels' Eventually Consistent in 2009 argued that cloud-scale systems had to give up strong consistency to reach their availability and latency targets. That was a correct reading of the hardware and protocols then available. Four things have changed since: how time is distributed, how data-centre networks are built, how power and cooling are provisioned, and what distributed protocols can do.
+
+Our position is that almost no application is better served by eventual consistency today. We may be wrong about specific workloads, so the opt-out exists. It should be rare enough that we notice each use.

@@ -1,0 +1,23 @@
+## Risks and Mitigations
+
+### A single workload can exhaust node swap
+
+Earlier releases exposed an UnlimitedSwap option, which let one workload claim every swap page on the node and drive the node unhealthy. We removed UnlimitedSwap from the API in beta2. A workload that would previously have absorbed all swap now receives a bounded allocation, and a node no longer becomes unschedulable because one pod grew without a ceiling. Reviewers should read this as a deliberate narrowing of the beta1 surface: the option is gone, not deprecated, and no configuration restores it.
+
+### Swap on an unencrypted disk leaks secrets
+
+The kernel writes swapped pages to whatever block device backs the swap area. If that device is unencrypted, anything a process held in memory can land on disk in cleartext, including Kubernetes secrets, service account tokens, and decrypted config. Anyone who can read the disk -- a salvaged drive, a snapshot, an operator with host access -- can read those pages.
+
+Encrypted swap closes this, and the kubelet cannot supply it. Disk encryption is configured in the operating system, below and outside the kubelet's remit, and a kubelet flag that claimed to encrypt swap would be describing work it does not perform. Our mitigation is documentation: the feature's user-facing docs state that swap without disk encryption exposes in-memory data, including secrets, and direct administrators to configure encrypted swap before enabling swap on nodes that handle sensitive workloads. We accept that documentation is a weaker control than an enforced check, and we do not have a better one at this layer.
+
+### Cgroups v1 is out of scope
+
+Supporting cgroups v1 was an early goal of this KEP. sig-node examined it and concluded that swap accounting and limit enforcement on cgroup v1 would be very difficult to implement correctly, so the feature requires cgroups v2. On a cgroup v1 node the kubelet does not enable swap for workloads. Cgroup v1 is on a path to deprecation across the ecosystem, which shrinks the population this excludes over time, though it does exclude some clusters today.
+
+### Memory-backed volumes must stay off disk
+
+Kubernetes guarantees that certain volumes never reside on disk. Secrets and memory-backed emptyDirs are the two that matter here, and the kubelet mounts both as tmpfs on the host. Enabling swap breaks that guarantee by default, because tmpfs pages are swappable like any other anonymous memory.
+
+When `--fail-swap-on=false`, the kubelet mounts these tmpfs volumes with the `noswap` option, which pins their pages in memory. That option requires kernel 6.4 or newer upstream, and distributions do backport it, so a version comparison alone would refuse the option on kernels that support it. The kubelet therefore resolves support in two steps. It uses `noswap` directly when the kernel reports 6.4 or later. Below that, it attempts to mount a dummy tmpfs volume with `noswap` and observes whether the mount succeeds, which detects a backport on an older reported version. If both checks fail, the kubelet emits a warning that `noswap` is unsupported on this kernel and proceeds without it.
+
+The dummy-mount probe exists only to cover the backport window. Once 6.4 and later kernels are widespread across supported distributions, we intend to delete the probe and keep the version check. Reviewers who want to test the fallback can boot a node on a pre-6.4 kernel without the backport, set `--fail-swap-on=false`, and read the kubelet log for the warning.

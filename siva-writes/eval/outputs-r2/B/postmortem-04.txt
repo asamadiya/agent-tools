@@ -1,0 +1,30 @@
+Cloudflare withdrew customer BYOIP prefixes for 5 hours 15 minutes on 20 February 2026
+
+All times UTC.
+
+On 20 February 2026 a cleanup task inside our Addressing service withdrew roughly 1,100 customer Bring Your Own IP prefixes from BGP and deleted their dependent service bindings. Impact started at 17:56 and the last prefixes came back at 23:03, 5 hours 15 minutes after the outage began at 17:48. Of the 6,500 prefixes we advertise to a given peer, 4,306 are BYOIP, so the withdrawal covered about 25% of BYOIP address space. This was our error, not a failure of any customer configuration, and we are sorry for the traffic you lost.
+
+What you saw depends on how your traffic reached us. If your prefix was withdrawn, clients did not get a fast, clean failure. They hit BGP path hunting: as each path disappeared, routers kept trying the next candidate route, and connections hung until they timed out instead of returning a connection error a client could retry against a backup. Visitors to the one.one.one.one website received HTTP 403 with an Edge IP Restricted message. The 1.1.1.1 resolver itself kept answering, including DNS over HTTPS, because resolution does not depend on the withdrawn BYOIP prefixes.
+
+The cause was an empty query parameter that the API read as a wildcard. We had added a sub-task to automate removal of BYOIP prefixes that customers had queued for deletion. That sub-task issued GET /v1/prefixes?pending_delete with no value after the equals sign. On the server, Query().Get("pending_delete") returned an empty string, the handler treated that as no filter, and the response contained every BYOIP prefix we hold. The sub-task read the list as its work queue and began deleting, prefix by prefix, until an engineer killed the process at 18:46. The Addressing API is the authoritative source of customer IP addresses and pushes changes to the edge immediately, so each deletion turned into a BGP withdrawal within seconds. Nothing in the path asked whether deleting 4,306 prefixes was a plausible amount of work.
+
+Timeline:
+
+- 2026-02-05 21:53 -- the change merges.
+- 17:46 -- the change deploys, 15 days after merge.
+- 17:48 -- outage begins.
+- 17:56 -- first prefixes withdrawn; impact starts.
+- 18:13 -- Cloudflare engineers engage on one.one.one.one failures.
+- 18:18 -- internal incident declared.
+- 18:21 -- the Addressing API team is paged.
+- 18:46 -- the sub-process is terminated. Withdrawals stop after 50 minutes and about 1,100 prefixes.
+- 19:11 -- mitigation in place.
+- 19:19 -- we publish self-remediation guidance for affected customers.
+- 20:20 -- about 800 prefixes restored.
+- 23:03 -- the remaining roughly 300 prefixes restored by hand.
+
+Our tests did not cover the code path that caused this. The test suite exercises the customer self-service journey: a person signs in, selects a prefix, and asks us to delete it. Every one of those requests carries an explicit prefix identifier. A task runner that mutates customer data with no explicit input had no equivalent coverage, and our staging data and mocks were too thin to expose the difference -- a wildcard read against a handful of staged prefixes returns a handful of prefixes and looks correct. The gap is a class of caller, not a missing assertion.
+
+Five changes follow from that. First, the Addressing API now rejects a filter parameter that is present and empty on any endpoint that feeds a delete path; an absent filter and an empty filter are no longer the same request. Second, destructive automation runs behind a blast-radius limit: a task that proposes to act on more than a set fraction of a customer's prefixes, or more than a set count overall, stops and pages a human. Third, we are adding staging fixtures at production cardinality so a wildcard read is visibly wrong. Fourth, we are extending test coverage to non-interactive callers, starting with every task runner that can mutate customer address records. Fifth, we are shortening prefix restoration, which took 4 hours 17 minutes from the last withdrawal to the final manual repair.
+
+If you run BYOIP with us and want to verify your prefixes are advertised as you expect, contact your account team and we will walk the current state with you.

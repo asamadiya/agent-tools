@@ -1,0 +1,52 @@
+## Measuring the call
+
+A flame graph told us Cassandra was spending about a third of its CPU inside os::javaTimeMillis(), but it could not tell us what a single call cost. No microbenchmark for that call existed, so we wrote one. TimeBench.java loops 100,000,000 times calling System.currentTimeMillis(), compares the result against the constant 87362, and does a println inside the loop when the comparison hits. The comparison and the println exist only to give the loop an observable side effect, which keeps the JIT compiler from deleting the whole thing. They also slow the test slightly, and that cost lands on both sides of the comparison.
+
+Run it under time(1) on both distributions. On CentOS:
+
+    real 0m12.989s
+    user 0m3.368s
+    sys  0m18.561s
+
+On Ubuntu, same hardware class, same EC2-Xen guest:
+
+    real 1m8.300s
+    user 0m38.337s
+    sys  0m29.875s
+
+Divide the wall time by 100 million calls: about 0.13 us per call on CentOS and 0.68 us on Ubuntu. Ubuntu is 5.3x slower for the identical operation. The sys time on both is large enough to say the call is not resolving in userspace.
+
+Java sits on top of gettimeofday(2), and a JVM is a big thing to blame for a syscall's behavior, so we wrote the same loop in C calling gettimeofday(2) directly and compiled it -O0 to keep the loop alive. The C version reproduced the same split. The Java and C results agreeing rules out the JVM. For a benchmark this small, disassemble the binary and read the loop body -- it takes a minute and it is the only way to know the compiler did what you assumed.
+
+## Finding the clocksource
+
+The flame graph had a frame we had not explained: pvclock_clocksource_read(). That name points at the paravirtualized Xen clock rather than any hardware timer, and Linux publishes which clock it is using:
+
+    # cat /sys/devices/system/clocksource/clocksource0/available_clocksource
+    xen tsc hpet acpi_pm
+    # cat /sys/devices/system/clocksource/clocksource0/current_clocksource
+    xen
+
+The kernel was reading time through the Xen pvclock, which costs a trip out of the guest on every call. TSC is the alternative on the list. A TSC read is one RDTSC instruction, and Linux exposes it through the vDSO, so the call never enters the kernel at all.
+
+Switching is a write to sysfs and takes effect immediately -- no reboot, no guest restart:
+
+    # echo tsc > /sys/devices/system/clocksource/clocksource0/current_clocksource
+
+TimeBench on the same Ubuntu instance, seconds later:
+
+    real 0m3.370s
+    user 0m3.353s
+    sys  0m0.026s
+
+Sys time dropped from 29.875s to 0.026s, which is the syscall disappearing. Wall time improved 20.3x over the Xen clocksource and 3.9x over CentOS, since CentOS was also paying for pvclock. Per call that is roughly 33 ns, and at that scale the loop's own instructions -- the compare, the branch, the counter -- are a real fraction of the measurement. Partially unrolling the loop would tighten the number. We did not, because the decision in front of us did not need a tighter one.
+
+## Deciding to ship it
+
+The reason TSC was not already the default is clock drift. TSC has a long history of running at different rates across sockets and stepping with power states, and a clock that goes backwards breaks more than it speeds up. That history is why the conservative default exists, and it is a real thing to weigh.
+
+We had two inputs and neither was a citation. A processor engineer we met at a conference said TSC had been stable for years on current hardware, and knew of no public reference stating so. The second input was Netflix's own architecture: the cloud tolerates instance failure by design, so a bad instance is a routine event rather than an outage. A change that is cheap to revert -- one sysfs write -- against a failure mode the system already absorbs is a change you test in production, not one you argue about further.
+
+Production confirmed it. Cassandra write latencies dropped 43%, landing slightly better than the CentOS fleet rather than merely matching it. In the post-change flame graph os::javaTimeMillis() fell from about a third of CPU to 1.6%, with a single vdso frame above it and no kernel frames at all -- exactly the shape you expect when a syscall becomes a userspace instruction.
+
+The gap between 0.68 us and 33 ns was never a Java problem or a Cassandra problem. It was a default in a guest kernel, visible in one sysfs file, on every instance in the fleet.

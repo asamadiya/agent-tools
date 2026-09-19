@@ -1,0 +1,25 @@
+How to reason about coding-agent capability
+
+Introduction
+
+A coding agent is a feedback loop, and its capability is a property of the loop and not of the model inside it. Our team keeps arguing about agent capability as though we were grading the model: it is good at this language, weak at that framework, strong on small functions. That framing predicts the wrong things. An electrical engineer looking at the same question would ask what the component sits inside, because a component's behaviour inside a loop is often nothing like its behaviour outside one.
+
+Super-human is not a useful summary
+
+Computers have been vastly super-human in narrow areas for at least 85 years, dating back to work such as Marian Rejewski's in the 1930s. The MacBook on your desk adds 64-bit numbers roughly 100,000,000,000 times faster than you can. Across those nine decades the pattern has not changed: enormously super-human on some tasks, well short of a competent human on others, with no smooth gradient between them. Coding agents now build meaningful, correct software quickly and at very low cost, and they are super-human on some coding tasks. Neither fact tells you what the next task will do. "Is the agent better than a developer" collapses a bimodal distribution into one number, and it should be replaced with a question about mechanism.
+
+The square-root circuit
+
+Take an opamp and an analog multiplier IC, for example the long-obsolete MC1495. Wire the multiplier into the opamp's feedback path so that it squares the output and returns the square to one input. Apply a voltage on the left, and the voltage on the right is its square root. The mechanism is worth stating exactly, because it is the whole argument: the opamp drives its two inputs to equality, and the only output voltage whose square equals the input is the square root of the input. The multiplier never computes a square root. The loop does.
+
+The generalisation is the part we want. A component inside a feedback loop can behave very differently from its open-loop behaviour, and good outputs can be extracted from components that are individually poor. Build the loop and you get the inverse of the component you put in it.
+
+Where our tooling moved
+
+Developer tooling crossed from open loop to closed loop in about two years. IDE autocomplete is open loop: the model emits tokens and a human runs the build, reads the failure, and decides the next edit. An agent relocates that build-test-iterate loop inside itself. The component did not change much. The circuit did.
+
+What to evaluate
+
+Evaluate the feedback path first. For any task we want to hand to an agent, ask three questions before asking anything about the model. What is the error signal -- a compiler, a test suite, a type checker, a benchmark, a human review? How fast and how cheap is one trip around the loop? What stops the loop from oscillating or settling on a wrong fixed point that still passes the check?
+
+This predicts our failures. Where a task has no usable error signal -- is this the right feature, does this API read well, is this abstraction one we will want in a year -- the agent runs open loop, and its output lands at the model's own unaided accuracy. Our leverage is in building error signals the agent can close a loop around, and we should fund test infrastructure, fast local builds, and machine-checkable invariants on exactly that basis.

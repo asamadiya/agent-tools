@@ -1,0 +1,17 @@
+Remediation after the 20 February 2026 BYOIP prefix withdrawal
+
+A cleanup sub-task passed pending_delete with no value and removed roughly 1,100 BYOIP prefixes and their service bindings, and the three workstreams below are built to make that call impossible to express, reversible once it is applied, and stoppable while it is still spreading.
+
+pending_delete travelled as an untyped string, which is why nothing between the caller and the database rejected it. A string field with no schema behind it has no invalid value: an empty one is as well formed as a prefix identifier, and neither the client library nor the server had any basis to reason about which it had been handed. We are standardizing the API schema so the type carries the constraint. Validation then belongs to tooling that runs before a call reaches the control plane, and a malformed call fails at the caller.
+
+Customer configuration and operational actions land in the same authoritative database today, which is why recovery meant restoring database snapshots. One database holding both means there is no separate record of what the network is supposed to look like, and therefore nothing to reconcile the live state against. An engineer recovering from a bad write has no known-good version to name; they have a backup, a timestamp, and whatever else changed in the same window.
+
+We are snapshotting what is read from that database and applied to production, then rolling those snapshots out the way we ship binaries. Health metrics gate the rollout and halt it when they degrade. The property we want out of this is a revert: one customer or every customer returned to a named prior version in close to the time it takes to push it, without a database restore in the path.
+
+That design blocks customers from direct API updates during an outage, and we are choosing it anyway. A customer who cannot change their configuration for the length of an incident still serves traffic. A customer whose prefixes are withdrawn is offline. We will freeze the configuration surface and keep the packets moving.
+
+The three recovery classes we observed on 20 February show why breadth of change is the variable worth watching. A prefix that was only withdrawn came back with a dashboard toggle. A prefix withdrawn with some service bindings removed came back partially. A prefix withdrawn with all bindings removed required a global configuration push to every edge machine, which is the slowest recovery path we have. Same root cause, three costs, separated by how much of the record the call destroyed.
+
+A circuit breaker will watch the rate and breadth of change and halt snapshot deployment when either is unusual. A burst of BGP prefix withdrawals or deletions is the signal that matters here, because it is visible early and it is the shape the 20 February event took within seconds. Direct monitoring of customer services can trip the same breaker, which covers the case where the change looks ordinary in the control plane and the damage is only visible at the edge.
+
+All three sit under Code Orange: Fail Small, which holds three buckets -- controlled rollouts for any configuration change that propagates across the network, break-glass procedures with no circular dependencies, and defined behaviour under every failure mode. Typed schemas keep a bad call from being expressible. Versioned snapshots make an applied change revocable. The circuit breaker bounds how much of the network a single change reaches before a human sees it.

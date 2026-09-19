@@ -1,0 +1,15 @@
+Graph-store capacity: 400 hosts, ordered by Nov 3 2026
+
+The graph-store fleet runs out of serving capacity in late February 2027, and we are asking the board to approve 400 additional hosts at $2.9M annualised, with the purchase order signed by Nov 3 2026.
+
+The fleet today is 2,100 hosts across three regions carrying a peak of 1.8M QPS, which is 857 QPS per host. Load testing puts the redline at 1,050 QPS per host, so the fleet ceiling is 2.2M QPS. Headroom is the difference: 193 QPS per host, or about 405K QPS fleet-wide, which is 22% above today's peak.
+
+That headroom is consumed by compounding growth, not by a step change. Trailing nine-month growth is 4.2% per month compounded, and every month since January has landed within 0.4 points of that figure, which is the part that makes the forecast usable. Compounding 1.8M at 4.2% reaches 2.2M in a little under five months of serving time and 2.6M QPS by June 2027. Twenty-two percent of headroom sounds comfortable and is five months at this growth rate.
+
+Serving 2.6M QPS at the 1,050 redline needs 2,476 hosts. Rounding to a fleet of 2,500 is the request: 400 hosts on top of the current 2,100, at $7,250 per host per year, $2.9M annualised. That sizing carries the forecast through June 2027 with the fleet at redline, which is a ceiling and not a target -- it leaves no absorption for a regional failover or a traffic anomaly in that month.
+
+Hardware lead time is 14 weeks, which moves the decision 14 weeks ahead of the crossing it pays for. Signing the purchase order on Nov 3 2026 puts hosts on the floor around Feb 9 2027, immediately ahead of the crossing. Every week the signature slips is a week the fleet spends above redline at the far end, because the February date is set by traffic and does not move when procurement does. The board therefore has no decision available in January; the last useful meeting is this one.
+
+One alternative was evaluated. Moving the read path to the new columnar serialization is estimated to cut CPU per query by 18%, which raises the effective per-host redline to roughly 1,280 QPS and pushes the crossing from February to August 2027 -- six months of runway, at no hardware cost. The work has no engineer assigned and has been unstaffed for two quarters. We are not treating it as a substitute for the hardware on that record. If the board wants to trade the purchase against the software work, the decision it needs to make is a staffing one, and Nov 3 is the last date on which that decision is free: after it, an unstaffed project and an unsigned purchase order both arrive in February with the fleet over redline.
+
+What we would ask the board to do: approve the 400 hosts and authorise the purchase order for Nov 3. The number to revisit is the growth rate. If monthly growth falls below 3.0% and holds there for two consecutive months, the crossing moves out past May 2027 and the order can be resized before hardware ships; we will bring that check back to the November review with October and November actuals. Nothing in the last nine months of data suggests it will happen, and the forecast is built on the rate we have measured.

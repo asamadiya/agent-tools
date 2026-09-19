@@ -1,0 +1,72 @@
+BYOIP prefix withdrawal, 20 February 2026
+
+On 20 February 2026 we withdrew roughly 1,100 customer IP prefixes from the Internet, and some of
+them stayed withdrawn for five hours. All times are UTC. The outage window runs 17:48 to 23:03,
+five hours and fifteen minutes; the withdrawals themselves landed between 17:56 and 18:46. Of the
+6,500 prefixes we advertise to a given peer, 4,306 belong to Bring Your Own IP customers, and this
+took about 25% of them. The cause was ours, the trigger was a query parameter with no value, and we
+are sorry.
+
+What you saw
+
+If your prefix was withdrawn, your traffic did not fail fast. A BGP withdrawal sends routers into
+path hunting: each router tries the next-best path it knows, advertises that attempt, and the
+attempts propagate before the prefix is finally declared unreachable. Connections hang until
+timeout instead of refusing immediately, which is the worst shape a failure can take for anything
+with a retry loop behind it.
+
+Visitors to the one.one.one.one website received HTTP 403 with an Edge IP Restricted message. DNS
+resolution over 1.1.1.1, including DNS over HTTPS, kept working throughout the incident and was not
+part of this failure.
+
+What happened
+
+We had added a sub-task to automate removal of BYOIP prefixes already queued for deletion. It
+called the Addressing API with GET /v1/prefixes?pending_delete -- key present, value absent. In Go,
+Query().Get("pending_delete") returns an empty string for that, and the API read an empty filter as
+no filter and returned every BYOIP prefix in the system. The sub-task took that response as its
+work queue and began deleting, prefix by prefix, along with the service bindings that depend on
+them. The Addressing API is the authoritative source for customer IP addresses and pushes changes
+to the edge immediately, so each deletion reached the routers within seconds. Nothing in that path
+asked whether removing a quarter of our BYOIP prefixes in fifty minutes was plausible.
+
+Timeline
+
+The change merged on 5 February at 21:53 and sat unreleased for fifteen days. Deployment began at
+17:46 on 20 February and the first withdrawals followed at 17:56. We engaged on the wrong signal
+first: at 18:13 engineers picked up the one.one.one.one failures, which are a downstream symptom of
+the deletions. We declared an internal incident at 18:18 and paged the Addressing API team at
+18:21. An engineer terminated the sub-process at 18:46, fifty minutes after the first withdrawal.
+Mitigation was in place at 19:11 and we published self-remediation guidance at 19:19. About 800
+prefixes were re-advertised by 20:20. The remaining ~300 had lost service bindings that our
+automated restore could not reconstruct, and we restored those by hand, finishing at 23:03.
+
+Why our tests did not catch it
+
+Our tests covered the customer self-service journey: a person clicks delete, one prefix goes away,
+the right bindings are torn down. They did not cover a task runner mutating customer data with no
+explicit input from a customer. Staging made the gap invisible from the other side -- with a
+handful of fixture prefixes and mocked dependencies, an unfiltered list and a correctly filtered
+list look close enough that both pass. The number of rows returned is the entire signal here, and
+we had arranged for that number to be small in every environment where we looked at it.
+
+What we are changing
+
+Reject empty filter values. A request to /v1/prefixes with a filter key and no value returns 400
+instead of the full table.
+
+Bound destructive automation. An automated task that would delete more than a small fraction of a
+customer-visible resource class halts and requires human confirmation before it proceeds.
+
+Stage prefix-affecting deletions. Deletions originating from automated tasks propagate to the edge
+on a delay with a window to detect and abort, instead of landing within seconds.
+
+Test task runners as first-class callers, against production-shaped prefix data in staging instead
+of mocks. A test that cannot tell 3 rows from 4,306 is not testing the filter.
+
+Alert on withdrawal rate directly. We detected this through a 403 on a website, 17 minutes after
+the first prefix left the table. Withdrawing ~1,100 prefixes in fifty minutes should page us on its
+own evidence.
+
+The expensive assumption here was not the missing filter value. It was that a batch job deleting
+customer resources needs no more supervision than a customer deleting one of their own.

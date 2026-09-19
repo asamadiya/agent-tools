@@ -1,0 +1,20 @@
+Pylon to Helix migration: Q3 status for the Infrastructure QBR
+Owner: Priya Raghavan. Period: Apr 6 2026 to Sep 18 2026.
+
+We have cut over 744 of 1,240 services, 60% of scope, and the trailing six-week rate is 62 services per week. 496 services remain, 118 of them tier-0. At 62 per week the remaining work takes 8.0 weeks and lands around Nov 13, roughly four weeks inside the Dec 12 target. One caveat on that buffer: the 62-per-week figure comes from a population we have not broken out by tier, and the tail is 24% tier-0, which is a slower mix than the work behind us. Treat four weeks as the optimistic case.
+
+The watchAndReload blocker is scheduled but not yet closed. 96 of the 496 remaining services call watchAndReload, an API Helix does not implement; the compatibility shim is in code review with an ETA of Oct 9. The 400 unblocked services keep the team fully loaded until about Nov 2 at the current rate, so the shim has its three weeks of stated ETA plus another three weeks of slack before it starves the queue. A shim landing after Nov 2 pushes completion past Dec 12 by roughly a week for every week it slips.
+
+Rollback experience is good and the one customer-visible event is worth naming. Three rollbacks in 744 cutovers is a 0.40% rate, and all three were back on Pylon inside 24 hours. The Aug 27 rollback of notify-dispatch delayed 12% of push notifications for 9 minutes. We are sequencing the 118 tier-0 services across the full remaining window instead of batching them at the end, and we are holding tier-0 cutovers to the same 24-hour revert guarantee.
+
+The exemption requests are the decision we need from this QBR. Payments and Trust have asked to stay on Pylon through Q1 2027, and neither team has filed a migration plan. The Pylon hardware lease expires Feb 28 2027 and will not be renewed, so an exemption running to Mar 31 asks us to serve config from hardware we no longer hold for about a month. Two of us cannot resolve that: either the exemptions are denied and both teams file plans this quarter, or someone approves a lease extension and funds it. The second option also carries the $310K per month parallel-operation cost, which does not stop while any service reads from Pylon.
+
+Money follows the schedule directly. Running both stores costs $310K per month. Completing on Nov 13 rather than Dec 12 saves one month, $310K. Slipping from Dec 12 to the Feb 28 lease expiry costs an additional $794K at 2.56 months, and past Feb 28 the cost is no longer a line item -- it is a hardware negotiation we have already told the vendor we would not have.
+
+Asks for the next 90 days:
+
+1. Rule on the Payments and Trust exemptions at this QBR. If they are granted, name the budget owner for the lease extension and the $310K per month.
+2. Land the watchAndReload shim by Nov 2 at the latest. Oct 9 is the team's estimate; Nov 2 is the date at which the schedule starts moving.
+3. Hold 62 services per week through the tier-0 tail. We will report the rate split by tier in the Oct monthly so the four-week buffer stops being an assumption.
+
+What we will bring to the Q4 QBR: cutover count against the 1,240 total, the tier-split burn rate, shim status, and a confirmed completion date with the parallel-run cost attached to it. If the rate holds and the shim lands on time, that date is Nov 13 and the migration closes 29 days early.

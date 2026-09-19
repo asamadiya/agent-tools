@@ -1,0 +1,31 @@
+Request queuing for a multi-tenant RPC service
+
+Proposal
+
+The problem
+
+One customer can consume a shared RPC service's capacity and leave every other customer waiting. A single FIFO queue in front of a worker pool has no opinion about who filled it. If one customer sends a burst, or has a retry storm, or simply runs a batch job at midnight, their requests sit ahead of everyone else's requests in the same line. Latency for the well-behaved customers degrades in proportion to the misbehavior of one, and we find out from their tickets.
+
+Fair queuing solves this, and we cannot afford it
+
+Fair queuing is the textbook answer. Keep a separate FCFS queue per conversation and service the queues bit-by-bit round-robin. A conversation that exceeds its fair share gets longer delays and higher packet loss, and the conversations that stay within their share do not. The construction does not care that it was invented for packets: for RPC we key on the authorized customer id instead of a source-destination address pair, and the same isolation property falls out.
+
+The cost is the problem. Per-customer queuing is O(customers) queues and O(customers) work per round-robin sweep. A service with a hundred thousand authorized customers would spend its dequeue loop walking overwhelmingly empty queues, and would hold the memory for all of them on every host. The isolation is real; the bookkeeping is not something we want on the request path.
+
+Stochastic Fairness Queuing
+
+McKenney's 1990 Stochastic Fairness Queuing replaces per-customer queues with a fixed set of queues and a hash. Allocate Q queues. Hash the customer id into [0, Q) and enqueue there. Round-robin over the Q queues to dequeue. This is O(1) queues and O(1) time on both sides, independent of how many customers exist, and it approximates the fairness of the exact scheme because most customers land alone in their queue most of the time.
+
+The approximation has a sharp edge. Two customers that hash to the same queue keep hashing to the same queue, for as long as the hash function is fixed. If one of them is noisy, the other one persistently receives less than its share -- not for a burst, but forever. McKenney's remedy is to periodically perturb the hash function. A customer colliding with a noisy neighbor in one period is unlikely to collide with the same neighbor in the next, which converts a permanent penalty into an occasional one.
+
+What we propose: SFQ subsets with best-of-two
+
+We propose combining SFQ with shuffle sharding. Rather than hashing each customer to one queue, map each customer to a small subset of the Q queues -- two is enough -- and enqueue each request into the shorter of that customer's two queues. Perturb the subset assignment on the same period as the hash above.
+
+The best-of-two choice is what buys the isolation. With Q = 64 and subsets of size 2, there are C(64,2) = 2016 distinct subsets. Two customers share at least one queue with probability 1 - C(62,2)/C(64,2) = 125/2016, about 6.2 percent, which is worse than the 1/64 collision rate of plain SFQ. Sharing *both* queues, which is the case where a customer has nowhere to go, has probability 1/2016, about 0.05 percent. That is roughly 32 times better than plain SFQ, and the gap widens as Q grows. A customer that overlaps a noisy neighbor on one queue sends its work to the other one.
+
+The property holds only while a small portion of customers are noisy. If a quarter of the tenants are hostile, every subset of two contains a hostile queue and the scheme degrades toward the single-FIFO behavior we started with. We believe our traffic satisfies the assumption -- the incidents we have seen involve one or two customers -- but we should measure the noisy fraction before committing to subset size 2.
+
+Deployment
+
+The same structure works at two levels. On a single host, the Q queues sit in front of the worker thread pool. Across hosts, the queues are the hosts themselves, and best-of-two becomes a load-balancing decision at the caller. We propose building the single-host version first, since it needs no coordination and can be measured against current p99 latency per customer.

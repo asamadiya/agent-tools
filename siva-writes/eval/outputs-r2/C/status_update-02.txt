@@ -1,0 +1,16 @@
+search-federator 2026.9.3 canary: p99 regression found, interceptor reverted, re-canary Sep 22
+Owner: Dan Ortiz. Status as of Sep 15.
+
+We ran build 2026.9.3 on 4 of 240 production hosts from Sep 8. The canary hosts serve p99 at 311 ms against 184 ms on the control fleet, an increase of 127 ms or 69%, and that puts the canary 61 ms over the 250 ms p99 SLO. p50 did not move: 41 ms on control, 42 ms on canary. The regression is confined to the tail. We reverted the responsible change from the release branch on Sep 15 and will re-canary on Sep 22.
+
+The cause is the new gRPC interceptor that validates response payloads against a JSON schema on the serving path, synchronously. Its median cost is 0.9 ms, which is affordable. Its p99 cost is 94 ms, and that cost is dominated by schema recompilation on a cache miss. The schema cache holds 512 entries. The live working set is roughly 3,400 distinct schemas, so the cache is undersized by a factor of 6.6 and the measured hit rate on canary is 71%. At 2,900 QPS per host, a 29% miss rate is about 840 recompilations per second per host.
+
+The pre-release load test hit 99.6% and told us nothing, because it exercised 300 schemas. 300 fits inside a 512-entry cache with room left over, so the test measured steady-state hit cost and never measured recompilation under contention. This is the finding worth carrying into other services: a cache-backed component tested below its cache capacity reports the cost of the hit path only. The load-test schema corpus is now the action item, not the interceptor alone.
+
+One number does not close yet. The interceptor's own p99 is 94 ms and the end-to-end p99 delta is 127 ms, a gap of 33 ms that per-request cost does not explain. The likely mechanism is queueing behind recompilation on shared serving threads, which would inflate the tail for requests that never entered the interceptor. We have not proven that. Before the Sep 22 re-canary we will capture thread-state profiles on a canary host and confirm or discard it, because if the amplification is real then a smaller cache miss rate reduces it superlinearly and our headroom estimate is conservative.
+
+Error budget consumed is zero. Canary carries 1.7% of traffic, which is consistent with 4 hosts at the fleet's per-host load: 4 × 2,900 QPS is 11,600, and 11,600 / 0.017 is 682,000, within 2% of 240 × 2,900. The SLO is evaluated fleet-wide and 1.7% of requests at 311 ms did not move the aggregate past the threshold. SLO owners should read this as a caught regression rather than an absorbed one. Had we ramped to 25% before looking, the arithmetic changes.
+
+Three changes land before the re-canary. First, the cache goes to 8,192 entries, which is 2.4x the observed working set and leaves room for schema growth. Second, validation moves behind a sampling flag set to 1%, so the recompilation rate per host drops from roughly 840 per second to under 10 even if the cache misses at the same rate. Third, the load test gets a schema corpus drawn from production traffic rather than a fixed set of 300.
+
+Exit criterion for Sep 22: canary p99 within 10 ms of control at 1% sampling, held for 72 hours, before we discuss raising the sampling rate.

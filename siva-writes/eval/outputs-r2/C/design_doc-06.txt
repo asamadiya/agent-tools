@@ -1,0 +1,35 @@
+Where we invest engineering effort over the next decade
+
+Three costs, and only one of them is still expensive
+
+The word "programming" bundles three activities whose costs have now separated, and the separation is the whole basis for this plan.
+
+Turning written business logic into code costs approximately zero. Hand a model a rule a product manager would recognise -- prorate the refund by remaining term, exclude accounts in dunning -- and you get the function, the table migration, and a plausible test suite. Integrating services and libraries costs approximately zero too. The SDK glue, the schema mapping between two teams' event formats, the retry wrapper: this is the plumbing, and it is the part of the job that generative tooling learned first and does best, because a well-documented API surface is exactly the kind of thing a model has read a million examples of.
+
+Building efficient, reliable, secure, end-to-end systems is getting cheaper, but slowly. The gap between those two rates is the thing to plan around. We do not have a clean internal measurement of the second rate and I would distrust anyone who claims one, because the confounds -- headcount mix, what we chose to build, which quarter we tightened review -- swamp the signal. What we can say is directional and consistent across our teams: the first two buckets collapsed inside about two years, and incident rate, time to detection, and the cost of a schema change did not move with them.
+
+Amdahl's Law tells you where the money goes next
+
+Amdahl's Law is the right lens, and it is unkind. Speeding up one portion of a problem makes that portion a shrinking share of total time, so the returns from improving it fall away fast.
+
+Put numbers on it with our own rough split. Suppose translation and plumbing were 70% of the hours on a typical service, and the remaining 30% is design, correctness under load, security review, rollout, and living with the thing in production. Drive the 70% to zero and total time falls to 30% of what it was -- a 3.3x speedup, which matches the order of the gains teams report anecdotally. Now improve that same tooling by another factor of ten. Total time goes from 30% to 30%. There is nothing left to win there. The 30% that remains is now 100% of the cost, and every further dollar of leverage has to come out of it.
+
+Two readings of this moment
+
+Reading one is that programming is ending as a high-value economic craft, joining weaving, ploughing, and coopering. The honest version of this argument is not that engineers stop existing; it is that the skill stops commanding a premium because the scarce input moved elsewhere.
+
+Reading two is that new tools bring new industries, research fields, and careers, and that the lever getting longer raises the value of whoever chooses where to put it. Integration, translation, simple analysis, and small-scale synthesis are solved. Genuinely new ideas are not, and they grow more valuable as the lever lengthens, because a good idea now reaches production in a week.
+
+I do not think we should bet the organisation on either reading being fully right, and I want to explain why with a case that cuts against my own preference. A mostly retired expert in analog circuit design founded a hardware company with friends in the late 1960s, on the explicit bet that serious customers would reject digital logic. The 74 series had just launched and they found it graceless, unreliable, and full of problems. Measure the bet by the ratio of transistors in digital versus analog circuits in 2026 and it was wrong by ten or more orders of magnitude. He still made a small fortune, enough to keep his children comfortable. The world changes slower than anyone would like, which is a hedge that protects a wrong bet and equally taxes a right one.
+
+What stays sticky, and what we fund
+
+Three things resist the collapse in cost, and they set our investment.
+
+Real-world feedback loops stay sticky. A model can write the pricing rule; it cannot tell you what happened to churn when you shipped it. We fund measurement -- experiment infrastructure, attribution, the ability to read a result in days instead of a quarter -- as a first-class engineering product, not as analytics support.
+
+Human stubbornness stays sticky. Migrations fail on people, not on code. We fund the smallest number of interfaces that many teams must agree on, and we staff the agreeing.
+
+Occasional adversaries stay sticky. Security and abuse are the one domain where the cost of your opponent's plumbing also went to zero, so the offence-defence balance shifted without anyone deciding it should. This is where we add headcount rather than tooling.
+
+Test the split yourself before you accept it. Take last quarter's incidents, classify each by which of the three buckets caused it, and count. If more than a handful trace to code that was written wrong, I am mistaken about where the cost sits and this plan should change.

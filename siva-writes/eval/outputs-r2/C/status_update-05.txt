@@ -1,0 +1,18 @@
+two-tower-v7 wrap-up: do not ramp
+Owner: Aditi Sundaram. Decision taken Sep 5 with the metrics council.
+
+We shut the two-tower-v7 LIX down on Sep 5 and will not ramp it further. The session-aware retrieval head, added to notifications ranking, did not move notification CTR at 10% treatment, regressed downstream sessions, and raised serving cost by 31%. We are keeping the session embedding table in the feature store, because two other teams now read it and the table is no longer coupled to this experiment.
+
+The ramp ran for seven and a half weeks: 2% on Jul 14, 4% on Aug 4, 10% on Aug 19, teardown on Sep 5. All numbers below come from the 10% arm unless stated otherwise.
+
+Notification CTR moved -0.11%, with a 95% confidence interval of -0.41% to +0.19%. The interval straddles zero and is wide enough to contain a launch-worthy gain and a real loss, so we cannot call the direction. Downstream sessions per member is the number that decided the review: -0.6% at p = 0.003. That metric is the one the notifications org is held to, and a significant negative reading on it disqualifies a head that has not earned a CTR win.
+
+Serving cost rose from 3,130 GPU-hours per day to 4,100, an increase of 970 GPU-hours per day, or 31%. p99 scoring latency rose from 38 ms to 57 ms, a 19 ms addition to a budget that is already contested by the candidate generation stage. Neither figure would block a launch on its own if the ranking gain were real. Paired with a flat CTR and a session regression, the cost is the whole story.
+
+The segment cut explains the aggregate and is the most useful output of the experiment. Members in the top decile by weekly session count gained +1.9% CTR. The 62% of members with fewer than three sessions a week lost 0.8%, and that segment carries enough of the traffic to set the aggregate sign by itself. The head works, for the members who already give it history to work with, and it is quietly harmful to everyone else.
+
+Our working hypothesis for the miss is a cold-start floor in the session encoder. The head appears to need at least four prior sessions before it emits an embedding that carries member-specific signal; below that it falls back to something close to a constant vector, which flattens the score spread across candidates and hands ranking back to the prior. This is a hypothesis, not a measured result. We did not instrument the encoder output during the ramp, and the segment boundary we have (three sessions per week) is not the same quantity as the four-prior-session threshold the hypothesis names.
+
+Test it directly before anyone builds on the head. Hold the trained model fixed, bucket held-out members by prior session count from zero to twelve, and compute the per-bucket variance of the session embedding across members in that bucket. If the hypothesis holds, the variance is near zero below four sessions and climbs sharply above it. If the variance is flat and nonzero throughout, the cold-start story is wrong and the regression has some other cause, most likely in how the head's score is blended with the existing ranker.
+
+Three things carry forward. The session embedding table stays in the feature store, owned by us, with the two downstream consumers now documented as dependencies. The LIX and its serving path are torn down, and the 970 GPU-hours per day return to the shared pool this week. Whoever picks up a v8 should treat the light-user segment as the primary metric from the first ramp step, because a head that only helps the top decile cannot win an aggregate that the bottom 62% controls.

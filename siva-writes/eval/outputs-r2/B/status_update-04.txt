@@ -1,0 +1,26 @@
+Subject: li-httpclient v3 deprecation -- 612 multiproducts left, builds break Dec 1
+
+To: engineering leads of every li-httpclient consuming team
+From: Tomasz Hejna, owner, li-httpclient
+
+388 of 1,000 consuming multiproducts are on v4, which is 38.8%. The remaining 612 are on v3, which reaches end of life on Jan 31 2027. If your team owns one of those 612, this update is your planning input for the next quarter.
+
+The forcing function is CVE-2026-31819, an HTTP request-smuggling flaw in Netty 4.1.79 at CVSS 7.5. v3 pins that Netty version and cannot move off it without breaking ABI, so there is no patch release of v3 that closes the CVE. v4 is the fix.
+
+Two changes in v4 will cost you time. First, v4 renames every connection-pool configuration key, so any config that tunes pool size, idle timeout or acquisition timeout needs a mechanical rewrite and a re-read of the values you actually set. Second, v4 drops support for HTTP/1.0 upstreams. We have identified 17 upstreams that still speak HTTP/1.0. Each one needs a fix on the upstream owner's side or a proxy shim in front of it; if one of your callees is on that list, start that conversation now, because it is the only part of this migration that depends on another team's schedule.
+
+The codemod covers 84% of call sites: 7,910 of 9,417 rewrite automatically. The remaining 1,507 need hand edits and they are not spread evenly. 63 multiproducts hold all of them, averaging 24 hand edits each. Check whether you are in that set before you size the work. For teams that have finished, median migration time is 6 engineer-days, and that median includes the hand-edit cases.
+
+Two dates bind. v3 builds start failing on Dec 1 2026, which is 73 days out. End of life is Jan 31 2027. The build break is the one that will land on your on-call, not the EOL date.
+
+The exemption process grants 30 days at a time. We have granted 22 exemptions so far and 9 of those went to the same three teams, which means most consumers have either migrated or have not yet asked. An exemption buys a month of green builds and moves nothing else: the CVE stays open in your service for that month, and you still land on Jan 31 2027. Treat it as scheduling relief for a team that is mid-migration, not as a way to defer the work past the quarter.
+
+Office hours run Tuesdays and 41 teams have attended. Bring your config diff and your call-site count and we will tell you which of the three shapes your migration is: codemod-clean, hand-edit heavy, or blocked on an HTTP/1.0 upstream.
+
+What we need from you this week:
+
+Run the codemod against your multiproduct in a scratch branch and record the count of call sites it could not rewrite. That number, not a guess, is your estimate input.
+
+Check your upstreams against the HTTP/1.0 list and open the request to the owning team if you find a match.
+
+Tell us your target migration month. We are tracking 612 multiproducts against a Dec 1 build break, which works out to roughly 8 completions per day across the org, and we cannot tell from the outside which of those 612 are three days of work and which are blocked. Your answer is how we find the ones that need help before December.

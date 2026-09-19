@@ -1,0 +1,19 @@
+two-tower-v7 wrap-up: session head shut down Sep 5
+
+We shut down the two-tower-v7 LIX on Sep 5 because the session-aware retrieval head bought no notification CTR, cost 31% more serving compute, and regressed the 62% of members who have fewer than three sessions a week. Owner: Aditi Sundaram. The LIX ran at 2% from Jul 14, 4% from Aug 4, and 10% from Aug 19 until teardown.
+
+The headline CTR result is indistinguishable from zero. At the 10% ramp, notification CTR moved -0.11%, with a 95% confidence interval of -0.41% to +0.19%. The interval covers zero, and it is 0.60 points wide, which is wider than any effect we would have ramped on. Six weeks at 10% did not narrow it enough to call a direction.
+
+Downstream engagement moved the wrong way, and that result is significant. Sessions per member fell 0.6% at p = 0.003. This is the metric that decided the review: a retrieval head that leaves CTR flat and takes 0.6% of sessions is trading a measurable loss for an unmeasurable gain.
+
+The variant cost 970 GPU-hours per day more than control and 19 ms more p99 latency. Serving ran at 4,100 GPU-hours per day against 3,130 for control, a 31% increase. p99 scoring latency moved from 38 ms to 57 ms, which is a 50% increase on the scoring stage and eats headroom we hold for traffic spikes. At full ramp that compute bill is ten times what the 10% cell paid.
+
+The segment cut shows two populations moving in opposite directions, and the 62% majority moves down. Members in the top decile by weekly session count gained +1.9% CTR. Members with fewer than three sessions a week lost 0.8%, and that group is 62% of the population, so it dominates the weighted aggregate. The flat headline is not a small effect. It is a real positive effect on heavy users, cancelled by a real negative effect on everyone else.
+
+Our working hypothesis is that the session head needs at least four prior sessions before its embedding carries information. Below that count the head falls back to a near-constant vector. A near-constant vector adds roughly the same offset to every candidate's score, which flattens the ranking the base tower produced and pushes the ordering toward arbitrary for light users. The 1.9% gain on heavy users is consistent with the head working as designed once it has enough session history to condition on.
+
+We have not run the ablation that would confirm the fallback. Zero out the session tower for members under four sessions, replay the Aug 19 to Sep 5 traffic, and check whether their CTR returns to control. That is the test this hypothesis owes the reader before anyone builds on it.
+
+The metrics council decided on Sep 5 not to ramp and to tear down the LIX, and we kept the session embedding table in the feature store. Two other teams now read that table, and deleting it would break them for a result that is about the retrieval head, not about the features. The table stays and we continue to publish it.
+
+Anyone reviving this line should treat the four-session floor as the design constraint rather than a bug to patch. A version that routes light users to the existing ranker and sends only members above the session threshold through the new head would keep the +1.9% and avoid the -0.8%, at a fraction of 4,100 GPU-hours per day, because the head would score a decile of traffic instead of all of it. We have not costed that variant. Before proposing it, run the replay ablation above, because the routing design is only worth building if the light-user regression comes from the constant-vector fallback and not from the retrained base tower underneath it.

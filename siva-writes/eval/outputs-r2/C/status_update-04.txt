@@ -1,0 +1,28 @@
+li-httpclient v3: 612 multiproducts left, and the build gate is Dec 1
+
+To: engineering leads of every li-httpclient consuming team
+From: Tomasz Hejna
+
+612 of the 1,000 multiproducts that consume li-httpclient are still on v3. 388 have migrated to v4, which is 38.8%. If you own one of the 612, the date to put on your roadmap is not the Jan 31 2027 end of life. It is Dec 1 2026, when v3 builds start failing. That is 73 days from today, or ten Tuesday office hours. Teams that have finished took a median of 6 engineer-days.
+
+The driver is CVE-2026-31819, CVSS 7.5, a request-smuggling flaw in Netty 4.1.79. v3 pins that Netty version and cannot move off it without an ABI break, so the fix exists only in v4. There will be no patched v3.
+
+Most of the work is mechanical. The codemod rewrites 7,910 of 9,417 call sites, 84%. The remaining 1,507 sites need hand edits, and they are not spread evenly across the fleet: 63 multiproducts hold all of them, roughly 24 sites each. Run the codemod against your repository this week and read the residual diff. If it comes back empty you are in the 937 multiproducts whose migration is a version bump, a config review, and a canary.
+
+Two breaking changes survive the codemod.
+
+Connection-pool configuration. v4 renames every pool key. A stale v3 key does not fail the build; it is ignored, and your pool silently falls back to v4 defaults. Diff your v3 pool config against the v4 key table and confirm that max connections, idle timeout, and acquire timeout each carry over to a named v4 key. Verify the applied values in a canary before you take the change to production.
+
+HTTP/1.0 upstreams. v4 drops support for them, and 17 upstreams still speak HTTP/1.0. Each needs a fix from its own owner or a proxy shim in front of it. If you call one of the 17, open that thread now. The fix is not yours to write, and a cross-team dependency is the item most likely to push a migration past Dec 1.
+
+On exemptions: 22 have been granted, each good for 30 days. Nine went to the same three teams, which means three teams are renewing an extension instead of migrating. Exemptions stay available at 30 days a time, and I will keep granting them for real blockers such as an HTTP/1.0 upstream whose owner has not scheduled a fix. I will not keep granting them to cover unstarted work. Starting in October I will publish the exemption list, with the multiproduct, the team, and the stated blocker, in the weekly report.
+
+What I need from each of you this week:
+
+Name a DRI for each v3 multiproduct you own and reply with the name. I will track the 612 by DRI from here.
+
+Run the codemod and report the residual call-site count. That number tells me whether you are a 6-engineer-day team or one of the 63 that needs help.
+
+Check your upstreams against the HTTP/1.0 list and flag any match, even if you have not started the migration.
+
+Office hours run Tuesdays and 41 teams have attended. Bring the residual diff and we will work through it in the session. If your multiproduct cannot clear Dec 1 for a reason outside your control, tell me before Nov 1 so the exemption is planned rather than an emergency the week the build breaks.

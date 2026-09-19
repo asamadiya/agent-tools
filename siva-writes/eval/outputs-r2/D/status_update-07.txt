@@ -1,0 +1,17 @@
+Trim: monthly programme status
+
+Trim has booked $16.4M of its $28M annualised FY27 savings target, 59%, and $7.0M of the $11.6M still outstanding depends on a scheduler change owned by another org that has no committed date.
+
+The booked $16.4M came from three workstreams that ran entirely inside capacity we already control. Right-sizing 6,800 over-provisioned pods returned $9.1M, cutting the median CPU request from 4.0 cores to 1.5. Deleting 41 PB of object storage untouched for more than three years returned $4.2M. Converting 62% of the steady-state fleet to reserved instances returned $3.1M. None of the three needed a code change from a team outside the programme, which is why all three closed on the reporting cadence we forecast.
+
+Right-sizing bought that $9.1M with five incidents, four SEV-3 and one SEV-2, every one of them CPU throttling on a service whose p99 CPU sat close to its new request. The mechanism is the cgroup quota. A request sized from mean utilization is correct for the average scheduling interval and short by the peak-to-mean ratio during the p99 interval, and the kernel does not borrow across intervals: it throttles the runnable threads to the quota and the latency shows up at the caller. The pods we cut too far were the ones whose CPU distribution had the longest tail, and the pipeline that proposed the cuts was reading the mean.
+
+The guardrail that shipped Aug 20 fixes that by reading the tail instead. It blocks any cut where measured p99 CPU exceeds 70% of the proposed request, and it has rejected 410 of 1,100 candidate cuts since, 37%. Read that rejection rate as a measurement of the old pipeline: better than one proposed cut in three would have left a service with under 1.43x headroom over its own p99, and the five incidents came out of exactly that population. The 690 cuts that passed carry the remaining right-sizing upside, and they are the ones whose tails are flat enough to survive the request we are setting.
+
+GPU bin-packing carries $7.0M of the $11.6M plan and is the programme's only unowned dependency. Cluster utilization is 38% today against a 65% target. Reaching 65% means packing multiple workloads onto a device that currently holds one, and the placement logic that does that lives in the scheduler, outside this programme. No date is committed for it. Until one is, the $7.0M has a value but no schedule, and reporting it inside a FY27 annualised number implies a confidence the dependency does not support.
+
+Decommissioning three legacy datacenter halls by June 2027 carries the other $4.6M and is on us. That work has no external dependency and no incident history.
+
+Two decisions belong to this review. First, get a committed scheduler date from the owning org, or move the $7.0M out of the FY27 forecast and into an unscheduled column. Trim without GPU bin-packing lands at $21.0M, 75% of the $28M target, and the business review should be looking at that number now instead of discovering it in Q3 FY27. Second, hold the guardrail at its current threshold through the next 300 candidate cuts before anyone proposes loosening it. The 70% line is what stands between the remaining right-sizing pipeline and a sixth throttling incident, and 410 rejections is not yet enough history to say whether the line is drawn tight or drawn correctly.
+
+Next month's report will carry the realised savings from the 690 guardrail-approved cuts and the scheduler owner's answer on a date.

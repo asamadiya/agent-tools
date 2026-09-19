@@ -1,0 +1,25 @@
+## Computing a container's swap limit
+
+A container's swap limit is its share of the node's physical memory multiplied by the swap the node has left over for pods: `ContainerMemoryProportion * TotalPodsSwapAvailable`. The kubelet computes both factors from node facts and the container's existing memory request. There is no user-facing swap field, and there is no per-container override.
+
+`ContainerMemoryProportion` is the container's memory request divided by the node's total physical memory. Only containers in Burstable pods reach this calculation at all; Guaranteed and BestEffort pods are denied swap access before it runs. Within a Burstable pod, a container whose memory request equals its memory limit has its proportion defined as zero, which gives it a swap limit of zero. That container has declared a fixed footprint, and swapping it would contradict the declaration.
+
+`TotalPodsSwapAvailable` is the node's total swap minus the configured system-reserved memory. The subtraction is the entire reservation mechanism. The kernel exposes `memory.swap.max` and `memory.swap.high` but no `memory.swap.min`, so the kubelet cannot ask it to hold a floor of swap for system-critical daemons. The kubelet therefore reserves by subtraction: it withholds the system-reserved bytes from the quantity the pods divide, and every container's limit is then a fraction of that reduced total.
+
+### Worked example
+
+Node: 40 GB physical memory, 40 GB swap, `systemReserved.memory` set to 2 GB. One Burstable pod, container A requesting 20 GB and container B requesting 10 GB.
+
+- `TotalPodsSwapAvailable` = 40 GB - 2 GB = 38 GB.
+- A: 20 GB / 40 GB = 0.5, limit = 0.5 * 38 GB = 19 GB.
+- B: 10 GB / 40 GB = 0.25, limit = 0.25 * 38 GB = 9.5 GB.
+
+The two limits sum to 28.5 GB against 38 GB available, and the 2 GB reserve is untouched by either container.
+
+### What the arithmetic guarantees, and what it does not
+
+The sum of swap limits on a node cannot exceed `TotalPodsSwapAvailable` as long as the sum of admitted memory requests does not exceed physical memory. Because the scheduler admits against allocatable memory, which is physical memory minus the reserves, the proportions of all containers on the node sum to less than 1 and the limits sum to less than 38 GB in the example above. This is a bound on limits, not on usage: limits are ceilings, and nothing here reserves swap for any individual container. A container can be denied swap it is entitled to if its neighbours reach their ceilings first.
+
+### Testing
+
+Set a container's memory limit equal to its request, then read `memory.swap.max` from its cgroup: it must be 0, not the 19 GB its 20 GB request would otherwise earn. Change `systemReserved.memory` from 2 GB to 8 GB on the same node and re-read A's limit: it must fall from 19 GB to 16 GB, because `TotalPodsSwapAvailable` drops to 32 GB while the proportion stays at 0.5. Both numbers come from node-level configuration the test can set directly, and neither case needs a live memory-pressure workload to verify.

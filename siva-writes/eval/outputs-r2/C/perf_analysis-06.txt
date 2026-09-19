@@ -1,0 +1,17 @@
+Diagnosis: the 100-Gbyte files bust the page cache and the 40-Gbyte files do not
+
+The first useful measurement was `free -m` on the problem instance, which showed total 64,414 MB, used 15,421, free 349, buff/cache 48,643, available 48,409, and no swap. The 349 MB in the free column is the number people panic about and it is not a finding; Linux is supposed to spend idle memory on cache, and the available column says 48,409 MB could be reclaimed on demand. The number that matters is buff/cache at 48,643 MB, because that is the working set the file-processing code is implicitly relying on, and it is smaller than the files that were slow and larger than the files that were fast. That gave us a theory rather than a diagnosis: if the service makes multiple passes over a file, a 40-Gbyte file stays resident across passes and a 100-Gbyte file cannot, and every pass after the first re-reads from S3-backed disk.
+
+cachestat confirmed it. On a 100-Gbyte upload the per-second hit ratios were 74.1%, 9.7%, 6.5%, 12.0%, 34.5%, 7.0%, and 11.1%, with misses climbing from 632 to 23,341, BUFFERS_MB at 17 and CACHE_MB pinned around 48,000. For a workload re-reading a file it just wrote, ratios in the upper 90s are the expected shape, and the first sample at 74.1% is probably the tail of the previous pass still being served from cache before the eviction pressure catches up. Everything after it is cache busting: the cache is full, the file does not fit, and each miss becomes a disk read.
+
+The control makes the mechanism hard to argue with. On a 32-Gbyte upload, cachestat reported a 100.0% hit ratio with 0 misses in every second sampled, hits ranging 33,424 to 65,158, BUFFERS_MB 41 and CACHE_MB about 33,680 -- almost exactly the file size, which is what you would expect if the whole file is resident. `free -m` on that run showed used 18,421, free 11,218, buff/cache 34,773, and iostat showed essentially no disk I/O. However many passes the code makes over a 32-Gbyte file, it makes them out of memory.
+
+One caveat on the control: we tested 32 Gbytes, not 40. 40 Gbytes plus ~15 Gbytes of process memory is close enough to 64 Gbytes that the fast case is likely running with much less headroom than the control suggests, and a 40-Gbyte file is probably a few gigabytes of RSS growth away from falling off the same cliff. If someone wants a sharper boundary, sweep file size in 8-Gbyte steps and watch the cachestat hit ratio; the transition should be abrupt, not gradual.
+
+Recommendations
+
+The quickest fix is a larger-memory instance, sized so the page cache comfortably exceeds the largest file the service accepts. That is a configuration change, it can ship today, and it buys a working set of roughly file size plus the 15 Gbytes the process already uses. It is also the fix that quietly fails again the next time the file size limit moves, which is how this instance got here.
+
+The durable fix is in the code. The service is making multiple passes over a whole file that it does not need to hold whole; processing the file in parts, sized to the cache the instance actually has, removes the dependence on the file fitting in memory at all. That work is more expensive than resizing the instance and it is the only version that keeps working at 200 Gbytes.
+
+I would do both, in that order, and I would add the cachestat hit ratio to the dashboard, because this failure produced no error, no alert, and no CPU signal -- only a job that took hours.

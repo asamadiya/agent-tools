@@ -1,0 +1,27 @@
+1.1.1.1 Resolver outage, 14 July 2025
+
+The 1.1.1.1 public DNS Resolver was unavailable worldwide for 62 minutes, from 21:52 to 22:54 UTC on 14 July 2025. We withdrew every Resolver prefix -- 1.1.1.0/24, 1.0.0.0/24, 2606:4700:4700::/48 and others -- from every Cloudflare location, and UDP, TCP and DoT query volume collapsed. DNS-over-HTTPS held up, because most DoH clients query cloudflare-dns.com, which is served from addresses we never withdrew. Gateway DNS degraded intermittently across the same window. All times below are UTC.
+
+What broke
+
+The outage started with a configuration error made 38 days earlier. At 17:38 on 6 June, a release that prepared a service topology for a future Data Localization Suite service attached the 1.1.1.1 Resolver prefixes to that non-production service. Production did not change: no route moved, no traffic shifted, and no alert fired. The prefixes were now claimed by two services at once, and the wrong binding sat dormant for five weeks, because nothing asked the system to recompute the topology.
+
+At 21:48 on 14 July we attached an offline test location to that same non-production service for internal testing. That change triggered a global refresh of network configuration. The refresh recomputed the 1.1.1.1 topology from the service definition that now owned the prefixes, found one offline location listed in it, and collapsed the Resolver from all locations to that one. Our routers withdrew the Resolver prefixes worldwide. Queries started failing at 21:52.
+
+Timeline
+
+Internal health alerts fired at 22:01 and we declared an incident. We found the bad binding and began the revert at 22:20. Re-advertising the prefixes brought query volume back to roughly 77% of pre-incident levels within minutes. The missing 23% belonged to edge servers whose IP bindings the refresh had removed; putting those bindings back requires a change-management path that we normally stage over hours to limit blast radius. We validated the change in test locations first, then ran it at full speed. Traffic reached normal levels at 22:54, and we marked the incident resolved at 22:55.
+
+The route advertisement from AS4755
+
+At 21:54, two minutes after our withdrawal, Tata Communications India (AS4755) began advertising 1.1.1.0/24. Our own withdrawal is what made that advertisement visible: while we announce the prefix, a competing announcement does not win on most paths. The Tata advertisement neither caused the outage nor extended it. Operators who saw it in their tables during this window were seeing a consequence, and any queries that followed it reached a resolver that is not ours.
+
+Why we did not catch it
+
+Two properties of the legacy topology system turned a typo into a global withdrawal. First, it hard-codes explicit location lists in each service definition, so a prefix can be bound to a service whose location list bears no relation to where that prefix is actually served. Second, it applies a topology change everywhere at once. The 6 June release was peer reviewed and the reviewer did not spot the extra prefix attachment, which is what review catches only some of the time. A canary deployment does not depend on anyone spotting anything: it would have withdrawn 1.1.1.1 from one location, tripped the health probes that fired at 22:01, and stopped there.
+
+What we are changing
+
+We are retiring the legacy topology system and moving 1.1.1.1 onto our newer address-management stack, which uses abstract location groups instead of hard-coded lists and does not let one service silently claim another's prefixes. Progressive rollout for topology changes is the higher-priority item, and it lands first: a topology change will deploy to a single location, then a metal, then a region, with health checks gating each step. We are also adding a check that refuses a service definition that binds prefixes already bound elsewhere, which would have failed the 6 June release at submit time.
+
+We are sorry. A 62-minute global outage of a public resolver breaks name resolution for everyone using it, and the fix for this class of failure is deployment mechanics that do not require a reviewer to be perfect.

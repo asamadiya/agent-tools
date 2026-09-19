@@ -1,0 +1,58 @@
+- KEP Title: Pod Scheduling Readiness
+- SIG: sig-scheduling
+
+## Motivation
+[motivation]: #motivation
+
+The scheduler treats a Pod as ready for scheduling the instant it is created, and there is no way
+for anything else to say otherwise. Creation is the only gate. Once the Pod exists, it enters the
+scheduling queue, and the scheduler will keep attempting to place it for as long as it stays
+pending.
+
+That assumption is wrong for a large class of Pods. Some Pods are waiting on an essential resource
+that has not been provisioned yet -- a volume, a quota grant, a peer in a gang -- and the wait can
+last a long time. The scheduler does not know this. It picks the Pod up, fails to place it,
+backs off, and picks it up again. Each cycle costs a scheduling attempt that could have gone to a
+Pod that was actually placeable, so overall scheduling throughput drops while the unschedulable Pod
+churns.
+
+The churn does not stop at the scheduler. Integrators watch the scheduler's output and react to it.
+Cluster Autoscaler is the one to reason about first: it consumes
+`{type: PodScheduled, reason: Unschedulable}` and treats that condition as the signal to add cluster
+resources. A Pod that is merely waiting on an out-of-band prerequisite will be reported as
+Unschedulable exactly like a Pod that needs a node, and the autoscaler cannot tell the two apart
+from the condition alone.
+
+Vendors hit the same wall from the other side. Features such as hierarchical quota want to admit
+Pods only after a quota decision is made, which means holding Pods out of the scheduling queue and
+releasing them later. Today that behavior has to be built outside the scheduler -- typically by
+withholding Pod creation itself -- because the queue offers no extension point where a third party
+can say "not yet."
+
+The `{type: PodScheduled, reason: Unschedulable}` condition is a published contract, and any
+solution here has to leave it intact. Integrators already depend on it, and repurposing it to also
+mean "deliberately paused" would silently change what an existing autoscaler decides to do.
+
+## Goals
+[goals]: #goals
+
+- Add an API that marks a Pod as scheduling-paused or scheduling-ready. A paused Pod is not a
+  candidate for placement and does not consume scheduling attempts.
+- Add an Enqueue extension point so that queueing behavior can be customized, rather than being
+  fixed by the scheduler's own policy.
+- Guarantee that a paused Pod is never marked Unschedulable through the PodScheduled condition.
+  This is what preserves the Cluster Autoscaler contract described above.
+- Ship a default enqueue plugin that implements the semantics of the new API, so the behavior is
+  available without writing a plugin.
+
+## Non-Goals
+[non-goals]: #non-goals
+
+- Forcing Pod conditions to carry more context about why a Pod is paused. The condition surface
+  stays as it is; consumers that want richer detail should look elsewhere.
+- Designing around in-house uses of the Enqueue extension point. The extension point is for
+  out-of-tree consumers, and in-tree use is not the case this proposal optimizes for.
+
+Permission control on individual scheduling gates is left as future work. Who is allowed to remove
+which gate depends on a fine-grained permissions design that does not exist yet, and we would rather
+not pin the API to a guess about it.

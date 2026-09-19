@@ -1,0 +1,13 @@
+Measuring availability and recovery as the customer samples it
+
+Availability and recovery targets should be set on the length-weighted mean of recovery time, E[X^2] / (2 E[X]), because that is the quantity a customer actually samples, and on real recovery distributions it runs several times larger than the MTTR we publish.
+
+Two familiar disputes are both sides being right about different averages. A service reports a mean request time of 100 ms; a user reports her mean wait is 1 s. A service reports MTTR under 1 minute; a user reports a mean outage length of 1 hour. The operator counts events, weighting one request or one outage equally with every other. The customer samples elapsed time, and the number of customers who land inside a given outage is proportional to that outage's length.
+
+That length weighting is the entire gap, and it has a closed form. Customers do not see f(t); they see a t-weighted version of it, whose mean is E_a[X] = E[X^2] / (2 E[X]) = 0.5 * (E[X] + Var(X) / E[X]). The excess over half the operator mean is Var(X) / E[X], and recovery times carry variance that is very large relative to their mean, because a handful of long recoveries dominate the second moment while contributing almost nothing to the event count.
+
+The multiplier is not a rounding correction. Fit a log-normal to a plausible recovery profile: median TTR 30 minutes, p99 600 minutes (10 hours, one event in 100). That fit yields an MTTR just over 1 hour and a customer-experienced mean of several hours. Reproduce it before believing it: draw failure durations from a log-normal with mu = 1.0 and sigma = 3.0, arrive clients as a Poisson process at rate 100, take 1000 samples, and compare the mean duration against the mean duration observed by an arriving client.
+
+Report three recovery numbers instead of one, and put the target on the third. Publish median TTR, p99 TTR, and the length-weighted mean E[X^2] / (2 E[X]) computed from the same incident set. The median tells the on-call engineer what a typical repair costs. The p99 and the weighted mean tell the platform what customers spent waiting, and a p99 of 600 minutes against a median of 30 says the recovery work worth funding is the tail, not the middle.
+
+Engineering the tail down is the only lever on the customer number. A client-side timeout with retry can hide part of a service-time tail, and nothing at any layer hides a recovery-time tail: the customer is inside the outage for its full remaining length. Cutting p99 TTR from 600 minutes to 120 minutes moves the customer-experienced mean far more than cutting the median from 30 minutes to 20.

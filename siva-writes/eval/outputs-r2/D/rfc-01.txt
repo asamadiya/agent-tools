@@ -1,0 +1,27 @@
+- Title: In-place update of pod resources
+- Target: SIG Node
+- Sections: Motivation, Goals, Non-Goals
+
+## Motivation
+
+This KEP proposes that `Pod.Spec.Containers[i].Resources` become desired state rather than an immutable field, and that `PodStatus` report the CPU and memory a runtime has actually applied. Today the field is immutable, and changing a CPU or memory request or limit requires deleting the pod object and creating a new one. There is no smaller edit available: the value lives in the spec, the spec rejects the write, and recreation is the only path from the old number to the new one.
+
+Three situations produce the write, and all three are routine. Load rose and the allocation is short. Load fell and the allocation sits idle. The values were set wrong when the workload was first authored. A VPA acting on any of these today has exactly one instrument, and it is pod deletion.
+
+The cost of that instrument is not uniform across workloads. A stateless deployment with a healthy replica count absorbs recreation inside its rolling-update budget and the user never sees it. A service running one or two replicas loses a measurable fraction of its serving capacity for the duration of the restart. A stateful workload pays reattachment and warm-up; a batch job that is most of the way through its work discards that work and starts again. The workloads that most need a correction to their allocation are the ones that can least afford how the correction is delivered.
+
+Splitting spec from status is what makes the resize honest, because a runtime is not obliged to apply what was asked. The spec records what the user, VPA, StatefulSet controller or JobController wants; status records what the container got. Without that second field, a failed or partial resize is indistinguishable from a successful one, and every controller above kubelet has to guess.
+
+Three CRI gaps block the kubelet side and are in scope here. `UpdateContainerResources` takes a Linux-shaped resources parameter that does not describe Windows containers or future runtimes. No CRI call lets kubelet read back the CPU and memory limits a runtime has applied, which is precisely the readback `PodStatus` needs. The behavior expected of a runtime that receives a resource update -- what it must apply, what it may refuse, what it reports -- is not written down anywhere, so conformance cannot be tested.
+
+## Goals
+
+Resize CPU and memory on a running container without necessarily restarting it. Necessarily is the operative word: some resizes will still need a restart, and the proposal is that a restart stop being the entry price.
+
+Let the initiator of a resize choose what happens when in-place is impossible. The user, VPA, StatefulSet controller and JobController have different tolerances for a restart, and none of them is the right default for the others.
+
+Let users mark which containers in a pod are safe to resize. A sidecar and the application it serves do not have the same answer.
+
+## Non-Goals
+
+Six things are out of scope: changing a pod's QoS class, resizing init containers that cannot be restarted, evicting lower-priority pods to free room for a resize, resource types other than CPU and memory, CPU manager and memory manager policies other than `None`, and resolving the scheduler race between a resize and a concurrent scheduling decision. Each of these is a separate decision with its own reviewers, and folding any of them in here would make this proposal unreviewable.

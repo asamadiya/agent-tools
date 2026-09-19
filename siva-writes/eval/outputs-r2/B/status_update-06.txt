@@ -1,0 +1,28 @@
+Storage Platform -- H2 2026 roadmap status and recommendation
+Owner: Kwame Boateng. For the VP staff planning review.
+
+Status
+
+The team is running 7 engineers against 11 approved headcount, and the gap is not closing. Four requisitions have been open since February at an average age of 214 days. Two candidates declined offers on compensation, one in July and one in August. Two engineers resigned in Q2, and one of them was DRI for the compaction rewrite. Seven months of hiring has produced zero net adds.
+
+Tiered storage GA moves from Nov 17 2026 to Feb 23 2027, a slip of fourteen weeks. Cross-region async replication is paused with zero engineers assigned and no restart date. The compaction rewrite continues with one engineer against a plan that assumed three, and that engineer picked the work up after the DRI left.
+
+The internal transfer pipeline does not close the Q4 gap. Three candidates are in loop with an earliest possible start of Nov 30. Ramp on this codebase has historically taken eight weeks, which puts first useful output near Jan 25 2027. Count those three as Q1 capacity, not Q4.
+
+The three options and what each one costs
+
+Borrowing two engineers from the Index team buys roughly five productive weeks each. A one-quarter loan is thirteen weeks and the eight-week ramp consumes eight of them. Index pays five weeks on its own query-planner goal for that, and we receive about ten engineer-weeks of output on a fourteen-week slip. The arithmetic does not clear the date.
+
+Contracting the migration tooling to a vendor costs $480K over two quarters, $240K per quarter. It buys tooling and not the design review, on-call, and code ownership the three workstreams are short of. A vendor team also needs ramp on this codebase, and the contract leaves all four requisitions open. Measure it against the thing that is actually scarce: reviewers who know the storage path.
+
+Cutting to single-region tiered storage holds Nov 17. It takes cross-region off the GA critical path, and cross-region is already parked at zero engineers with no restart date, so the dependency was going to block the date whichever option we picked. Single-region matches the scope to the 7 engineers we have.
+
+Recommendation
+
+Cut tiered storage to single-region and hold Nov 17 2026. Decline the Index loan and decline the vendor contract. A shipped single-region GA in November gives customers tiering, gives us production signal on the tiering path, and costs no other team its goals. The alternative buys a February date with either five weeks of Index's roadmap or $480K, and neither purchase survives the ramp math.
+
+Defer cross-region async replication to H1 2027 with a written restart trigger: the first two transfer candidates clearing ramp, currently estimated at Jan 25 2027. Set the trigger now so the workstream does not sit paused without an owner or a date.
+
+Hold the compaction rewrite at one engineer and re-baseline its milestones at the October review. A three-engineer plan executed by one engineer will not hit three-engineer dates, and the current schedule is still the three-engineer schedule.
+
+One ask for the staff review. Two of the four open requisitions failed at the offer stage on compensation, in July and August. Approve a band exception for the remaining four requisitions by Oct 3, or we should expect the same outcome on the next two offers and plan H1 2027 at 7 engineers. If the exception lands, the four requisitions still take a quarter to fill and eight weeks to ramp, which puts that capacity in Q2 2027.

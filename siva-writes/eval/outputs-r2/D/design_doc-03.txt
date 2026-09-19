@@ -1,0 +1,25 @@
+Request queuing for a multi-tenant RPC service
+
+Proposal
+
+We should queue incoming RPCs in a fixed set of queues, map each authorized customer id to a small subset of those queues through a periodically perturbed hash, and enqueue each request into the shortest queue in that customer's subset. This gives O(1) queues and O(1) work per enqueue and per dequeue, and it isolates a noisy customer from almost every other customer, provided only a small portion of customers are noisy at once.
+
+What fair queuing costs
+
+Classical fairness queuing buys isolation at a price that scales with the tenant count. It keeps a separate FCFS queue per conversation and services the queues bit-by-bit round-robin, and a conversation that exceeds its fair share absorbs its own delay and its own packet loss while well-behaved conversations do not. The construction transfers to RPC directly: key on authorized customer id instead of a source-destination address pair and the same guarantee holds. The cost is O(customers) queues plus O(customers) work to round-robin across them. At 10,000 authorized customers that is 10,000 queues to allocate and a 10,000-entry scan on the dequeue path, on a server whose whole budget per request is a few microseconds.
+
+Stochastic Fairness Queuing removes the scaling term
+
+McKenney's 1990 Stochastic Fairness Queuing replaces the per-conversation queues with a fixed set of queues and a hash from conversation to queue: O(1) queues and O(1) time, independent of how many customers are authorized. The isolation is no longer exact, because two customers can hash to the same queue and then share each other's delay. The damaging part is not the collision but its persistence. A fixed hash function collides the same pair on every request forever, so one unlucky customer sits behind a noisy neighbour permanently and receives less than its share for as long as the mapping stands. McKenney's remedy is to perturb the hash function periodically, which re-randomizes the mapping: a pair that collided in one period is unlikely to collide in the next, and the victim pays for one period rather than for the life of the process.
+
+Subsets and best-of-two
+
+Assigning each customer a subset of queues instead of a single queue makes a full collision rare, not merely temporary. Map each customer to a subset -- two queues is enough -- enqueue each request into the shorter of the two, and perturb the subsets on the same period as the hash. With 64 queues there are C(64,2) = 2016 distinct pairs. Among 1,000 authorized customers, a given customer expects 999/2016 = 0.50 other customers drawing its exact pair. Every other customer overlaps in at most one queue and drains through the other one, because the shortest-queue rule steers work away from the queue a noisy neighbour is filling. Enqueue stays O(1): two depth reads and a comparison. Dequeue stays O(1): round-robin over the fixed queue set.
+
+The condition that has to hold
+
+This scheme isolates noisy neighbours only while noisy customers are a small portion of the population. If half the customers are simultaneously over their share, both queues in most subsets are full, best-of-two has nowhere to steer, and the guarantee degrades toward undifferentiated FCFS. Shuffle sharding is a statistical argument about a sparse set of offenders, not an admission control mechanism, and we still need a rate limiter above it.
+
+Deployment
+
+Run the same structure at two levels. On a single host, the queues are the worker queues in front of the request handlers. Across hosts, the queues are the hosts themselves and the enqueue rule becomes a load balancing rule: hash the customer id to a subset of hosts, send to the shorter queue, perturb the subsets on a timer.

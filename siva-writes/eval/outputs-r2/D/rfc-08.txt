@@ -1,0 +1,25 @@
+Notes and constraints: `.spec.schedulingGates`
+==============================================
+
+A pod's scheduling gates can only shrink, and the API server refuses any write that would grow them or attach them to a pod that already has a node. Those two validation rules are what let the scheduler treat gate removal as a one-way transition and skip re-checking bound pods.
+
+The field is initialized at create time and never after. A client sets `schedulingGates` in the create request, or a mutating admission webhook adds them during admission of that request. An update may remove gates in any order, and an update that adds a gate not already present is rejected. A pod therefore walks its gate set downward from whatever the create call established, and reaches the empty set exactly once.
+
+A scheduled pod always carries empty scheduling gates. A client -- a cluster administrator or a custom controller -- cannot create a pod that both populates `schedulingGates` and sets `spec.nodeName`; the API server returns a validation error. The pair of restrictions closes the loop: gates cannot be added, and a pod with a node cannot have been created with them, so no pod is ever gated after binding and the scheduler never has to unbind one.
+
+The four cells reviewers should check against validation are:
+
+| nodeName | gates | create | update |
+|---|---|---|---|
+| nil (unscheduled) | non-nil | allowed | rejected |
+| nil (unscheduled) | nil | allowed | allowed |
+| non-nil (scheduled) | non-nil | rejected | rejected |
+| non-nil (scheduled) | nil | allowed | allowed |
+
+Row 1 is the asymmetry that carries the design. Create with non-nil gates is the only way gates ever enter a pod, and the same cell rejects update, which is what makes the set monotonically non-increasing.
+
+Feature-gating is not uniform across the three parts of this feature, and reviewers should not assume the gate turns all of it off. The parts are (a) the pod spec field plus its feature gate and associated bits, (b) the `SchedulingGates` scheduler plugin, and (c) the underlying scheduler framework change, the new `PreEnqueue` extension point. Disabling the feature disables (a) and (b). It leaves (c) on.
+
+(c) staying on is deliberate. `PreEnqueue` is a framework extension point rather than a policy, and a plugin developer can build their own equivalents of (a) and (b) on top of it -- their own hold condition, their own release signal -- without the in-tree field or the in-tree plugin. Out-of-tree consumers of `PreEnqueue` keep working when the feature gate flips off, which is also why a change to `PreEnqueue`'s contract is a wider compatibility break than a change to `schedulingGates`.
+
+`kubectl get pod` gains one new phase literal, `SchedulingPaused`, printed in the PHASE column when a pod's gates are non-empty. It is a display value computed by kubectl and is not a new value of `.status.phase`; clients parsing pod status should keep reading `Pending` for these pods.

@@ -1,0 +1,65 @@
+Twenty years of missing stacks: how the frame pointer left x86-64
+
+The x86-64 ABI leaves the frame pointer optional, and a default chosen in 2004 for a different
+architecture is why a flame graph collected on a modern Linux box comes back without its
+application frames. %rbp holds the base of the current stack frame. A profiler that walks stacks
+from outside the process -- Linux perf, eBPF -- reads the saved %rbp at a known offset, jumps to
+the caller's frame, and repeats until the chain ends; that walk is what produces the stacks a
+flame graph aggregates. Code compiled to index into its frame off %rsp instead keeps no such
+chain. It saves two instructions per function, one in the prologue and one in the epilogue, and
+hands one general-purpose register back to the allocator.
+
+Roger Sayle patched gcc's i386 backend in 2004 so that 32-bit targets compiled as though
+-fomit-frame-pointer -ffixed-ebp had been passed on the command line. On i386 the register was
+worth taking. Four allocatable general-purpose registers became five, or six to seven counting
+%si and %di, on a machine where register pressure decided how often a hot loop spilled to memory.
+Sayle gave two further reasons. He wanted gcc to beat Intel's icc on benchmarks, and he judged
+that the debuggers of the day would be unharmed, since they already supported other ways of
+walking a stack.
+
+The same default then carried across to x86-64, a target that already had more than a dozen
+general-purpose registers. Run the arithmetic on both machines and the trade stops matching. One
+more register on top of four widens the allocator's working set by a quarter; one more on top of
+sixteen changes very little about which values live in registers across a call. The two
+instructions saved in the prologue and epilogue are the same two instructions on either target,
+and on the wider one they are the whole of the benefit.
+
+Eric Schrock, then at Sun, objected in November 2004, and his argument was specific to amd64. A
+17th general-purpose register, he wrote, opens up no new class of compiler optimization. The
+pushl/movl sequence it avoids is one the hardware has long since optimized. Leaf routines never
+establish a frame at all, which means the most common functions in a hot profile pay nothing
+either way. Set against the cost in lost debuggability, he concluded, the trade hardly seemed
+worth making. His closing line named the failure mode precisely: the practice goes off the rails
+once people begin compiling /usr/bin without frame pointers.
+
+Linux then compiled /usr/bin without frame pointers, and not only /usr/bin. /usr/lib went the
+same way, and so did application code. The decision was never made once per binary by someone
+weighing a profile against a benchmark; it arrived as a distribution-wide compiler default and
+propagated to everything built under it.
+
+The cost shows up the moment a stack walk crosses into libc. The walk reaches a frame with no
+saved %rbp to follow, the chain ends there, and the trace returns holding the libc frames and
+nothing above them. Those truncated stacks are not spread across the profile. They share a common
+prefix, they merge into one tower, and they pile up together on the left edge of a flame graph --
+15% of the samples in one example, a sixth of the profile reporting only that the process was
+somewhere inside the C library. Off-CPU flame graphs come off worse. libc read and write calls
+and mutex operations are most of what an off-CPU profile contains, which puts the truncation
+exactly where the interesting blocking lives.
+
+Java broke a second way, and that became the first repair. On joining Netflix in 2014, the author
+found that the JVM had no frame pointer support of its own, so every application stack was
+unwalkable regardless of how libc had been built. He wrote a fix in the c2 compiler. Oracle
+reworked it and shipped it as -XX:+PreserveFramePointer in JDK8u60, which is the flag a Java
+profile on Linux still depends on today.
+
+libc came next. He built his own with frame pointers for production use, which works and does not
+travel: a locally compiled libc solves the problem for one fleet and leaves every other
+installation walking off the same cliff. The durable version of that fix was a package other
+people could install, and he worked with Canonical to produce a prebuilt one, libc6-prof.
+
+Trace the line from 2004 to 2014 and the shape of the mistake is visible. A measured win on a
+register-starved 32-bit target became a default on a target that was not register-starved, the
+default became distribution policy, and the policy quietly removed the mechanism that external
+profilers use to attribute time to application code. Schrock wrote down the consequence before
+it happened, in the month the change spread, and it took a decade of per-component repairs to
+begin undoing it.

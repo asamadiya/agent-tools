@@ -1,0 +1,16 @@
+graph-store capacity status and hardware request
+For the September 2026 capacity review board. Owner: Mei-Lin Chao.
+
+We are asking the board to approve 400 additional graph-store hosts, $2.9M annualised, with the purchase order signed by Nov 3 2026.
+
+The fleet today runs 2,100 hosts across three regions and serves a peak of 1.8M QPS, or 857 QPS per host. Load testing puts the redline at 1,050 QPS per host, which sets the fleet ceiling at 2.2M QPS. Peak traffic therefore sits at 82% of redline, and the remaining 18% is the entire buffer for the next five months.
+
+Traffic has grown 4.2% per month compounded over the trailing nine months, and every individual month has landed within 0.4 points of that figure since January. That consistency is what makes the forecast worth acting on: the growth rate is not an average smoothing over a volatile series, it is a rate the fleet has held month after month. Compounding 1.8M at 4.2% crosses the 2.2M ceiling in 4.9 months, which puts the crossing in late February 2027. Nine months out, in June 2027, peak reaches 2.6M QPS.
+
+Serving 2.6M QPS at redline requires 2,476 hosts. Rounding the request to 400 hosts gives a fleet of 2,500 and a ceiling of 2.625M QPS, so the June 2027 peak lands at redline with roughly 1% of headroom left. That is the honest shape of this request: 400 hosts does not buy comfort through 2027, it buys arrival at the redline on schedule. If the board wants margin past June 2027, the number is larger and we should size it now rather than return in March.
+
+The date, not the host count, is the decision in front of the board. Hardware lead time is 14 weeks. A purchase order signed Nov 3 2026 racks hosts by Feb 9 2027, which clears the late-February crossing by about two weeks. Every week of slip past Nov 3 moves racking past the crossing, and there is no compensating lever on the serving side once peak exceeds 2.2M: the fleet degrades at redline rather than shedding gracefully.
+
+One alternative exists, and it is unstaffed. Moving the read path to the new columnar serialization is estimated to cut CPU per query by 18%, which raises effective per-host capacity to 1,280 QPS and the current fleet's ceiling to 2.69M QPS. Compounding 1.8M at 4.2% reaches 2.69M in 9.8 months, so the crossing moves to July 2027 -- one month earlier than the August 2027 figure carried in the forecast, and worth correcting before anyone treats August as the planning date. The serialization work has had no engineer assigned for two quarters. We are not proposing it as a substitute for the hardware, and the board should not treat it as one. Staffing it in October still leaves the Nov 3 deadline intact, because the 18% saving would have to land and be validated in production before we could cancel an order placed on that date.
+
+Two things we will bring back. First, a measured per-query CPU profile from the current read path, so the 18% estimate rests on a profile instead of a projection. Second, a regional breakdown of the 1.8M peak, because the fleet ceiling assumes traffic distributes across the three regions the way it does today, and a single-region failover changes the arithmetic. Neither changes the Nov 3 date.

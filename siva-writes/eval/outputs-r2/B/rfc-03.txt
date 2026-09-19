@@ -1,0 +1,37 @@
+Version skew
+
+Runtimes
+
+The CRI changes for in-place resize merged in v1.25, which let runtime authors implement support on a stable interface without waiting on the kubelet. containerd shipped it in 1.6.9. A kubelet newer than its runtime issues an update the runtime cannot perform; the container keeps its old limits and the kubelet reports no change in status.
+
+Clients
+
+A client built before ResizePolicy existed sends those fields as nil. The API server reads nil as "unchanged" and copies the non-nil values from the old pod forward. Round-trip a pod through such a client and the policy survives: omission does not clear it.
+
+Kubelets
+
+Kubelet skew is the case that forces an admission check, because both of its outcomes damage the node or the user.
+
+Before v1.31, with InPlacePodVerticalScaling disabled, the kubelet reads a change to container resources as a change to the container definition and restarts the container with the new values. The user asked for a resize and got a restart. Nothing on that path compares the new sum against node allocatable, so the node can end up over-subscribed.
+
+From v1.31 the kubelet no longer treats a resource change as a definition change, and it does not restart the container. The new values sit in the spec and take effect only when the container restarts for an unrelated reason: a liveness probe failure, an OOM kill, a node reboot. The delay is unbounded, and the running values never appear in the API, so a reader cannot tell which numbers are in force.
+
+Neither outcome is acceptable. The API server must reject a resize when the kubelet managing that pod lacks the feature.
+
+Detecting the kubelet
+
+No field on the Node object reports the gate. The proxy is `.status.containerStatuses[*].resources`, which a kubelet sets on a running container if and only if the feature is enabled. Read the field on a container running under a v1.30 kubelet and it is nil; read it under an enabled kubelet and it is populated. One detail to watch: the kubelet sets it to an empty object `{}` when the container declares no requests and no limits. An empty map is a positive signal. Test for nil, not for emptiness.
+
+Admission logic
+
+1. Feature gate off on the API server: reject the resize.
+2. Gate on, at least one running container: take the first running container and allow the resize when its status resources are non-nil. Reject when nil.
+3. Gate on, no running containers: allow the resize.
+
+Case 3 covers the pod that has never been scheduled, where the new values are simply what the scheduler and the kubelet use at start. That case is safe.
+
+Known gaps
+
+A scheduled pod whose containers are not yet running offers no signal, and case 3 admits the resize anyway. If that pod lands on a kubelet without the feature, the node can be over-provisioned with no rejection anywhere in the path. We accept this: the alternative is to reject every resize against a pod between scheduling and first container start, which breaks the ordinary case to cover a skewed cluster.
+
+The same gap contains a race. A resize is admitted against a non-running container while the kubelet is starting it. Under a pre-v1.31 kubelet the container comes up, sees a definition change, and restarts with the new values. Under v1.31 or later it keeps the old ones. The outcome depends on which write wins, and the KEP does not close it.

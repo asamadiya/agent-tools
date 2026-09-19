@@ -1,0 +1,22 @@
+Pylon to Helix migration: Q3 status for the Infrastructure QBR
+Owner: Priya Raghavan. Data as of Sep 18 2026.
+
+744 of 1,240 services now read their config from Helix. That is 60% of scope, with 496 services left and 85 days to the Dec 12 target. The trailing six-week burn rate is 62 services per week; finishing 496 by Dec 12 requires 41 per week. We are running about 50% above the pace the date demands, and that margin is the entire budget for the two problems below.
+
+96 of the 496 remaining services call watchAndReload, an API Helix does not implement. Those services cannot be scheduled at all until the compatibility shim lands. The shim is in code review with an ETA of Oct 9, which leaves its 96 dependents 64 days, or 9.1 weeks. If we hold 62 per week through Oct 9 we clear 186 of the 400 unblocked services, and the residual 310 fit the remaining 9.1 weeks at 34 per week -- comfortably inside the observed rate. The shim date is what carries the risk, not the volume. Slip it to Nov 13 and the 96 compress into 4.1 weeks, 23 per week on that cohort alone, against a team that has never sustained more than 62 across all cohorts combined. Treat Oct 9 as a commit date and escalate on Oct 2 if review is not closed.
+
+118 of the 496 remaining services are tier-0, 24% of what is left. Cutover risk so far has been low and bounded: three rollbacks across 744 cutovers, 0.4%, every one closed inside 24 hours. The Aug 27 rollback of notify-dispatch was the only one with member impact, producing a 9-minute partial outage in which 12% of push notifications were delayed. We have not yet run a tier-0 batch of this density, and the remaining queue concentrates tier-0 work into the same window as the shim-blocked cohort. We are sequencing tier-0 cutovers ahead of the Oct 9 shim where they do not depend on watchAndReload, to keep the December weeks from stacking tier-0 volume on top of newly unblocked services.
+
+Payments and Trust have requested exemptions through Q1, and neither team has filed a migration plan. The Pylon hardware lease expires Feb 28 2027 and will not be renewed. An exemption running to Mar 31 2027 therefore extends 31 days past the date the hardware stops existing, which makes it a request to keep an unsupported store alive on capacity we do not have. This is a decision for this room, not a scheduling detail the migration team can absorb.
+
+Running both stores in parallel costs $310K per month. Holding the Dec 12 date spends roughly $870K more between now and completion. Every month of slip past Dec 12 adds $310K, and sliding all the way to the lease expiry would add about $790K on top of the plan. The lease gives us 11 weeks of slack behind the target date and no more.
+
+Three asks:
+
+1. Direct Payments and Trust to file migration plans by Oct 31 2026, or approve an explicit scope reduction that names which services will be abandoned instead of migrated. An exemption with no plan and no end date is the only path here that ends with Pylon running past Feb 28 2027.
+
+2. Confirm reviewer bandwidth on the watchAndReload shim through Oct 9. This is one code review gating 19% of the remaining migration.
+
+3. Accept that tier-0 cutovers will continue at the present cadence through Q4. Pausing them to reduce risk moves 118 services into the shim-blocked window and converts a schedule with 50% headroom into one without any.
+
+Next checkpoint: Oct 9, on the shim. Full replan if it moves.

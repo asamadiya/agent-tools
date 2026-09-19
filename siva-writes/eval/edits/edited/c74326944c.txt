@@ -1,0 +1,57 @@
+Reproducing the problem off production
+
+The flame graph told us that about a third of the Cassandra cluster's CPU was inside
+os::javaTimeMillis(), but it did not tell us how expensive a single call was, and there was no
+microbenchmark in circulation for that call, so we wrote one. TimeBench.java loops 100,000,000
+times calling System.currentTimeMillis(), compares the result against 87362, and does a println
+inside the loop on the comparison, which exists only to stop the JIT from noticing that nothing
+consumes the result and deleting the loop. That guard costs something -- the comparison and the
+branch are real instructions -- so the numbers below are slightly pessimistic, which is the
+direction you want a guard to err when the thing you are measuring is a syscall-sized cost.
+
+The same binary on the same instance type is 5x slower on Ubuntu than on CentOS. Under time(1),
+CentOS gives real 0m12.989s, user 0m3.368s, sys 0m18.561s; Ubuntu gives real 1m8.300s, user
+0m38.337s, sys 0m29.875s. Divide by 100,000,000 and the per-call cost is about 0.13 us on CentOS
+and about 0.68 us on Ubuntu. The split between user and sys is worth staring at: on both systems
+more time is charged to sys than a pure userspace read of a counter would explain, and on Ubuntu
+the user column alone (38.3s) is larger than the entire CentOS run.
+
+To rule out something JVM-specific, we wrote the equivalent loop in C calling gettimeofday(2)
+directly and compiled it -O0 so the compiler would keep the loop. The C version gave similar
+results, which moves the cost out of the JVM and into the kernel or the hardware clock path. A
+benchmark this short is also short enough to disassemble, and it is worth doing: it is the only way
+to confirm that the compiler emitted the loop you think you wrote rather than a constant.
+
+The clocksource is xen, and the kernel will let you change it at runtime
+
+Reading /sys/devices/system/clocksource/clocksource0/available_clocksource listed xen, tsc, hpet,
+and acpi_pm, and current_clocksource was xen. That matches the flame graph, which had
+pvclock_clocksource_read() sitting in the stack under os::javaTimeMillis() -- the paravirtualized
+clock, read through the hypervisor. Echoing tsc into current_clocksource takes effect immediately,
+with no reboot and no instance replacement, which makes this an unusually cheap experiment to run:
+you can flip it, measure, and flip it back inside one shell session.
+
+With tsc selected, TimeBench ran real 0m3.370s, user 0m3.353s, sys 0m0.026s. That is over 20x
+faster than the Ubuntu xen number and nearly 4x faster than CentOS, and the sys column collapsing
+from 29.875s to 0.026s is the part that identifies the mechanism. Under tsc the call reads time
+with a single RDTSC instruction and is serviced through the vDSO, so there is no syscall and no
+hypervisor entry, and the kernel time simply has nothing left to charge. The 33 ns per call implied
+by 3.370s over 100,000,000 iterations is an upper bound on the clock read itself, since the loop's
+own instructions -- the counter, the compare, the branch -- are now a meaningful fraction of the
+work; partially unrolling the loop would tighten that number if you needed it tight, and we did not.
+
+Deciding to run tsc in production
+
+The reason tsc is not the default is drift, not speed. TSC has a long history of being unreliable
+across sockets and across frequency and power-state transitions, and the conservative default
+reflects that history. We could not find a public reference stating that this had been fixed. What
+we had instead was a processor engineer met at a conference who said tsc had been stable for years,
+and who did not know of a citable source either. That is weak evidence on its own. It was enough
+here because Netflix's cloud is built to tolerate a bad node: if tsc misbehaved on some instances,
+the failure mode is bounded and observable, and the change is reversible with a single echo.
+
+Production confirmed the microbenchmark and then some. Write latencies on the cluster dropped 43%,
+slightly better than the CentOS hosts had been doing, and os::javaTimeMillis() fell to 1.6% of CPU
+with only a vdso frame above it in the flame graph -- the syscall and the pvclock read are gone
+from the profile entirely. The residual 1.6% is roughly what a workload that asks for the time this
+often should cost when asking is nearly free.

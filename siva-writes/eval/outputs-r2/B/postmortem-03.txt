@@ -1,0 +1,32 @@
+Cloudflare incident, 5 December 2025: HTTP 500s between 08:47 and 09:12 UTC
+
+Cloudflare returned HTTP 500 errors to a large share of the requests it proxies for about 25 minutes on 5 December 2025. Roughly 28% of all HTTP traffic we serve was affected. This was not an attack. We caused it ourselves, with a configuration change made to protect customers, and we are sorry.
+
+Requests failed for customers whose traffic ran through FL1, our older proxy engine, with the Cloudflare Managed Ruleset deployed. For those zones essentially every request returned 500 for the duration. A small number of endpoints handled outside the ruleset path kept answering normally, including /cdn-cgi/trace, which is why some external checks stayed green while the site behind them did not. Traffic on our China network was unaffected throughout.
+
+The change began with CVE-2025-55182, a critical vulnerability in React Server Components. Our WAF buffers HTTP request bodies in memory to inspect them, and that buffer held 128KB. Covering customers against the CVE required inspecting bodies up to the Next.js default limit of 1MB, so we started raising the buffer to that size.
+
+The buffer change went out through our gradual deployment system and behaved as intended. Partway through the rollout, an internal WAF testing tool turned out not to support the larger buffer, and we disabled it. That tool handles no customer traffic. We disabled it through the global configuration system, which performs no staged rollout and reaches every server in the fleet within seconds.
+
+The disable was implemented as a killswitch in the rulesets system. Every rule carries an action -- block, log, skip, or execute -- where execute evaluates a sub-ruleset. No killswitch had ever been applied to a rule whose action is execute. The skip was honoured and the rule did not run, but the code that processes results still dereferenced rule_result.execute, a field that no longer existed. Lua raised a nil index error at init.lua line 314 inside FL1, and the request became a 500. The defect had been reachable for years without anything reaching it. FL2, the Rust reimplementation that now carries most of our traffic, has no equivalent path.
+
+Timeline, all times UTC:
+
+08:47 The killswitch propagates. FL1 begins returning 500s.
+08:50 Automated alerts fire and we declare an incident.
+09:11 We revert the killswitch.
+09:12 The revert finishes propagating. Error rates return to baseline.
+
+Detection took three minutes and the revert took twenty-one more. The gap between alert and revert is the part of this we are least happy with, and most of it went to identifying which of the two in-flight changes had done the damage.
+
+Five things are changing:
+
+Ruleset killswitches will propagate through the gradual deployment system by default, with an explicit break-glass path for the cases where global speed is genuinely worth the blast radius. A killswitch is an emergency tool and we will keep one that reaches the fleet in seconds, but it will no longer be the only option.
+
+FL1's result-processing code will treat a missing action field as an absent result and continue, instead of indexing into nil. We are auditing the surrounding code for the same shape.
+
+Killswitch test coverage will cover every rule action, execute included. The existing tests covered block, log, and skip, which is exactly why this reached production.
+
+We are pulling the remaining FL1 zones onto FL2 sooner than planned.
+
+Our synthetic health checks will stop relying on endpoints that bypass ruleset evaluation. A probe that /cdn-cgi/trace answers tells us the machine is up; it told us nothing about whether customer requests were being served.

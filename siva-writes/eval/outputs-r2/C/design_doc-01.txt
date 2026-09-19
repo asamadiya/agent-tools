@@ -1,0 +1,29 @@
+Prioritising latency work against cost: the latency Lorenz curve
+
+The problem
+
+Capacity and performance teams argue about tail latency using the wrong unit. One side says p99 is 10 seconds and customers are suffering. The other side says p99 is one percent of requests and we have a fleet to pay for. Both are describing the same distribution and neither number tells you what fraction of the fleet the slow requests are consuming. We propose to answer that question directly, with a curve we can compute from data we already collect.
+
+Definition
+
+Define the empirical Lorenz curve L(P) as the share of total mean latency contributed by requests faster than percentile P. Then 1-L(P) is the share contributed by requests at or above P. From raw samples the computation is two lines: sort the n samples, take k = P*n, and compute L = sum(sorted(x)[:k]) / sum(x). From a quantile vector you cannot do this exactly. You have to interpolate between the quantiles you have and extrapolate past the last one, and a power-law fit is one reasonable choice. We treat any curve built from quantiles as an estimate and we go back to sorted raw samples when the decision is expensive.
+
+A worked example
+
+Take a service whose quantiles at percentiles [0, 0.5, 0.9, 0.99, 0.999] measure [1, 10, 200, 10000, 20000] ms. The curve gives 1-L = [1, 0.9938, 0.9308, 0.5171, 0.1034]. Read the middle of that vector. Requests at or above p50 -- half of all traffic -- account for 99.4 percent of mean latency. Requests at or above p99 account for 51.7 percent. One percent of requests carries more than half the latency mass in this service.
+
+Why this is a cost number, not just a latency number
+
+Little's law turns the same fraction into a share of system concurrency. In a threaded service, if 1-L(P) = k, then 100k percent of busy threads are occupied at any instant by requests that will eventually finish above the Pth percentile. The 51.7 percent above is therefore 51.7 percent of the thread pool. The slow one percent of requests is holding half the machines you are paying for. Values of 1-L(0.99) above 0.5, and above 0.75, are common in services we have measured, and a service in that regime can often be made cheaper and faster by the same change.
+
+That is the prioritisation rule we want the team to adopt. Compute 1-L(0.99) for each service before arguing about whether its tail matters. A service with 1-L(0.99) near 0.10 has a tail that hurts a small number of users and costs almost nothing in capacity, and optimising it is a customer-experience decision that should be justified on those terms. A service near 0.52 has a tail that is also a capacity line item, and the fleet reduction can pay for the work.
+
+Where the method breaks
+
+The mean has to exist. If the tail index alpha is at or below 1, sum(x) does not converge to anything stable as n grows, the denominator of L is meaningless, and the curve should not be drawn. Check alpha before publishing a number.
+
+Measured percentiles are themselves estimates, and the uncertainty grows with the percentile. A p999 drawn from a one-minute window of a few thousand requests rests on a handful of samples. We will report 1-L with the sample count that produced the deepest quantile in the input, and we will not extrapolate beyond p999 in dashboards.
+
+Next steps
+
+Add 1-L(0.9), 1-L(0.99) and the tail index to the standard service dashboard, computed hourly from raw samples where the tracing pipeline retains them and from quantiles elsewhere. Rank the top twenty services by 1-L(0.99) times fleet cost. That ranking is the latency work queue.

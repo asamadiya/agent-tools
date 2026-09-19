@@ -1,0 +1,24 @@
+Timing the timer
+
+No microbenchmark for os::javaTimeMillis() existed, which is awkward when the flame graph says a third of a Cassandra node's CPU is inside it, so I wrote one. TimeBench.java loops 100,000,000 times calling System.currentTimeMillis(), compares the result against the constant 87362, and does a println inside the loop when the comparison hits, which keeps the compiler from noticing that the loop has no observable effect and deleting the whole thing. The println costs something and the comparison costs something, and both inflate the per-call number I'm about to quote; that's the price of having a loop at all. Run it under shell time(1) on both distributions.
+
+CentOS gives real 0m12.989s, user 0m3.368s, sys 0m18.561s. Ubuntu, same JVM, same instance type, gives real 1m8.300s, user 0m38.337s, sys 0m29.875s. Divide by the iteration count and the call costs about 0.13 us on CentOS and about 0.68 us on Ubuntu, so Ubuntu is roughly 5x slower per call, and the third-of-CPU number from production is no longer surprising.
+
+Two things in those numbers are worth staring at before moving on. System time exceeds wall time on CentOS, 18.561s against 12.989s, which is only possible if more than one thread is burning system time -- the JVM is not just the benchmark loop -- and it means the loop's own cost is a floor rather than the whole story. And system time dominates both runs, 18.561s of 12.989s wall on one and 29.875s of 68.300s on the other, which points at the kernel and not at the JVM's dispatch of the call.
+
+A C version calling gettimeofday(2) directly, compiled -O0 so the loop survives, reproduces the same split. That matters because it rules out the JVM: if Java and C agree, the interesting behavior is below both. A benchmark this short can also be disassembled, and it is usually worth doing, because "compiled -O0" is a claim about what the compiler was asked to do and the disassembly is evidence about what it did.
+
+The kernel's exposed configuration named the culprit:
+
+  $ cat /sys/devices/system/clocksource/clocksource0/available_clocksource
+  xen tsc hpet acpi_pm
+  $ cat /sys/devices/system/clocksource/clocksource0/current_clocksource
+  xen
+
+The current source is xen, and the flame graph has a pvclock_clocksource_read() frame sitting under os::javaTimeMillis(), so the profile and the configuration are telling the same story from two directions. Echo tsc into current_clocksource and it takes effect immediately, with no reboot and no instance replacement.
+
+TimeBench on tsc: real 0m3.370s, user 0m3.353s, sys 0m0.026s. That is over 20x faster than the Ubuntu xen run and nearly 4x faster than CentOS, and the system time collapsing from 29.875s to 0.026s is the mechanism in one number. TSC reads time with a single RDTSC instruction, and Linux exposes it through the vDSO, so the call never enters the kernel. Per call the tsc run works out to roughly 33 ns, but that number includes the loop's own comparison and branch, which at this scale are no longer negligible; partially unrolling the loop would tighten it, and I'd treat 33 ns as an upper bound on the call rather than a measurement of it.
+
+The reason nobody had already switched is drift, not performance. TSC has a long history of being avoided because the counter could run at different rates across cores or across frequency changes, and a clock that goes backwards is a worse problem than a slow clock. I could not resolve that from documentation. A processor engineer I met at a conference said tsc had been stable for years on current hardware but knew of no public reference I could cite, which is weak evidence and I'd rather have had a datasheet. Netflix's cloud is built to tolerate a bad node, so the cost of being wrong on one instance was bounded, and that combination -- a large expected win, a weak but non-zero prior on correctness, and a cheap failure mode -- was enough to try it in production.
+
+Production agreed with the benchmark, which is not guaranteed. Cassandra write latencies dropped 43%, slightly better than the CentOS baseline, and os::javaTimeMillis() fell from about a third of CPU to 1.6% of the profile with only a vdso frame above it. The remaining 1.6% is the RDTSC path itself, and there is nothing left there to remove.

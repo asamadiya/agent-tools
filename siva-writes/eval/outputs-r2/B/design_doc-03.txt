@@ -1,0 +1,25 @@
+Request queuing for a multi-tenant RPC service
+
+Problem
+
+One customer can consume the service's capacity and push latency onto every other customer. A single FIFO admission queue has no notion of who sent a request, so a caller that floods the service with more requests than it can be served gets a share of the workers proportional to its arrival rate. The well-behaved caller sitting behind that flood waits for it to drain. We want the caller who exceeds its share to absorb the resulting delay and loss itself.
+
+Baseline: fairness queuing keyed on customer
+
+Fairness queuing already solves this shape of problem for network traffic, and the construction transfers to RPC by changing the key. McKenney's Stochastic Fairness Queuing (1990) keeps one FCFS queue per conversation, where a conversation is a source-destination address pair, and services the queues bit-by-bit round-robin. Substitute the authorized customer id for the address pair and the same result holds for requests: a conversation that exceeds its fair share sees longer delays and higher packet loss than a conversation that stays inside it, and the penalty lands on the offender because the offender's own queue is the one that grows.
+
+The baseline does not survive contact with our customer count. Per-conversation queuing costs O(customers) queues to hold and O(customers) work to walk the round-robin on every dequeue. With tens of thousands of authorized customer ids, that walk sits on the hot path of every worker.
+
+Proposal
+
+Allocate a fixed set of N queues and hash the customer id into them. Queue count and dequeue cost both become O(1) and stop tracking the number of customers at all. This is SFQ, and it buys the bound by giving up exact per-customer isolation: two customers whose ids hash to the same queue share it, and each of the two gets less than its share whenever the other is busy.
+
+Collisions are tolerable only if they are temporary. A fixed hash makes a collision permanent -- the same two customers collide on every request for the lifetime of the process, so one noisy customer permanently taxes whichever quiet customer it landed on. Perturb the hash function periodically. Two customers that collide in one period are unlikely to collide in the next, which converts a permanent penalty for one unlucky pair into a small penalty spread thinly across many pairs over time.
+
+We propose going further and combining SFQ with shuffle sharding and best-of-two. Map each customer id to a subset of the N queues rather than to a single queue; a subset of size two is enough to get the effect. On enqueue, compare the depths of the two queues in that customer's subset and take the shorter one. Perturb the subset assignment on the same period as the hash. Enqueue reads two queue depths and dequeue walks a fixed set, so both stay O(1), independent of customer count.
+
+The isolation property is conditional and the condition matters. Best-of-two protects a quiet customer as long as at least one queue in its subset is not being fed by a noisy customer, which holds when only a small fraction of customers are noisy at once. Under a broad event that makes most customers noisy simultaneously -- a retry storm after a dependency fails, for instance -- every subset contains a hot queue and the scheme degrades toward FIFO. Fairness queuing is not a capacity control and we still need load shedding underneath it.
+
+Open questions
+
+Pick N and the perturbation period from measurement, not from a round number. Collision probability falls with N and queue memory rises with it; the period trades reassignment churn against how long an unlucky pair stays unlucky. Run the shuffle-sharded variant against production traces at several values of each and report tail latency for the quiet customers.

@@ -1,0 +1,23 @@
+Reasoning about agent capability: the feedback loop, not the model
+
+Introduction
+
+We keep getting the capability question wrong because we ask it about the model. A coding agent now produces meaningful, correct software quickly and at very low cost, and on some tasks it is plainly super-human. That should not surprise anyone. Computers have been super-human at some things for about 85 years, going back to Marian Rejewski's work in the 1930s, and a MacBook on your desk adds 64-bit numbers roughly 100,000,000,000 times faster than you can. The pattern across those nine decades has been stable: vastly super-human in some areas, well short of human in others. Agents inherit that shape. What is new is where the loop lives, and that is what this document asks the team to reason about.
+
+The circuit
+
+There is an old analog circuit that makes the point better than any benchmark. Take an opamp and an analog multiplier IC -- the MC1495 is the classic part, long obsolete. Apply a voltage on the left; read the square root of it on the right. Nothing in the circuit computes a square root. The opamp drives its two inputs to equality, and we feed the output back through the multiplier into one input, so the only voltage that satisfies the opamp is the one whose square equals the input. The square root falls out of the constraint.
+
+Two facts about that circuit matter here. Components inside a feedback loop behave very differently from how they behave open-loop: a multiplier divides. And excellent outputs can be extracted from poor components, because the loop, not the part, sets the accuracy. Precision analog design lives on this.
+
+Agents are that circuit
+
+An agent is a feedback loop built around an LLM, and the LLM is a component with useful but flawed open-loop behavior. Left open-loop, it guesses a plausible API and stops. Closed around a compiler, a test suite, and a runtime, its guess becomes a probe, and the error it gets back is the constraint the loop drives to zero. Our tooling made exactly this transition over about two years, from autocomplete in the IDE -- open-loop, one shot, human closes the loop -- to agents that hold build-test-iterate themselves.
+
+What this means for how we plan
+
+We should evaluate loops, not components. A model evaluation predicts open-loop behavior and tells us little about what the closed system converges to. We expect model quality to matter less than the quality of the error signal we can feed back, though we do not yet have numbers separating the two on our own codebase, and we should get them.
+
+Three consequences follow for the team. Invest in the feedback path: fast tests, precise compiler and lint errors, reproducible environments, a runtime the agent can query. Assume capability is bounded by observability, so work with no cheap correctness signal -- ambiguous requirements, design taste, production judgment -- stays hard regardless of model. And expect the jagged edge to persist rather than close, because it has not closed in 85 years.
+
+Measure the loop gain in your own repo before arguing about the part inside it.
