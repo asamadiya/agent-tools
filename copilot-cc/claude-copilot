@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+BASE_URL="${COPILOT_CC_BASE_URL:-http://127.0.0.1:4141}"
+
+settings_sources=()
+forwarded=()
+while (( $# )); do
+  case "$1" in
+    --settings)
+      if (( $# < 2 )); then
+        echo "--settings requires a JSON object or file" >&2
+        exit 2
+      fi
+      settings_sources+=("$2")
+      shift 2
+      ;;
+    --settings=*)
+      settings_sources+=("${1#--settings=}")
+      shift
+      ;;
+    --)
+      forwarded+=("$@")
+      break
+      ;;
+    *)
+      forwarded+=("$1")
+      shift
+      ;;
+  esac
+done
+set -- "${forwarded[@]}"
+
+MODEL_SETTINGS="$(python3 - "$BASE_URL" "${settings_sources[@]}" <<'PY'
+import json
+import os
+import sys
+from pathlib import Path
+from urllib.error import HTTPError, URLError
+from urllib.request import ProxyHandler, build_opener
+
+settings = {}
+try:
+    if os.environ.get("COPILOT_CC_SKIP_PROXY_CHECK") != "1":
+        # The local bridge must not inherit a user's corporate HTTP proxy.
+        opener = build_opener(ProxyHandler({}))
+        with opener.open(sys.argv[1].rstrip("/") + "/model-picker", timeout=35) as reply:
+            settings = json.load(reply)
+        if not isinstance(settings, dict) or not settings.get("modelPicker", {}).get("options"):
+            raise ValueError("bridge returned no modelPicker options")
+        custom = os.environ.get("ANTHROPIC_CUSTOM_MODEL_OPTION")
+        options = settings["modelPicker"]["options"]
+        if custom and not any(row["model"].removesuffix("[1m]") == custom.removesuffix("[1m]") for row in options):
+            options.append({
+                "model": custom,
+                "label": os.environ.get("ANTHROPIC_CUSTOM_MODEL_OPTION_NAME", custom),
+                "description": os.environ.get("ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION", "Explicit custom model"),
+            })
+    for source in sys.argv[2:]:
+        value = json.loads(source if source.lstrip().startswith("{") else Path(source).read_text())
+        if not isinstance(value, dict):
+            raise ValueError("--settings must contain a JSON object")
+        settings.update(value)
+except (HTTPError, URLError, OSError, ValueError) as exc:
+    raise SystemExit(
+        f"Cannot load Copilot model picker/settings: {exc}\n"
+        "Start or restart this port's proxy using the updated copilot_connector.py."
+    )
+print(json.dumps(settings, separators=(",", ":")))
+PY
+)"
+
+unset ANTHROPIC_AUTH_TOKEN
+unset ANTHROPIC_API_KEY
+unset DISABLE_PROMPT_CACHING
+unset HTTP_PROXY
+unset HTTPS_PROXY
+unset ALL_PROXY
+unset http_proxy
+unset https_proxy
+unset all_proxy
+
+export ANTHROPIC_BASE_URL="$BASE_URL"
+export ANTHROPIC_MODEL="${ANTHROPIC_MODEL:-claude-opus-5.5}"
+export ANTHROPIC_DEFAULT_OPUS_MODEL="${ANTHROPIC_DEFAULT_OPUS_MODEL:-claude-opus-5.5}"
+DEFAULT_MODEL="opus[1m]"
+if [[ "$ANTHROPIC_DEFAULT_OPUS_MODEL" == "claude-opus-5.5" ]]; then
+  DEFAULT_MODEL="claude-opus-5.5[1m]"
+  export ANTHROPIC_DEFAULT_OPUS_MODEL_NAME="${ANTHROPIC_DEFAULT_OPUS_MODEL_NAME:-Opus 5.5}"
+  export ANTHROPIC_CUSTOM_MODEL_OPTION="${ANTHROPIC_CUSTOM_MODEL_OPTION:-$DEFAULT_MODEL}"
+  if [[ "$ANTHROPIC_CUSTOM_MODEL_OPTION" == "$DEFAULT_MODEL" ]]; then
+    export ANTHROPIC_CUSTOM_MODEL_OPTION_NAME="${ANTHROPIC_CUSTOM_MODEL_OPTION_NAME:-Opus 5.5 (1M context)}"
+    export ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION="${ANTHROPIC_CUSTOM_MODEL_OPTION_DESCRIPTION:-Copilot / claude-opus-5.5[1m]}"
+  fi
+fi
+export ANTHROPIC_DEFAULT_SONNET_MODEL="${ANTHROPIC_DEFAULT_SONNET_MODEL:-claude-sonnet-5}"
+export ANTHROPIC_DEFAULT_HAIKU_MODEL="${ANTHROPIC_DEFAULT_HAIKU_MODEL:-claude-sonnet-5}"
+export MAX_THINKING_TOKENS="${MAX_THINKING_TOKENS:-4096}"
+export CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING="${CLAUDE_CODE_DISABLE_ADAPTIVE_THINKING:-0}"
+export ENABLE_TOOL_SEARCH="${ENABLE_TOOL_SEARCH:-false}"
+export CLAUDE_CODE_ATTRIBUTION_HEADER="${CLAUDE_CODE_ATTRIBUTION_HEADER:-0}"
+export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC="${CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC:-1}"
+
+export NO_PROXY="${NO_PROXY:-127.0.0.1,localhost,::1}"
+
+args=(--dangerously-skip-permissions --setting-sources user,project,local)
+if [[ "$MODEL_SETTINGS" != "{}" ]]; then
+  args+=(--settings "$MODEL_SETTINGS")
+fi
+has_model=0
+for arg in "$@"; do
+  if [[ "$arg" == "--model" || "$arg" == --model=* ]]; then
+    has_model=1
+    break
+  fi
+done
+if [[ "$has_model" == "0" ]]; then
+  args+=(--model "${CLAUDE_CODE_MODEL:-$DEFAULT_MODEL}")
+fi
+
+exec claude "${args[@]}" "$@"
