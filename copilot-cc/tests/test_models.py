@@ -110,10 +110,13 @@ def test_catalog_is_cached_per_app_not_globally():
             session = _FakeUpstreamSession({"/models": response({"data": [model(name)]})})
             app["upstream_session"] = session
             async with TestServer(app) as server, TestClient(server) as client:
-                for _ in range(2):
-                    result = await (await client.get("/v1/models")).json()
-                    assert result["data"][0]["id"] == name
-            assert len(session.calls) == 1
+                result = await (await client.get("/v1/models")).json()
+                assert result["data"][0]["id"] == name
+                first_calls = len(session.calls)
+                result = await (await client.get("/v1/models")).json()
+                assert result["data"][0]["id"] == name
+            assert first_calls >= 1
+            assert len(session.calls) == first_calls
     asyncio.run(run())
 
 
@@ -556,3 +559,46 @@ def test_translated_error_preserves_and_logs_non_json_or_text_body(status_code, 
     assert status == status_code
     assert json.loads(raw)["error"]["message"] == expected
     assert expected in caplog.text
+
+
+class _SequentialModelsSession(_FakeUpstreamSession):
+    def __init__(self, responses):
+        super().__init__({})
+        self._responses = list(responses)
+
+    def request(self, method, url, **kwargs):
+        self.calls.append((method, url, kwargs))
+        reply = self._responses.pop(0) if len(self._responses) > 1 else self._responses[0]
+        from test_unit import _FakeUpstreamRequestContext
+        return _FakeUpstreamRequestContext(reply, self.recorder)
+
+
+def test_catalog_reconciles_partial_replica_dropping_gemini():
+    partial = [model("claude-opus-5.5", "/v1/messages")]
+    full = [
+        model("claude-opus-5.5", "/v1/messages",
+              capabilities={"type": "chat", "limits": {"max_context_window_tokens": 1000000},
+                            "supports": {"streaming": True, "tool_calls": True,
+                                         "reasoning_effort": ["low", "medium", "high", "xhigh", "max"]}}),
+        model("gemini-4-neon", "/chat/completions", ["low", "medium", "high", "xhigh"]),
+    ]
+    async def run():
+        app = cc.create_app()
+        app["token_manager"] = _FakeTokenManager("https://api.example.test")
+        session = _SequentialModelsSession([
+            response({"data": partial}),
+            response({"data": full}),
+            response({"data": partial}),
+        ])
+        app["upstream_session"] = session
+        async with TestServer(app) as server, TestClient(server) as client:
+            reply = await client.get("/model-picker")
+            assert reply.status == 200
+            options = (await reply.json())["modelPicker"]["options"]
+            assert [row["model"] for row in options] == ["claude-opus-5.5[1m]", "gemini-4-neon[1m]"]
+            assert "context 1,000,000" in options[0]["description"]
+    asyncio.run(run())
+
+
+def test_identity_headers_request_long_context_api_version():
+    assert cc.IDENTITY_HEADERS["X-GitHub-Api-Version"] == "2026-08-01"

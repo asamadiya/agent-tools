@@ -52,7 +52,7 @@ IDENTITY_HEADERS = {
     "Copilot-Integration-Id": "copilot-cli",
     "Openai-Intent": "conversation-agent",
     "X-Initiator": "user",
-    "X-GitHub-Api-Version": "2025-04-01",
+    "X-GitHub-Api-Version": "2026-08-01",
 }
 
 

@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import time
 
 import aiohttp
 
 from copilot_protocols import EFFORTS
+
+log = logging.getLogger(__name__)
+CATALOG_PROBES = 3
 
 
 class CatalogError(Exception):
@@ -68,11 +72,41 @@ def picker_settings(models: list[dict]) -> dict:
     return {"modelPicker": {"options": options, "replaceBuiltInOptions": True}}
 
 
+def _context_window(model: dict) -> int:
+    value = model.get("capabilities", {}).get("limits", {}).get("max_context_window_tokens")
+    return value if isinstance(value, int) and not isinstance(value, bool) else 0
+
+
+def _merge_catalogs(batches: list[list[dict]]) -> list[dict]:
+    merged: dict[str, dict] = {}
+    for batch in batches:
+        for model in batch:
+            model_id = model["id"]
+            existing = merged.get(model_id)
+            if existing is None or _context_window(model) > _context_window(existing):
+                merged[model_id] = model
+    return list(merged.values())
+
+
 class ModelCatalog:
     def __init__(self):
         self.models: list[dict] = []
         self.expires = 0.0
         self.lock = asyncio.Lock()
+
+    async def _fetch_once(self, session, api_base: str, headers: dict) -> list[dict]:
+        async with session.request("GET", f"{api_base}/models", headers=headers,
+                                   timeout=aiohttp.ClientTimeout(total=30)) as reply:
+            if reply.status != 200:
+                raise CatalogError(reply.status, f"Copilot model catalog returned HTTP {reply.status}; check this proxy's account")
+            try:
+                data = await reply.json()
+            except (ValueError, aiohttp.ContentTypeError) as exc:
+                raise CatalogError(502, "Invalid Copilot model catalog JSON") from exc
+        models = data.get("data") if isinstance(data, dict) else None
+        if not isinstance(models, list) or not all(isinstance(m, dict) and isinstance(m.get("id"), str) for m in models):
+            raise CatalogError(502, "Invalid Copilot model catalog")
+        return models
 
     async def get(self, session, api_base: str, headers: dict) -> list[dict]:
         if time.monotonic() < self.expires:
@@ -80,17 +114,36 @@ class ModelCatalog:
         async with self.lock:
             if time.monotonic() < self.expires:
                 return self.models
-            async with session.request("GET", f"{api_base}/models", headers=headers,
-                                       timeout=aiohttp.ClientTimeout(total=30)) as reply:
-                if reply.status != 200:
-                    raise CatalogError(reply.status, f"Copilot model catalog returned HTTP {reply.status}; check this proxy's account")
+            # Copilot /models replicas intermittently return truncated model sets (e.g. omitting Gemini).
+            # Reconcile across bounded parallel probes so one partial replica is not cached for 5 minutes.
+            results = await asyncio.gather(
+                *(self._fetch_once(session, api_base, headers) for _ in range(max(1, CATALOG_PROBES))),
+                return_exceptions=True,
+            )
+            batches: list[list[dict]] = []
+            errors: list[BaseException] = []
+            for item in results:
+                if isinstance(item, CatalogError) and item.status in (401, 403):
+                    raise item
+                if isinstance(item, BaseException):
+                    errors.append(item)
+                else:
+                    batches.append(item)
+            if not batches:
+                raise errors[0]
+            if errors:
+                log.warning("Copilot /models had %d failed probe(s); using %d healthy response(s)",
+                            len(errors), len(batches))
+            models = _merge_catalogs(batches)
+            prev_selectable = {m["id"] for m in self.models if selectable(m)}
+            curr_selectable = {m["id"] for m in models if selectable(m)}
+            if prev_selectable - curr_selectable:
                 try:
-                    data = await reply.json()
-                except (ValueError, aiohttp.ContentTypeError) as exc:
-                    raise CatalogError(502, "Invalid Copilot model catalog JSON") from exc
-            models = data.get("data") if isinstance(data, dict) else None
-            if not isinstance(models, list) or not all(isinstance(m, dict) and isinstance(m.get("id"), str) for m in models):
-                raise CatalogError(502, "Invalid Copilot model catalog")
+                    extra = await self._fetch_once(session, api_base, headers)
+                except (CatalogError, aiohttp.ClientError, asyncio.TimeoutError):
+                    pass
+                else:
+                    models = _merge_catalogs([models, extra])
             self.models = models
             self.expires = time.monotonic() + 300
             return self.models
