@@ -95,13 +95,28 @@ def convert_content(content: Any, endpoint: str, role: str = "user") -> list[dic
 
 
 def tool_output(block: dict, endpoint: str) -> str | list[dict]:
-    content = block.get("content", "")
-    parts = blocks(content)
+    parts = blocks(block.get("content", ""))
     if block.get("is_error"):
-        parts = [{"type": "text", "text": "Tool error: " + text_content(content)}]
+        text = "\n".join(part["text"] for part in parts if part.get("type") == "text")
+        non_text = [part for part in parts if part.get("type") != "text"]
+        parts = [{"type": "text", "text": f"Tool error: {text}" if text else "Tool error"}] + non_text
     if all(part.get("type") == "text" for part in parts):
         return text_content(parts)
     return convert_content(parts, endpoint)
+
+
+def chat_tool_output(block: dict) -> tuple[str, list[dict]]:
+    # Copilot's /chat/completions adapter tokenizes base64 data URLs inside role="tool"
+    # messages as raw text (~150k tokens per screenshot). Hoist images to a following
+    # role="user" message so they are processed as vision inputs instead.
+    output = tool_output(block, "/chat/completions")
+    if isinstance(output, str):
+        return output, []
+    texts = [part["text"] for part in output if part.get("type") == "text"]
+    images = [part for part in output if part.get("type") != "text"]
+    if not texts and images:
+        texts = ["[Image returned by tool; attached in following user message]"]
+    return "\n".join(texts), images
 
 
 def translate_request(body: dict, endpoint: str, metadata: dict) -> dict:
@@ -184,6 +199,7 @@ def translate_request(body: dict, endpoint: str, metadata: dict) -> dict:
         if role not in ("user", "assistant", "system", "developer"):
             raise ValueError(f"Unsupported message role: {role}")
         pending: list[dict] = []
+        deferred_user: list[dict] = []
         calls: list[dict] = []
         extra: dict = {}
         call_extras: dict = {}
@@ -230,13 +246,21 @@ def translate_request(body: dict, endpoint: str, metadata: dict) -> dict:
                 if role != "user":
                     raise ValueError("tool_result requires a user message")
                 flush()
-                output = tool_output(block, endpoint)
                 if responses:
-                    messages.append({"type": "function_call_output", "call_id": block["tool_use_id"], "output": output})
+                    messages.append({"type": "function_call_output", "call_id": block["tool_use_id"],
+                                     "output": tool_output(block, endpoint)})
                 else:
-                    messages.append({"role": "tool", "tool_call_id": block["tool_use_id"], "content": output})
+                    text, images = chat_tool_output(block)
+                    messages.append({"role": "tool", "tool_call_id": block["tool_use_id"], "content": text})
+                    deferred_user.extend(images)
             else:
+                if deferred_user:
+                    pending.extend(deferred_user)
+                    deferred_user.clear()
                 pending.extend(convert_content([block], endpoint, role))
+        if deferred_user:
+            pending.extend(deferred_user)
+            deferred_user.clear()
         flush()
         # A stream can deliver opaque state after its tool blocks.
         if not responses and (extra or call_extras):

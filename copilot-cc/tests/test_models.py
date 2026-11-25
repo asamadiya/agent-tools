@@ -602,3 +602,41 @@ def test_catalog_reconciles_partial_replica_dropping_gemini():
 
 def test_identity_headers_request_long_context_api_version():
     assert cc.IDENTITY_HEADERS["X-GitHub-Api-Version"] == "2026-08-01"
+
+
+def test_chat_tool_result_images_move_to_following_user_message():
+    body = {
+        "model": "gemini-4-neon",
+        "messages": [
+            {"role": "assistant", "content": [
+                {"type": "tool_use", "id": "call_1", "name": "Read", "input": {"file_path": "a.png"}},
+                {"type": "tool_use", "id": "call_2", "name": "Read", "input": {"file_path": "b.png"}},
+            ]},
+            {"role": "user", "content": [
+                {"type": "tool_result", "tool_use_id": "call_1", "content": [
+                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "AAA"}},
+                ]},
+                {"type": "tool_result", "tool_use_id": "call_2", "is_error": True, "content": [
+                    {"type": "text", "text": "Partial render"},
+                    {"type": "image", "source": {"type": "base64", "media_type": "image/png", "data": "BBB"}},
+                ]},
+                {"type": "text", "text": "Compare them"},
+            ]},
+        ],
+    }
+    chat = translate(body, "/chat/completions")
+    msgs = chat["messages"]
+    assert [m["role"] for m in msgs] == ["assistant", "tool", "tool", "user"]
+    assert isinstance(msgs[1]["content"], str) and "AAA" not in msgs[1]["content"]
+    assert isinstance(msgs[2]["content"], str) and "Tool error: Partial render" in msgs[2]["content"]
+    assert "BBB" not in msgs[2]["content"]
+    user_parts = msgs[3]["content"]
+    urls = [p["image_url"]["url"] for p in user_parts if p.get("type") == "image_url"]
+    assert urls == ["data:image/png;base64,AAA", "data:image/png;base64,BBB"]
+    assert any(p.get("type") == "text" and p.get("text") == "Compare them" for p in user_parts)
+
+    # /responses handles function_call_output input_image natively without base64 text tokenization.
+    resp = translate(body, "/responses")
+    outputs = [item for item in resp["input"] if item.get("type") == "function_call_output"]
+    assert len(outputs) == 2
+    assert any(part.get("type") == "input_image" for part in outputs[0]["output"])
