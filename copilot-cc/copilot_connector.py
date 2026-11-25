@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -31,6 +32,7 @@ log = logging.getLogger(__name__)
 
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 4141
+STREAM_PING_INTERVAL = 15.0
 DEFAULT_COPILOT_API_BASE = "https://api.enterprise.githubcopilot.com"
 DEFAULT_MODEL_MAP = {
     "claude-opus-4-8": "claude-opus-4.8",
@@ -461,10 +463,18 @@ async def handle_models(request: web.Request) -> web.Response:
 
 async def translated_response(request: web.Request, upstream, body: dict, endpoint: str) -> web.StreamResponse:
     if upstream.status >= 400:
-        try:
-            error = error_message(await upstream.json())
-        except (ValueError, aiohttp.ContentTypeError):
+        raw = (await upstream.text()).strip()
+        error = ""
+        if raw:
+            try:
+                parsed = json.loads(raw)
+            except ValueError:
+                error = raw[:500]
+            else:
+                error = error_message(parsed) if isinstance(parsed, dict) else raw[:500]
+        if not error:
             error = f"Copilot returned HTTP {upstream.status}"
+        log.warning("Copilot %s returned HTTP %s: %s", endpoint, upstream.status, error)
         return api_error(upstream.status, error)
     if not body.get("stream"):
         try:
@@ -477,18 +487,50 @@ async def translated_response(request: web.Request, upstream, body: dict, endpoi
         await downstream.prepare(request)
         translator = StreamTranslator(endpoint, body["model"])
         await downstream.write(encode_event(translator.start()))
+        loop = asyncio.get_running_loop()
+        last_write = loop.time()
+        ping_interval = STREAM_PING_INTERVAL
+        events = sse_events(upstream.content).__aiter__()
+        pending: asyncio.Task[dict] | None = None
         try:
-            async for event in sse_events(upstream.content):
-                for converted in translator.feed(event):
-                    await downstream.write(encode_event(converted))
+            pending = asyncio.create_task(events.__anext__())
+            while True:
+                if ping_interval > 0:
+                    wait = max(0.0, last_write + ping_interval - loop.time())
+                    done, _ = await asyncio.wait({pending}, timeout=wait)
+                    if not done:
+                        await downstream.write(encode_event({"type": "ping"}))
+                        last_write = loop.time()
+                        continue
+                else:
+                    await pending
+                try:
+                    event = pending.result()
+                except StopAsyncIteration:
+                    pending = None
+                    break
+                pending = asyncio.create_task(events.__anext__())
+                converted = translator.feed(event)
+                for item in converted:
+                    await downstream.write(encode_event(item))
+                    last_write = loop.time()
+                if not converted and ping_interval > 0 and loop.time() - last_write >= ping_interval:
+                    await downstream.write(encode_event({"type": "ping"}))
+                    last_write = loop.time()
             for converted in translator.finish():
                 await downstream.write(encode_event(converted))
         except (ValueError, KeyError, TypeError, aiohttp.ClientError, asyncio.TimeoutError) as exc:
             log.warning("Copilot %s stream failed: %s", endpoint, exc)
             await downstream.write(encode_event({"type": "error", "error": {
                 "type": "api_error", "message": f"Copilot stream failed: {exc}"}}))
+        finally:
+            if pending is not None:
+                if not pending.done():
+                    pending.cancel()
+                with contextlib.suppress(asyncio.CancelledError, StopAsyncIteration, Exception):
+                    await pending
         await downstream.write_eof()
-    except (ConnectionResetError, BrokenPipeError):
+    except (aiohttp.ClientConnectionResetError, ConnectionResetError, BrokenPipeError):
         pass
     return downstream
 

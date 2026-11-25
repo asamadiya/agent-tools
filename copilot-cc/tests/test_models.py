@@ -494,3 +494,65 @@ def test_responses_edited_history_omits_stale_replay_with_warning(caplog):
     request = translate({"model": "gpt-test", "messages": [{"role": "assistant", "content": content}]})
     assert request["input"] == [{"role": "assistant", "content": [{"type": "output_text", "text": "Edited"}]}]
     assert "omitting stale Responses replay metadata" in caplog.text
+
+
+class _TimedUpstreamContent:
+    def __init__(self, steps):
+        self._steps = list(steps)
+
+    async def iter_any(self):
+        for delay, chunk in self._steps:
+            if delay:
+                await asyncio.sleep(delay)
+            yield chunk
+
+
+def test_translated_stream_emits_ping_during_silent_wait_and_buffered_reasoning(monkeypatch):
+    monkeypatch.setattr(cc, "STREAM_PING_INTERVAL", 0.025)
+    steps = [
+        (0.06, sse({"choices": [{"index": 0, "delta": {"reasoning_text": "step 1"}}]})),
+        (0.015, sse({"choices": [{"index": 0, "delta": {"reasoning_text": "step 2"}}]})),
+        (0.015, sse({"choices": [{"index": 0, "delta": {"reasoning_text": "step 3"}}]})),
+        (0.015, sse({"choices": [{"index": 0, "delta": {"tool_calls": [{
+            "index": 0, "id": "call_1", "type": "function",
+            "function": {"name": "read", "arguments": '{"path":"a.py"}'},
+        }]}}]})),
+        (0.0, sse({"choices": [{"index": 0, "delta": {}, "finish_reason": "tool_calls"}]}) + b"data: [DONE]\n\n"),
+    ]
+    upstream_resp = _FakeUpstreamResponse(200, {"Content-Type": "text/event-stream"}, [])
+    upstream_resp.content = _TimedUpstreamContent(steps)
+    status, raw, _ = asyncio.run(call_proxy(
+        "/v1/messages",
+        {"model": "gemini-4-neon[1m]", "messages": [], "stream": True},
+        models=[model("gemini-4-neon", "/chat/completions", ["low", "medium", "high", "xhigh"])],
+        upstream={"/chat/completions": upstream_resp},
+    ))
+    assert status == 200
+    events = parse_events(raw)
+    assert events[0]["type"] == "message_start"
+    assert events[-1]["type"] == "message_stop"
+    pings = [event for event in events if event["type"] == "ping"]
+    assert len(pings) >= 2
+    tool_starts = [event for event in events if event["type"] == "content_block_start"
+                   and event["content_block"]["type"] == "tool_use"]
+    assert [(event["content_block"]["id"], event["content_block"]["name"]) for event in tool_starts] == [
+        ("call_1", "read"),
+    ]
+
+
+@pytest.mark.parametrize("status_code,raw_body,expected", [
+    (400, b"invalid tool schema: missing properties", "invalid tool schema: missing properties"),
+    (400, b'{"error":{"message":"bad request payload"}}', "bad request payload"),
+    (502, b"", "Copilot returned HTTP 502"),
+])
+def test_translated_error_preserves_and_logs_non_json_or_text_body(status_code, raw_body, expected, caplog):
+    upstream_resp = _FakeUpstreamResponse(status_code, {"Content-Type": "text/plain"}, [raw_body])
+    status, raw, _ = asyncio.run(call_proxy(
+        "/v1/messages",
+        {"model": "gemini-4-neon[1m]", "messages": [], "stream": True},
+        models=[model("gemini-4-neon", "/chat/completions")],
+        upstream={"/chat/completions": upstream_resp},
+    ))
+    assert status == status_code
+    assert json.loads(raw)["error"]["message"] == expected
+    assert expected in caplog.text
