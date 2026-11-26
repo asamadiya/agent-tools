@@ -604,6 +604,21 @@ def test_identity_headers_request_long_context_api_version():
     assert cc.IDENTITY_HEADERS["X-GitHub-Api-Version"] == "2026-08-01"
 
 
+def test_identity_headers_use_copilot_developer_cli_integration_id():
+    assert cc.IDENTITY_HEADERS["Copilot-Integration-Id"] == "copilot-developer-cli"
+    reply = {"choices": [{"message": {"content": "OK"}, "finish_reason": "stop"}]}
+    status, _, session = asyncio.run(call_proxy(
+        "/v1/messages",
+        {"model": "gemini-4-neon[1m]", "max_tokens": 16, "messages": [{"role": "user", "content": "hi"}]},
+        models=[model("gemini-4-neon", "/chat/completions", ["low", "medium", "high", "xhigh"])],
+        upstream={"/chat/completions": response(reply)},
+    ))
+    assert status == 200
+    assert session.calls
+    for _, _, kwargs in session.calls:
+        assert kwargs["headers"]["Copilot-Integration-Id"] == "copilot-developer-cli"
+
+
 def test_chat_tool_result_images_move_to_following_user_message():
     body = {
         "model": "gemini-4-neon",

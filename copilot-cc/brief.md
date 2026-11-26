@@ -29,7 +29,7 @@ upstream as VS Code. Runtime auth and upstream identity must match Copilot CLI.
 - For other models, `copilot_catalog.py` selects the endpoint from the account's
   catalog. `copilot_protocols.py` translates Messages to Responses or Chat Completions.
 - Send Copilot CLI identity headers: `User-Agent`, `Editor-Version`,
-  `Editor-Plugin-Version`, `Copilot-Integration-Id: copilot-cli`,
+  `Editor-Plugin-Version`, `Copilot-Integration-Id: copilot-developer-cli`,
   `Openai-Intent: conversation-agent`, `X-Initiator: user`, and
   `X-GitHub-Api-Version`.
 - Do not forward Claude-local headers such as `anthropic-version`,

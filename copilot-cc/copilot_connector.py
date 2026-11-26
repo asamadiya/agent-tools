@@ -49,7 +49,7 @@ IDENTITY_HEADERS = {
     "Editor-Version": "copilot-cli/1.0.0",
     "Editor-Plugin-Version": "copilot-cli/1.0.0",
     "User-Agent": "Copilot/1.0",
-    "Copilot-Integration-Id": "copilot-cli",
+    "Copilot-Integration-Id": "copilot-developer-cli",
     "Openai-Intent": "conversation-agent",
     "X-Initiator": "user",
     "X-GitHub-Api-Version": "2026-08-01",
